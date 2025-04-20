@@ -1,0 +1,38 @@
+INSERT(BPlusTree T, clave K)
+1. Nodo R ← T.raíz
+2. Si R está lleno (tiene 2t - 1 claves):
+3.     Crear un nuevo nodo S (no hoja)
+4.     T.raíz ← S
+5.     S.children[0] ← R
+6.     SPLIT_CHILD(S, 0)
+7.     INSERT_NON_FULL(S, K)
+8. Sino:
+9.     INSERT_NON_FULL(R, K)
+
+
+INSERT_NON_FULL(nodo N, clave K)
+1. Si N es hoja:
+2.     Insertar K en N.keys en orden
+3.     // No es necesario dividir aquí, ya fue manejado en el paso anterior
+4. Sino:
+5.     Encontrar el índice i donde K < N.keys[i]
+6.     Si hijo N.children[i] está lleno:
+7.         SPLIT_CHILD(N, i)
+8.         Si K > N.keys[i]: i ← i + 1
+9.     INSERT_NON_FULL(N.children[i], K)
+
+
+SPLIT_CHILD(nodo P, índice i)
+1. Nodo F ← P.children[i]  // hijo lleno a dividir
+2. Crear nuevo nodo G con F.leaf igual a F.leaf
+3. Mitad ← t
+4. G.keys ← F.keys[t:]     // Copiar mitad derecha
+5. F.keys ← F.keys[:t - 1] // Conservar mitad izquierda
+6. Si F no es hoja:
+7.     G.children ← F.children[t:]
+8.     F.children ← F.children[:t]
+9. Insertar G en P.children en posición i+1
+10. Insertar F.keys[t-1] en P.keys en posición i
+11. Si ambos F y G son hojas:
+12.     G.next_leaf ← F.next_leaf
+13.     F.next_leaf ← G
