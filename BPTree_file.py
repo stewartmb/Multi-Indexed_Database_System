@@ -138,7 +138,6 @@ class BPTree:
     Clase que representa un árbol B+.
     """
     def __init__(self, name_index_file = 'index_file.bin', name_data_file = 'data_file.bin'):
-        self.root = -2  # Inicializa la raíz como un nodo hoja
         self.index_file = name_index_file
         self.data_file = name_data_file
         self._initialize_files()  # Inicializa los archivos de índice y datos
@@ -225,6 +224,12 @@ class BPTree:
         size += 1
         self._write_header_index(size, root_position)  # Actualiza el encabezado del archivo de índice
 
+    def _update_root(self, root_position):
+        """
+        Actualiza la raíz del árbol B+.
+        """
+        self._write_header_index(self._read_header_index()[0], root_position)
+
     ### MANEJO DE RECORDS (registros en el data_file.bin)###
 
     def _read_record(self, position):
@@ -279,13 +284,15 @@ class BPTree:
             for i in range(temp.key_count):
                 if temp.keys[i] == key:
                     return temp.childrens[i]  # Retorna un posicion de registro en data_file.bin
-            return -1
+            return pos_children # Retorna la posicion de la hoja 
     
     def search(self, key):
         """
         Busca un registro en el árbol B+.
         """
-        pos_record = self.search_aux(self.root, key)
+        root = self._read_header_index()[1]  # posición de la raíz
+
+        pos_record = self.search_aux(root, key)
         if pos_record == -1:
             return None
         else:
@@ -330,19 +337,29 @@ class BPTree:
         # Agrega el registro al archivo de datos
         pos_new_record = self._read_header_data() # posicion del nuevo registro
         self._add_record(record) # se inserta el registro en el data_file.bin
-    
+
+        # obtener la posición de la raíz
+        header = self._read_header_index()
+        root = header[1] # posición de la raíz
+        n_pages = header[0] # cantidad de páginas
+
 
         ## CASO 1: El árbol está vacío ##
-        if self.root == -2 or self.root == -1:
+        if root == -2 or root == -1:
             # Crea una nueva página raíz
             new_page = IndexPage(leaf=True)
             new_page.keys[0] = key
-            new_page.childrens[0] = 0
+            new_page.childrens[0] = pos_new_record
             new_page.key_count = 1
-            position = self._read_header_index()[0] # Cantidad de páginas
             self._add_index_page(new_page) # Se agrega la nueva página al index_file.bin
-            self.root = position
-            self._write_header_index(position, self.root)
+            self._update_root(n_pages) # Se actualiza la raíz del árbol
+            return
+        
+        ## CASO 2: El árbol no está vacío ##
+        # Busca la posición de la hoja donde se debe insertar el registro
+        pos_leaf = self.search_aux(root, key) # posición de la hoja donde se debe insertar el registro
+
+
 
 
 
