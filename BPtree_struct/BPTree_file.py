@@ -443,6 +443,9 @@ class BPTree:
             new_leaf_page = self.key_insert(leaf_page, key, pos_new_record)
             self._write_index_page(pos_leaf, new_leaf_page)
             return
+        ### CASO 2.2: La raíz está llena ###
+        else:
+            self
         
 
 
