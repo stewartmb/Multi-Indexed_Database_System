@@ -18,9 +18,9 @@ def test_codigo():
 
 
     # Insertar el registro en el árbol
-    arbol.insert(registro1)
-    arbol.insert(registro2)
-    arbol.insert(registro3)
+    arbol.add(registro1)
+    arbol.add(registro2)
+    arbol.add(registro3)
 
     # Buscar el registro en el árbol
     resultado1 = arbol.search("A1")
@@ -55,9 +55,9 @@ def test_producto():
     registro2 = BPT.Registro(codigo="B2", nombre="producto200", ciclo="02")
     registro3 = BPT.Registro(codigo="A3", nombre="producto3000", ciclo="03")
     # Insertar el registro en el árbol
-    arbol.insert(registro1)
-    arbol.insert(registro2)
-    arbol.insert(registro3)
+    arbol.add(registro1)
+    arbol.add(registro2)
+    arbol.add(registro3)
     # Buscar el registro en el árbol
     resultado1 = arbol.search("producto100")
     resultado2 = arbol.search("producto200")
@@ -86,9 +86,9 @@ def test_ciclo():
     registro2 = BPT.Registro(codigo="B2", nombre="producto200", ciclo="02")
     registro3 = BPT.Registro(codigo="A3", nombre="producto3000", ciclo="03")
     # Insertar el registro en el árbol
-    arbol.insert(registro1)
-    arbol.insert(registro2)
-    arbol.insert(registro3)
+    arbol.add(registro1)
+    arbol.add(registro2)
+    arbol.add(registro3)
     # Buscar el registro en el árbol
     resultado1 = arbol.search("01")
     resultado2 = arbol.search("02")

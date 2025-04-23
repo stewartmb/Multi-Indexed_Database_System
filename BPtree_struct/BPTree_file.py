@@ -405,7 +405,7 @@ class BPTree:
         page.childrens[index] = pos_page
         return page
     
-    def insert(self, record):
+    def add(self, record):
         """
         Inserta un registro en el árbol B+.
         """
