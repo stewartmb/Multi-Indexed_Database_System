@@ -11,7 +11,7 @@ def test_codigo():
         pass  # Ignorar si los archivos no existen
 
     # Crear un registro
-    arbol = BPT.BPTree('index_file.bin', 'data_file.bin')  # Corrección aquí
+    arbol = BPT.BPTree('BPtree_struct/index_file.bin', 'BPtree_struct/data_file.bin')  # Corrección aquí
     registro1 = BPT.Registro(codigo="A1", nombre="Producto", ciclo="01")
     registro2 = BPT.Registro(codigo="B2", nombre="Producto", ciclo="02")
     registro3 = BPT.Registro(codigo="C3", nombre="Producto", ciclo="03")
@@ -50,7 +50,7 @@ def test_producto():
     except FileNotFoundError:
         pass
     # Crear un registro
-    arbol = BPT.BPTree('index_file.bin', 'data_file.bin')  # Corrección aquí
+    arbol = BPT.BPTree('BPtree_struct/index_file.bin', 'BPtree_struct/data_file.bin')  # Corrección aquí
     registro1 = BPT.Registro(codigo="C1", nombre="producto100", ciclo="01")
     registro2 = BPT.Registro(codigo="B2", nombre="producto200", ciclo="02")
     registro3 = BPT.Registro(codigo="A3", nombre="producto3000", ciclo="03")
@@ -81,7 +81,7 @@ def test_ciclo():
     except FileNotFoundError:
         pass
     # Crear un registro
-    arbol = BPT.BPTree('index_file.bin', 'data_file.bin')  # Corrección aquí
+    arbol = BPT.BPTree('BPtree_struct/index_file.bin', 'BPtree_struct/data_file.bin')  # Corrección aquí
     registro1 = BPT.Registro(codigo="C1", nombre="producto100", ciclo="01")
     registro2 = BPT.Registro(codigo="B2", nombre="producto200", ciclo="02")
     registro3 = BPT.Registro(codigo="A3", nombre="producto3000", ciclo="03")
