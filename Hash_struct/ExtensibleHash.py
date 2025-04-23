@@ -4,6 +4,11 @@ import os
 
 
 def getbits(dato, nbits):
+    """
+    toma los ultimos n bits de un dato en binario.
+    :param dato: dato a convertir
+    :param nbits: cantidad de bits a tomar
+    """
     if isinstance(dato, int): # numeros
         bits = bin(dato & (2 ** (nbits * 8) - 1))[2:]
     else:
@@ -16,15 +21,9 @@ def getbits(dato, nbits):
     return bits[-nbits:] if nbits <= len(bits) else bits.zfill(nbits)
 
 
-class Bucket:
-    def __init__(self, local_depth, fullness):
-        self.local_depth = local_depth
-
-
-
 class ExtensibleHash:
-    def __init__(self, name_index_file='index_file.bin', name_data_file='data_file.bin',
-                 global_depth = 3, max_records = 3):
+    def __init__(self, table_format, index_key, name_index_file='index_file.bin',
+                 name_data_file='data_file.bin', global_depth = 3, max_records = 3):
         self.index_file = name_index_file
         self.data_file = name_data_file
         self.global_depth = global_depth
@@ -34,6 +33,37 @@ class ExtensibleHash:
         self.BUCKET_FORMAT = 'i' * max_records + 'iii'
         self.bucket_size = struct.calcsize(self.BUCKET_FORMAT)
         self._initialize_files(global_depth, force=True)
+
+    class Bucket:
+        def __init__(self, max_records, records = None, local_depth = 1, fullness = 0, overflow_position = -1):
+            self.local_depth = local_depth
+            self.BUCKET_FORMAT = 'i' * max_records + 'iii'
+            self.bucket_size = struct.calcsize(self.BUCKET_FORMAT)
+            self.max_records = max_records
+            self.fullness = 0
+            self.overflow_position = -1
+
+            if records is not None:
+                self.records = records
+            else:
+                self.records = [0] * max_records
+
+        def to_bytes(self):
+            """
+            Convierte el registro a bytes.
+            """
+            return struct.pack(self.BUCKET_FORMAT,
+                               *(self.records * self.max_records + [self.local_depth, self.fullness, self.overflow_position])
+                               )
+
+        @classmethod
+        def from_bytes(cls, data, max_records):
+            """
+            Convierte bytes a un registro.
+            """
+            unpacked = struct.unpack('i' * max_records + 'iii', data)
+            return cls(*(max_records, unpacked[:-3], unpacked[-3], unpacked[-2], unpacked[-1]))
+
 
 
     def _initialize_files(self, global_depth, force=False):
@@ -50,7 +80,8 @@ class ExtensibleHash:
                 f.write(struct.pack(self.BUCKET_FORMAT, *([0] * self.max_records + [1,0,-1])))
                 f.write(struct.pack(self.BUCKET_FORMAT, *([0] * self.max_records + [1,0,-1])))
 
-
+    def (self):
+        pass
 
 
 
@@ -197,4 +228,9 @@ class ExtensibleHash:
 #         print("Printing buckets")
 #         self.head.print()
 
-eh = ExtensibleHash()
+
+
+table_format = {"nombre":"10s", "apellido":"20s", "edad": "i", "ciudad": "25s"}
+index_key = 2
+
+eh = ExtensibleHash(table_format, index_key)
