@@ -2,7 +2,11 @@ import pickle
 import struct
 import os
 
-# Falta implementar algun hasheo para estructuras no numericas ni strings
+from OpenGL.platform.entrypoint31 import records
+from numpy.matlib import empty
+
+
+# TODO: Falta implementar algun hasheo para estructuras no numericas ni strings
 def getbits(dato, nbits):
     """
     toma los ultimos n bits de un dato en binario.
@@ -21,9 +25,30 @@ def getbits(dato, nbits):
     return bits[-nbits:] if nbits <= len(bits) else bits.zfill(nbits)
 
 
-# Estructura temporal de registro
+def find_numbers_with_suffix(n, suffix):
+    result = []
+    for i in range(n + 1):
+        bin_rep = bin(i)[2:]
+        if bin_rep.endswith(suffix):
+            result.append(i)
+    return result
+
+# TODO: Estructura temporal de registro (formato estatico)
 class RegistroType:
+    """
+    Estructura que maneja el control de los registros.
+    RT.size = espacio en bytes
+    RT.FORMAT = formato de los registros
+    RT.to_bytes = convierte el registro a bytes
+    RT.from_bytes = convierte bytes a un registro
+    RT.get_key = obtiene el valor del indice de ordenamiento del registro
+    """
     FORMAT = '3s20s2s'
+
+    def __init__(self, key):
+        self.key_index = key
+        self.size = struct.calcsize(self.FORMAT)
+
 
     def to_bytes(self, codigo, nombre, ciclo):
         """
@@ -35,7 +60,6 @@ class RegistroType:
                            ciclo.zfill(2).encode('utf-8')
                            )
 
-    @classmethod
     def from_bytes(self, data):
         """
         Convierte bytes a un registro.
@@ -45,8 +69,46 @@ class RegistroType:
                 unpacked[1].decode('utf-8').strip('\x00'),
                 unpacked[2].decode('utf-8').strip('\x00')]
 
+    def get_key(self, lista):
+        return lista[self.key_index]
 
+class BucketType:
+    """
+    Estructura que maneja el control de los buckets.
+    BT.size = espacio en bytes
+    BT.FORMAT = formato de los buckets
+    BT.to_bytes = convierte el bucket a bytes
+    BT.from_bytes = convierte bytes a un bucket
+    BT.max_records = cantidad maxima de registros por bucket
+    """
+    def __init__(self, max_records):
+        self.FORMAT = 'i' * max_records + 'iii' # *Records, local_depth, fullness, overflow_position
+        self.size = struct.calcsize(self.FORMAT)
+        self.max_records = max_records
 
+    def to_bytes(self, bucket):
+        """
+        Convierte el diccionario bucket a bytes.
+        """
+        return struct.pack(self.FORMAT,
+                           *bucket['records'],
+                           bucket['local_depth'],
+                           bucket['fullness'],
+                           bucket['overflow_position']
+                           )
+
+    def from_bytes(self, data):
+        """
+        Convierte bytes a un diccionario bucket.
+        """
+        unpacked = struct.unpack('i' * self.max_records + 'iii', data)
+        bucket = {
+            'records': list(unpacked[0:self.max_records]),
+            'local_depth': unpacked[-3],
+            'fullness': unpacked[-2],
+            'overflow_position': unpacked[-1]
+        }
+        return bucket
 
 class ExtensibleHash:
     def __init__(self, table_format, index_key, name_index_file='index_file.bin',
@@ -55,48 +117,39 @@ class ExtensibleHash:
         self.data_file = name_data_file
         self.global_depth = global_depth
         self.max_records = max_records
-        self.header = 4
-        self.hashindex = 4 * 2**global_depth
-        self.BUCKET_FORMAT = 'i' * max_records + 'iii'
-        self.bucket_size = struct.calcsize(self.BUCKET_FORMAT)
+        self.buckets = 2
+        self.header = 2
+        self.header_size = 4 * self.header
+        self.hashindex = 2 ** global_depth
+        self.hashindex_size = 4 * self.hashindex
+
+        self.RT = RegistroType(1)
+        self.BT = BucketType(max_records)
         self._initialize_files(global_depth, force=True)
 
-    class Bucket:
-        def __init__(self, max_records, records = None, local_depth = 1, fullness = 0, overflow_position = -1):
-            self.local_depth = local_depth
-            self.BUCKET_FORMAT = 'i' * max_records + 'iii'
-            self.bucket_size = struct.calcsize(self.BUCKET_FORMAT)
-            self.max_records = max_records
-            self.fullness = 0
-            self.overflow_position = -1
 
-            if records is not None:
-                self.records = records
-            else:
-                self.records = [0] * max_records
+    def _read_header_index(self, file):
+        """
+        Lee el encabezado del archivo de índice y devuelve una tupla
+        """
+        data = file.read(self.header_size)
+        return struct.unpack('i' * self.header, data)
 
-        def to_bytes(self):
-            """
-            Convierte el bucket a bytes.
-            """
-            return struct.pack(self.BUCKET_FORMAT,
-                               *(self.records * self.max_records + [self.local_depth, self.fullness, self.overflow_position])
-                               )
-
-        @classmethod
-        def from_bytes(cls, data, max_records):
-            """
-            Convierte bytes a un bucket.
-            """
-            unpacked = struct.unpack('i' * max_records + 'iii', data)
-            return cls(*(max_records, unpacked[:-3], unpacked[-3], unpacked[-2], unpacked[-1]))
-
-
+    def _write_header_index(self, file, args):
+        """
+        Escribe en el encabezado del archivo de índice los elementos de args
+        """
+        file.seek(0)
+        file.write(struct.pack('i' * self.header, *args))
 
     def _initialize_files(self, global_depth, force=False):
+        """
+        Inicializa los archivos de índice y datos.
+        """
         if force or not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
                 f.write(struct.pack('i', global_depth))
+                f.write(struct.pack('i', 0))
                 for i in range(2 ** global_depth):
                     if i % 2 == 0:
                         f.write(struct.pack('i', 0))
@@ -104,50 +157,139 @@ class ExtensibleHash:
                         f.write(struct.pack('i', 1))
 
                 # [0,0,0...0,0,0] + [localdepth, fullness, overflowPosition]
-                f.write(struct.pack(self.BUCKET_FORMAT, *([0] * self.max_records + [1,0,-1])))
-                f.write(struct.pack(self.BUCKET_FORMAT, *([0] * self.max_records + [1,0,-1])))
+                f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
+                f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
 
+        if force or not os.path.exists(self.data_file):
+            with open(self.data_file, 'wb') as f:
+                f.write(struct.pack('i', 0))
 
+    def _write_record(self, data_file, position, record):
+        """
+        Escribe un registro en una posicion del archivo de datos
+        """
+        offset = position * self.RT.size
+        data_file.seek(offset)
+        data_file.write(self.RT.to_bytes(*record))
+
+    def _insert_value_in_bucket(self, index_file, bucket_position, register_position):
+        """
+        Inserta al bucket la referencia a la posicion de un registro
+        """
+        index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
+        bucket = self.BT.from_bytes(index_file.read(self.BT.size))
+
+        # Si el bucket no esta lleno, se agrega el registro
+        if bucket['fullness'] < self.max_records:
+            bucket['records'][bucket['fullness']] = register_position
+            bucket['fullness'] += 1
+            index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
+            index_file.write(self.BT.to_bytes(bucket))
+        else:
+            return False
+
+        return True
 
     def insert(self, record):
         """
-        Inserta un registro en el hash extensible.
+        Inserta un registro en datafile y su puntero en el hash extensible.
         :param record: registro a insertar
         :return: True si se inserto, False si no se pudo insertar
         """
-        # Obtener el hash del registro
-        hash = getbits(record, self.global_depth)
+        # bucket_index_position = posicion del puntero al bucket
+        index_hash = getbits(self.RT.get_key(record), self.global_depth)
+        bucket_index_position = int(index_hash, 2)
 
-        # Obtener la posicion del bucket
-        bucket_position = int(hash, 2)
+        with open(self.index_file, 'r+b') as index_file, open(self.data_file, 'r+b') as data_file:
+            register_position = self._append_record(index_file, data_file, record)
+            self._add_to_hash(index_file, data_file, bucket_index_position, register_position, index_hash)
 
-        # Leer el bucket correspondiente
-        with open(self.index_file, 'r+b') as f:
-            f.seek(self.header + self.hashindex + (bucket_position * self.bucket_size))
-            bucket_data = f.read(self.bucket_size)
-            bucket = self.Bucket.from_bytes(bucket_data, self.max_records)
-
-            # Si el bucket esta lleno, hay que hacer un split
-            if bucket.fullness == self.max_records:
-                # Hacer un split
-                pass
-
-            else:
-                # Insertar el registro en el bucket
-                pass
+    def insert_with_position(self, index_file, data_file, record, register_position):
+        """
+                Inserta un registro en el hash extensible (sabiendo su posicion en el datafile).
+                :param record: registro a insertar
+                :return: True si se inserto, False si no se pudo insertar
+                """
+        # bucket_index_position = posicion del puntero al bucket
+        index_hash = getbits(self.RT.get_key(record), self.global_depth)
+        bucket_index_position = int(index_hash, 2)
+        self._add_to_hash(index_file, data_file, bucket_index_position, register_position, index_hash)
 
 
+    def _add_to_hash(self, index_file, data_file, bucket_index_position, register_position, index_hash):
+        index_file.seek(self.header_size + bucket_index_position * 4)
+        bucket_position = struct.unpack('i', index_file.read(4))[0]
+        inserted = self._insert_value_in_bucket(index_file, bucket_position, register_position)
+        if (not inserted):
+            print("No se pudo insertar")
+            index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
+            old_bucket = self.BT.from_bytes(index_file.read(self.BT.size))
+            # crear nuevos buckets
+            bucket1_pos = bucket_position
+            bucket2_pos = self.buckets
+            self.buckets += 1
+            emptyBucket = {'records': [-1, -1, -1],
+                           'local_depth': old_bucket['local_depth'] + 1,
+                           'fullness': 0,
+                           'overflow_position': -1}
+            index_file.seek(self.header_size + self.hashindex_size + bucket1_pos * self.BT.size)
+            index_file.write(self.BT.to_bytes(emptyBucket))
+            index_file.seek(self.header_size + self.hashindex_size + bucket2_pos * self.BT.size)
+            index_file.write(self.BT.to_bytes(emptyBucket))
+
+            # actualizar punteros
+            current_pattern = index_hash[-old_bucket['local_depth']:]
+
+            for i in find_numbers_with_suffix(2**self.global_depth, '0' + current_pattern):
+                index_file.seek(self.header_size + i * 4)
+                index_file.write(struct.pack('i', bucket1_pos))
+            for i in find_numbers_with_suffix(2**self.global_depth, '1' + current_pattern):
+                index_file.seek(self.header_size + i * 4)
+                index_file.write(struct.pack('i', bucket2_pos))
+
+            # reinsertar elementos
+            for i in range(old_bucket['fullness']):
+                data_file.seek(old_bucket['records'][i] * self.RT.size)
+                registro = self.RT.from_bytes(data_file.read(self.RT.size))
+                self.insert_with_position(index_file, data_file, registro, old_bucket['records'][i])
+
+            # reinserta el nuevo registro
+            data_file.seek(register_position * self.RT.size)
+            registro = self.RT.from_bytes(data_file.read(self.RT.size))
+            self.insert_with_position(index_file, data_file, registro, register_position)
 
 
 
 
+    def _append_record(self, index_file, data_file, record):
+        _, size = self._read_header_index(index_file)
+        pos = size
+        self._write_record(data_file, pos, record)
+        size += 1
+        self._write_header_index(index_file, [self.global_depth, size])
+        return pos
+
+    def imprimir(self):
+        """
+        Imprime todos los buckets y sus registros.
+        """
+        with open(self.index_file, 'rb') as index_file, open(self.data_file, 'rb') as data_file:
+            index_file.seek(0)
+            global_depth = struct.unpack('i', index_file.read(4))[0]
+            print(f"Global depth: {global_depth}")
+            index_file.seek(4)
+            size = struct.unpack('i', index_file.read(4))[0]
+            print(f"Size: {size}")
+
+            # Iterar buckets
+            for i in range(self.buckets):
+                index_file.seek(self.header_size + self.hashindex_size + i * self.BT.size)
+                bucket = self.BT.from_bytes(index_file.read(self.BT.size))
+                print(f"Bucket {i}: {bucket['records']}, fullness: {bucket['fullness']}, local depth: {bucket['local_depth']}")
 
 
 
-# def posbucket (x):
-#     b = bin(x % 2 ** MAX_D)[2:]
-#     return b.zfill(MAX_D)
-#
+
 # class Bucket:
 #     def __init__(self, splitable=True):
 #         self.records = []
@@ -283,19 +425,26 @@ class ExtensibleHash:
 
 
 
-
-rt = RegistroType()
-b = rt.to_bytes("001", "Juan Perez", "01")
-print(rt.from_bytes(b))
-
-print(rt.FORMAT)
-
-
-
+#
+# rt = RegistroType(1)
+# b = rt.to_bytes("001", "Juan Perez", "01")
+# print(rt.from_bytes(b))
+#
+# print(rt.FORMAT)
+#
+# bt = BucketType(5)
+# b = bt.to_bytes([1,2], 1, 2, 3)
+# print(bt.from_bytes(b))
 
 
 
 table_format = {"nombre":"10s", "apellido":"20s", "edad": "i", "ciudad": "25s"}
 index_key = 2
-
 eh = ExtensibleHash(table_format, index_key)
+
+eh.insert(["033", "g", "02"])
+eh.insert(["001", "a", "01"])
+eh.insert(["023", "e", "05"])
+eh.insert(["033", "c", "02"])
+
+eh.imprimir()
