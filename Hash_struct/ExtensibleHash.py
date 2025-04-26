@@ -2,7 +2,7 @@ import pickle
 import struct
 import os
 
-
+# Falta implementar algun hasheo para estructuras no numericas ni strings
 def getbits(dato, nbits):
     """
     toma los ultimos n bits de un dato en binario.
@@ -19,6 +19,33 @@ def getbits(dato, nbits):
 
         bits = ''.join(f'{byte:08b}' for byte in dato_bytes)
     return bits[-nbits:] if nbits <= len(bits) else bits.zfill(nbits)
+
+
+# Estructura temporal de registro
+class RegistroType:
+    FORMAT = '3s20s2s'
+
+    def to_bytes(self, codigo, nombre, ciclo):
+        """
+        Convierte el registro a bytes.
+        """
+        return struct.pack(self.FORMAT,
+                           codigo.encode('utf-8').ljust(3, b'\x00'),
+                           nombre.encode('utf-8').ljust(20, b'\x00'),
+                           ciclo.zfill(2).encode('utf-8')
+                           )
+
+    @classmethod
+    def from_bytes(self, data):
+        """
+        Convierte bytes a un registro.
+        """
+        unpacked = struct.unpack(self.FORMAT, data)
+        return [unpacked[0].decode('utf-8').strip('\x00'),
+                unpacked[1].decode('utf-8').strip('\x00'),
+                unpacked[2].decode('utf-8').strip('\x00')]
+
+
 
 
 class ExtensibleHash:
@@ -50,7 +77,7 @@ class ExtensibleHash:
 
         def to_bytes(self):
             """
-            Convierte el registro a bytes.
+            Convierte el bucket a bytes.
             """
             return struct.pack(self.BUCKET_FORMAT,
                                *(self.records * self.max_records + [self.local_depth, self.fullness, self.overflow_position])
@@ -59,7 +86,7 @@ class ExtensibleHash:
         @classmethod
         def from_bytes(cls, data, max_records):
             """
-            Convierte bytes a un registro.
+            Convierte bytes a un bucket.
             """
             unpacked = struct.unpack('i' * max_records + 'iii', data)
             return cls(*(max_records, unpacked[:-3], unpacked[-3], unpacked[-2], unpacked[-1]))
@@ -80,8 +107,34 @@ class ExtensibleHash:
                 f.write(struct.pack(self.BUCKET_FORMAT, *([0] * self.max_records + [1,0,-1])))
                 f.write(struct.pack(self.BUCKET_FORMAT, *([0] * self.max_records + [1,0,-1])))
 
-    def (self):
-        pass
+
+
+    def insert(self, record):
+        """
+        Inserta un registro en el hash extensible.
+        :param record: registro a insertar
+        :return: True si se inserto, False si no se pudo insertar
+        """
+        # Obtener el hash del registro
+        hash = getbits(record, self.global_depth)
+
+        # Obtener la posicion del bucket
+        bucket_position = int(hash, 2)
+
+        # Leer el bucket correspondiente
+        with open(self.index_file, 'r+b') as f:
+            f.seek(self.header + self.hashindex + (bucket_position * self.bucket_size))
+            bucket_data = f.read(self.bucket_size)
+            bucket = self.Bucket.from_bytes(bucket_data, self.max_records)
+
+            # Si el bucket esta lleno, hay que hacer un split
+            if bucket.fullness == self.max_records:
+                # Hacer un split
+                pass
+
+            else:
+                # Insertar el registro en el bucket
+                pass
 
 
 
@@ -227,6 +280,18 @@ class ExtensibleHash:
 #     def print(self):
 #         print("Printing buckets")
 #         self.head.print()
+
+
+
+
+rt = RegistroType()
+b = rt.to_bytes("001", "Juan Perez", "01")
+print(rt.from_bytes(b))
+
+print(rt.FORMAT)
+
+
+
 
 
 
