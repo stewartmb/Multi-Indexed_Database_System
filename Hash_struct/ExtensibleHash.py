@@ -1,4 +1,5 @@
 import pickle
+import random
 import struct
 import os
 
@@ -138,7 +139,6 @@ class ExtensibleHash:
         self.BT = BucketType(max_records)
         self._initialize_files(global_depth, force=True)
 
-
     def _read_header_index(self, file, index):
         """
         Lee el encabezado del archivo de índice y devuelve una tupla
@@ -199,8 +199,23 @@ class ExtensibleHash:
             index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
             index_file.write(self.BT.to_bytes(bucket))
         else:
-            return False
+            if bucket['local_depth'] != self.global_depth:
+                return False
+            if bucket['overflow_position'] == -1:
+                print("creando overflow")
+                overflow_pos = self._read_header_index(index_file, 2)
+                self._write_header_index(index_file, overflow_pos + 1, 2)
+                bucket['overflow_position'] = overflow_pos
+                emptyBucket = {'records': [-1, -1, -1],
+                               'local_depth': 3,
+                               'fullness': 0,
+                               'overflow_position': -1}
+                index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
+                index_file.write(self.BT.to_bytes(bucket))
+                index_file.seek(self.header_size + self.hashindex_size + overflow_pos * self.BT.size)
+                index_file.write(self.BT.to_bytes(emptyBucket))
 
+            self._insert_value_in_bucket(index_file, bucket['overflow_position'], register_position)
         return True
 
     def insert(self, record):
@@ -234,7 +249,7 @@ class ExtensibleHash:
         bucket_position = struct.unpack('i', index_file.read(4))[0]
         inserted = self._insert_value_in_bucket(index_file, bucket_position, register_position)
         if (not inserted):
-            print("No se pudo insertar")
+            print(f"No se pudo insertar { register_position} en el bucket {bucket_position}, se necesita dividir el bucket")
             index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
             old_bucket = self.BT.from_bytes(index_file.read(self.BT.size))
             # crear nuevos buckets
@@ -272,8 +287,6 @@ class ExtensibleHash:
             self.insert_with_position(index_file, data_file, registro, register_position)
 
 
-
-
     def _append_record(self, index_file, data_file, record):
         size = self._read_header_index(index_file, 1)
         pos = size
@@ -306,160 +319,16 @@ class ExtensibleHash:
 
 
 
-
-# class Bucket:
-#     def __init__(self, splitable=True):
-#         self.records = []
-#         self.full = 0
-#         self.overflow = None
-#         self.splitable = splitable
-#
-#     def insert(self, record):
-#         if self.full < MAX_RECORDS:
-#             self.records.append(record)
-#             self.full += 1
-#             return True
-#         else:
-#             if self.splitable:
-#                 return False
-#             else:
-#                 if self.overflow is None:
-#                     self.overflow = Bucket(splitable=False)
-#                 self.overflow.insert(record)
-#                 return True
-#
-#     def search(self, record):
-#         if record in self.records:
-#             return True
-#         elif self.overflow is not None:
-#             return self.overflow.search(record)
-#         else:
-#             return False
-#
-#     def delete(self, record):
-#         if record in self.records:
-#             self.records.remove(record)
-#             self.full -= 1
-#             return True
-#         elif self.overflow is not None:
-#             return self.overflow.delete(record)
-#         else:
-#             return False
-#
-# class Node:
-#     def __init__(self, bucket, level):
-#         self.bucket = bucket
-#         self.zero = None
-#         self.one = None
-#         self.level = level
-#
-#     def split(self):
-#         self.bucket = None
-#         if self.level == 1:
-#             print("Splitting bucket")
-#             self.zero = Node(Bucket(splitable=False), self.level - 1)
-#             self.one = Node(Bucket(splitable=False), self.level - 1)
-#         else:
-#             self.zero = Node(Bucket(), self.level - 1)
-#             self.one = Node(Bucket(), self.level - 1)
-#
-#     def insert(self, record, hash):
-#         if self.bucket is None:
-#             if hash[MAX_D - self.level] == "0":
-#                 return self.zero.insert(record, hash)
-#             else:
-#                 return self.one.insert(record, hash)
-#         else:
-#             if self.bucket.insert(record):
-#                 return True
-#             else:
-#                 records = self.bucket.records
-#                 records.append(record)
-#                 self.split()
-#                 for r in records:
-#                     hash = posbucket(r)
-#                     if hash[MAX_D - self.level] == "0":
-#                         self.zero.insert(r, hash)
-#                     else:
-#                         self.one.insert(r, hash)
-#
-#
-#     def print(self, prefix=""):
-#         if self.bucket is not None:
-#             print(f"Bucket ({prefix}):", self.bucket.records)
-#             current = self.bucket
-#             while current.overflow is not None:
-#                 current = current.overflow
-#                 print(f"  Overflow ({prefix}):", current.records)
-#         else:
-#             self.zero.print(prefix + "0")
-#             self.one.print(prefix + "1")
-#
-#     def search(self, record, hash):
-#         if self.bucket is not None:
-#             return self.bucket.search(record)
-#         else:
-#             if hash[MAX_D - self.level] == "0":
-#                 return self.zero.search(record, hash)
-#             else:
-#                 return self.one.search(record, hash)
-#
-#     def delete(self, record, hash):
-#         if self.bucket is not None:
-#             if self.bucket.records.remove(record):
-#                 self.bucket.full -= 1
-#                 if self.bucket.full == 0:
-#                     self.bucket = None
-#                 return True
-#
-#         else:
-#             if hash[MAX_D - self.level] == "0":
-#                 return self.zero.delete(record, hash)
-#             else:
-#                 return self.one.delete(record, hash)
-#
-# class ExtensibleHash:
-#     def __init__(self):
-#         self.head = Node(Bucket(), MAX_D)
-#         self.head.split()
-#
-#     def insert(self, record):
-#         hash = posbucket(record)
-#         if self.head.insert(record, hash):
-#             return True
-#
-#     def search(self, record):
-#         hash = posbucket(record)
-#         return self.head.search(record, hash)
-#
-#     def delete(self, record):
-#         hash = posbucket(record)
-#         return self.head.delete(record, hash)
-#
-#     def print(self):
-#         print("Printing buckets")
-#         self.head.print()
-
-
-
-#
-# rt = RegistroType(1)
-# b = rt.to_bytes("001", "Juan Perez", "01")
-# print(rt.from_bytes(b))
-#
-# print(rt.FORMAT)
-#
-# bt = BucketType(5)
-# b = bt.to_bytes([1,2], 1, 2, 3)
-# print(bt.from_bytes(b))
-
-
-
 table_format = {"nombre":"10s", "edad": "i", "ciudad": "25s"}
 index_key = 1
 eh = ExtensibleHash(table_format, index_key)
 
 print(''.join(table_format.values()))
+
+nums = random.sample(range(100), 100)
+
+for i in nums:
+    eh.insert(["Juan", i, "Perez"])
 
 
 while True:
