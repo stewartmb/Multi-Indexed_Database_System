@@ -139,17 +139,17 @@ class ExtensibleHash:
         self.BT = BucketType(max_records)
         self._initialize_files(global_depth, force=True)
 
-    def _read_header_index(self, file, index):
+    def _read_header_variable(self, file, index):
         """
-        Lee el encabezado del archivo de índice y devuelve una tupla
+        Lee el encabezado del archivo de índice
         """
         file.seek(4 * index)
         data = file.read(4)
         return struct.unpack('i', data)[0]
 
-    def _write_header_index(self, file, value, index):
+    def _write_header_variable(self, file, value, index):
         """
-        Escribe en el encabezado del archivo de índice los elementos de args
+        Escribe en el encabezado del archivo de índice
         """
         file.seek(4 * index)
         file.write(struct.pack('i', value))
@@ -203,8 +203,8 @@ class ExtensibleHash:
                 return False
             if bucket['overflow_position'] == -1:
                 print("creando overflow")
-                overflow_pos = self._read_header_index(index_file, 2)
-                self._write_header_index(index_file, overflow_pos + 1, 2)
+                overflow_pos = self._read_header_variable(index_file, 2)
+                self._write_header_variable(index_file, overflow_pos + 1, 2)
                 bucket['overflow_position'] = overflow_pos
                 emptyBucket = {'records': [-1, -1, -1],
                                'local_depth': 3,
@@ -254,8 +254,8 @@ class ExtensibleHash:
             old_bucket = self.BT.from_bytes(index_file.read(self.BT.size))
             # crear nuevos buckets
             bucket1_pos = bucket_position
-            bucket2_pos = self._read_header_index(index_file,2)
-            self._write_header_index(index_file, bucket2_pos + 1, 2)
+            bucket2_pos = self._read_header_variable(index_file, 2)
+            self._write_header_variable(index_file, bucket2_pos + 1, 2)
             emptyBucket = {'records': [-1, -1, -1],
                            'local_depth': old_bucket['local_depth'] + 1,
                            'fullness': 0,
@@ -288,11 +288,39 @@ class ExtensibleHash:
 
 
     def _append_record(self, index_file, data_file, record):
-        size = self._read_header_index(index_file, 1)
+        size = self._read_header_variable(index_file, 1)
         pos = size
         self._write_record(data_file, size, record)
-        self._write_header_index(index_file, size + 1, 1)
+        self._write_header_variable(index_file, size + 1, 1)
         return pos
+
+    def search(self, key):
+        """
+        Busca un registro en el hash extensible.
+        :return: True si se encontro, False si no se encontro
+        """
+        index_hash = getbits(key, self.global_depth)
+        bucket_index_position = int(index_hash, 2)
+
+        with open(self.index_file, 'r+b') as index_file, open(self.data_file, 'r+b') as data_file:
+            index_file.seek(self.header_size + bucket_index_position * 4)
+            bucket_position = struct.unpack('i', index_file.read(4))[0]
+            index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
+            bucket = self.BT.from_bytes(index_file.read(self.BT.size))
+            # Iterar registros
+            goto_overflow = True
+            while goto_overflow:
+                for i in range(bucket['fullness']):
+                    data_file.seek(bucket['records'][i] * self.RT.size)
+                    registro = self.RT.from_bytes(data_file.read(self.RT.size))
+                    if self.RT.get_key(registro) == key:
+                        return registro
+                if bucket['overflow_position'] != -1:
+                    bucket_position = bucket['overflow_position']
+                    index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
+                    bucket = self.BT.from_bytes(index_file.read(self.BT.size))
+                else:
+                    goto_overflow = False
 
     def imprimir(self):
         """
@@ -306,36 +334,39 @@ class ExtensibleHash:
             size = struct.unpack('i', index_file.read(4))[0]
             print(f"Size: {size}")
 
-            # Iterar buckets
-            for i in range(self._read_header_index(index_file, 2)):
-                index_file.seek(self.header_size + self.hashindex_size + i * self.BT.size)
+            printed = []
+            for i in range(self.hashindex):
+                index_file.seek(self.header_size + i * 4)
+                bucket_position = struct.unpack('i', index_file.read(4))[0]
+                index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
                 bucket = self.BT.from_bytes(index_file.read(self.BT.size))
-                print(f"Bucket {i}: {bucket['records']}, fullness: {bucket['fullness']}, local depth: {bucket['local_depth']}")
-                # Iterar registros
-                for j in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][j] * self.RT.size)
-                    registro = self.RT.from_bytes(data_file.read(self.RT.size))
-                    print(f"Registro {j}: {registro}")
+                if bucket_position in printed:
+                    continue
+                print(f"Bucket {bin(i)[2:].rjust(bucket['local_depth'],'0')}:")
+                print(bucket)
+                printed.append(bucket_position)
 
 
 
-table_format = {"nombre":"10s", "edad": "i", "ciudad": "25s"}
+
+table_format = {"nombre":"10s", "edad": "i"}
 index_key = 1
 eh = ExtensibleHash(table_format, index_key)
 
 print(''.join(table_format.values()))
 
-nums = random.sample(range(100), 100)
-
-for i in nums:
-    eh.insert(["Juan", i, "Perez"])
+# nums = random.sample(range(100), 100)
+#
+# for i in nums:
+#     eh.insert(["Juan", i])
 
 
 while True:
     print("\nSeleccione una opción:")
     print("1. Insertar elementos")
     print("2. Imprimir elementos")
-    print("3. Salir")
+    print("3. Buscar elemento")
+    print("4. Salir")
 
     choice = input("Ingrese su opción: ")
 
@@ -348,6 +379,14 @@ while True:
         # Imprimir elementos
         eh.imprimir()
     elif choice == '3':
+        # Buscar elemento
+        key = int(input("Ingrese la clave a buscar: "))
+        result = eh.search(key)
+        if result:
+            print(f"Elemento encontrado: {result}")
+        else:
+            print("Elemento no encontrado.")
+    elif choice == '4':
         # Salir del programa
         print("¡Adiós!")
         break
