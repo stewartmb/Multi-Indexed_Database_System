@@ -1,0 +1,9 @@
+Insert(isam I, record):
+
+Search(isam I, record):
+
+Range_Search(isam I, double min, double max):
+
+Delete(isam I, record):
+
+
