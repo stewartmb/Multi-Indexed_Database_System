@@ -395,15 +395,41 @@ class BPTree:
         page.key_count += 1
         return page
 
-
-    def child_insert(self, page , pos_page ,index):
+    def split(self, pos_page , key, pos_record):
         """
-        Inserta un puntero a la página hija en la posición index.
+        Divide una página llena en dos páginas.
         """
+        page = self._read_index_page(pos_page)
+        index = self.find_index(page, key)
+        temp_keys = page.keys[:]
+        temp_childrens = page.childrens[:]
+        # Desplaza las claves y punteros a la derecha para hacer espacio
         for i in range(page.key_count, index, -1):
-            page.childrens[i] = page.childrens[i - 1]
-        page.childrens[index] = pos_page
-        return page
+            temp_keys[i] = temp_keys[i - 1]
+            temp_childrens[i] = temp_childrens[i - 1]
+        temp_keys[index] = key
+        temp_childrens[index] = pos_record
+        # Divide la página en dos
+        header = self._read_header_index()
+        pos_new_page = header[0]  # posición de la nueva página
+        new_page = IndexPage(leaf=page.leaf)  # Crea una nueva página de índic
+        # Asigna las claves y punteros a la nueva página
+        mid_index = (M - 1) // 2
+        new_page.keys[:mid_index] = temp_keys[mid_index + 1:]
+        new_page.childrens[:mid_index] = temp_childrens[mid_index + 1:]
+        new_page.key_count = mid_index
+        # Actualiza la página original
+        pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
+        page.keys = temp_keys[:mid_index + 1]
+        page.childrens = temp_childrens[:mid_index + 1]
+        page.key_count = mid_index + 1
+        # Actualiza el puntero al siguiente nodo
+        new_page.childrens[M-1] = pos_next_page
+        page.childrens[M-1] = pos_new_page
+        # Escribe las páginas actualizadas en el archivo
+        self._write_index_page(pos_page, page)
+        self._add_index_page(new_page)  # Agrega la nueva página al archivo de índice
+        return new_page.keys[0]  # Devuelve la clave que se sube al padre
     
     def add(self, record):
         """
@@ -420,7 +446,7 @@ class BPTree:
         # Le el encabezado del archivo de índice
         header = self._read_header_index()
         root = header[1] # posición de la raíz
-        n_pages = header[0] # cantidad de páginas
+        pos_new_index = header[0] # cantidad de páginas
         
         ## CASO 1: El árbol está vacío ##
         if root == -2 or root == -1:
@@ -430,14 +456,15 @@ class BPTree:
             new_page.childrens[0] = pos_new_record
             new_page.key_count = 1
             self._add_index_page(new_page) # Se agrega la nueva página al index_file.bin
-            self._update_root(n_pages) # Se actualiza la raíz del árbol
+            self._update_root(pos_new_index) # Se actualiza la raíz del árbol
             return
         
         ## CASO 2: El árbol no está vacío ##
-
-        ### CASO 2.1: La raíz no está llena ###
         pos_leaf = self.search_leaf(key) # Busca la posición de la hoja donde se debe insertar el registro
+        
+        ### CASO 2.1: La raíz no está llena ###
         leaf_page = self._read_index_page(pos_leaf) # Lee la página
+        
         if leaf_page.key_count < M - 1: # Si la página tiene espacio
             # Inserta la clave y el puntero al registro
             new_leaf_page = self.key_insert(leaf_page, key, pos_new_record)
@@ -445,9 +472,7 @@ class BPTree:
             return
         ### CASO 2.2: La raíz está llena ###
         else:
-            self
-        
-
+            key_up = self.split(pos_leaf, key, pos_new_record) # Divide la página llena
 
 
 
