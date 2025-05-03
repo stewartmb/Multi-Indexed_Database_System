@@ -3,11 +3,7 @@ import struct
 import os
 import random
 
-from PIL.ImageChops import offset
-
-
-# TODO: Falta implementar algun hasheo para estructuras no numericas ni strings
-def getbits(dato, nbits):
+def get_bits(dato: any, nbits: int) -> str:
     """
     toma los ultimos n bits de un dato en binario.
     :param dato: dato a convertir
@@ -15,6 +11,9 @@ def getbits(dato, nbits):
     """
     if isinstance(dato, int): # numeros
         bits = bin(dato & (2 ** (nbits * 8) - 1))[2:]
+    elif isinstance(dato, float): # float
+        dato_bytes = struct.pack('d', dato) # TODO: hashear mas uniformemente
+        bits = ''.join(f'{byte:08b}' for byte in dato_bytes)
     else:
         if isinstance(dato, str): # texto
             dato_bytes = dato.encode('utf-8')
@@ -23,14 +22,6 @@ def getbits(dato, nbits):
 
         bits = ''.join(f'{byte:08b}' for byte in dato_bytes)
     return bits[-nbits:] if nbits <= len(bits) else bits.zfill(nbits)
-
-def find_numbers_with_suffix(n, suffix):
-    result = []
-    for i in range(n + 1):
-        bin_rep = bin(i)[2:]
-        if bin_rep.endswith(suffix):
-            result.append(i)
-    return result
 
 class RegistroType:
     """
@@ -42,14 +33,14 @@ class RegistroType:
     from_bytes = convierte bytes a un registro
     get_key = obtiene el valor del indice de ordenamiento del registro
     """
-    def __init__(self, dict_format, keyIndex):
+    def __init__(self, dict_format, key_index: int):
         self.dict_format = dict_format
-        self.keyIndex = keyIndex
-        self.key = list(dict_format.keys())[keyIndex]
+        self.keyIndex = key_index
+        self.key = list(dict_format.keys())[key_index]
         self.FORMAT = ''.join(dict_format.values())
         self.size = struct.calcsize(self.FORMAT)
 
-    def to_bytes(self, args):
+    def to_bytes(self, args: list) -> bytes:
         """
         Convierte el registro a bytes.
         """
@@ -59,12 +50,14 @@ class RegistroType:
                 args[i] = int(args[i])
             elif types[i] == 'f':
                 args[i] = float(args[i])
+            elif types[i] == 'd':
+                args[i] = float(args[i])
             else:
                 args[i] = args[i].encode('utf-8').ljust(20, b'\x00')
 
         return struct.pack(self.FORMAT, *args)
 
-    def from_bytes(self, data):
+    def from_bytes(self, data: bytes) -> list:
         """
         Convierte bytes a un registro.
         """
@@ -75,12 +68,14 @@ class RegistroType:
                 unpacked[i] = int(unpacked[i])
             elif types[i] == 'f':
                 unpacked[i] = float(unpacked[i])
+            elif types[i] == 'd':
+                unpacked[i] = float(unpacked[i])
             else:
                 unpacked[i] = unpacked[i].decode('utf-8').strip('\x00')
 
         return unpacked
 
-    def get_key(self, lista):
+    def get_key(self, lista: list) -> any:
         return lista[self.keyIndex]
 
 class BucketType:
@@ -92,12 +87,12 @@ class BucketType:
     BT.from_bytes = convierte bytes a un bucket
     BT.max_records = cantidad maxima de registros por bucket
     """
-    def __init__(self, max_records):
+    def __init__(self, max_records: int):
         self.FORMAT = 'i' * max_records + 'iii' # *Records, local_depth, fullness, overflow_position
         self.size = struct.calcsize(self.FORMAT)
         self.max_records = max_records
 
-    def to_bytes(self, bucket):
+    def to_bytes(self, bucket: dict) -> bytes:
         """
         Convierte el diccionario bucket a bytes.
         """
@@ -108,7 +103,7 @@ class BucketType:
                            bucket['overflow_position']
                            )
 
-    def from_bytes(self, data):
+    def from_bytes(self, data: bytes) -> dict:
         """
         Convierte bytes a un diccionario bucket.
         """
@@ -130,7 +125,7 @@ class TreeNodeType:
         self.size = struct.calcsize(self.FORMAT)
 
 
-    def to_bytes(self, treeNode):
+    def to_bytes(self, treeNode: dict) -> bytes:
         """
         Convierte el nodo a bytes.
         """
@@ -141,7 +136,7 @@ class TreeNodeType:
                             treeNode['depth']
                            )
 
-    def from_bytes(self, data):
+    def from_bytes(self, data: bytes) -> dict:
         """
         Convierte bytes a un nodo.
         """
@@ -163,7 +158,7 @@ class HeaderType:
         self.FORMAT = 'iiii'
         self.size = struct.calcsize(self.FORMAT)
 
-    def read(self, file, index):
+    def read(self, file, index: int) -> int:
         """
         Lee el encabezado del archivo de índice
         """
@@ -171,29 +166,40 @@ class HeaderType:
         data = file.read(4)
         return struct.unpack('i', data)[0]
 
-    def write(self, file, value, index):
+    def write(self, file, value: int, index: int) -> None:
         """
         Escribe en el encabezado del archivo de índice
         """
         file.seek(4 * index)
         file.write(struct.pack('i', value))
 
+
 class ExtensibleHash:
-    def __init__(self, table_format, index_key,
-                 buckets_file_name='hash_buckets.bin',
-                 index_file_name='hash_index.bin',
-                 data_file_name='data_file.bin',
-                 global_depth=3,
-                 max_records=3):
+    def __init__(self, table_format, index_key: int,
+                 buckets_file_name: str = 'hash_buckets.bin',
+                 index_file_name: str = 'hash_index.bin',
+                 data_file_name: str = 'data_file.bin',
+                 global_depth: int = 3,
+                 max_records_per_bucket: int = 3):
+        """
+        Inicializa el hash extensible.
+        :param table_format: formato de la tabla
+        :param index_key: indice de ordenamiento
+        :param buckets_file_name: nombre del archivo de buckets
+        :param index_file_name: nombre del archivo de índice
+        :param data_file_name: nombre del archivo de datos
+        :param global_depth: profundidad global
+        :param max_records_per_bucket: cantidad maxima de registros por bucket
+        """
         self.index_file = index_file_name
         self.buckets_file = buckets_file_name
         self.data_file = data_file_name
         self.global_depth = global_depth
-        self.max_records = max_records
+        self.max_records = max_records_per_bucket
 
         self.NT = TreeNodeType()
         self.RT = RegistroType(table_format, index_key)
-        self.BT = BucketType(max_records)
+        self.BT = BucketType(max_records_per_bucket)
         self.Header = HeaderType()
         self._initialize_files(global_depth, force=True)
 
@@ -334,7 +340,7 @@ class ExtensibleHash:
         """
         Funcion para reinsertar recursivamente los registros que se dividieron
         """
-        index_hash = getbits(self.RT.get_key(record), self.global_depth)
+        index_hash = get_bits(self.RT.get_key(record), self.global_depth)
         self._add_to_hash(buckets_file, index_file, data_file, data_position, index_hash)
 
 
@@ -351,7 +357,7 @@ class ExtensibleHash:
             if data_position is None:
                 data_position = self._append_record(index_file, data_file, record)
 
-            index_hash = getbits(self.RT.get_key(record), self.global_depth)
+            index_hash = get_bits(self.RT.get_key(record), self.global_depth)
             self._add_to_hash(buckets_file, index_file, data_file, data_position, index_hash)
 
 
@@ -406,10 +412,17 @@ class ExtensibleHash:
         :param key: clave a buscar
         :return: registro encontrado o None si no se encuentra
         """
+        if self.RT.dict_format[self.RT.key] == 'i':
+            key = int(key)
+        elif self.RT.dict_format[self.RT.key] == 'f':
+            key = float(key)
+        elif self.RT.dict_format[self.RT.key] == 'd':
+            key = float(key)
+
         with open(self.index_file, 'r+b') as index_file, \
                 open(self.data_file, 'r+b') as data_file, \
                 open(self.buckets_file, 'r+b') as buckets_file:
-            index_hash = getbits(key, self.global_depth)
+            index_hash = get_bits(key, self.global_depth)
             index_file.seek(self.Header.size)
             root = self.NT.from_bytes(index_file.read(self.NT.size))
             if index_hash[-1] == '0':
@@ -431,32 +444,42 @@ class ExtensibleHash:
         else:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            for i in range(bucket['fullness']):
-                data_file.seek(bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
-                if self.RT.get_key(record) == key:
-                    return record
+            self._find_in_bucket(data_file, bucket, key)
+            ans = self._find_in_bucket(data_file, bucket, key)
+            if ans is not None:
+                return ans
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                for i in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][i] * self.RT.size)
-                    record = self.RT.from_bytes(data_file.read(self.RT.size))
-                    if self.RT.get_key(record) == key:
-                        return record
+                ans = self._find_in_bucket(data_file, bucket, key)
+                if ans is not None:
+                    return ans
                 overflow_position = bucket['overflow_position']
+        return None
+
+    def _find_in_bucket(self, data_file, bucket, key):
+        """
+        Busca un registro en un bucket.
+        """
+        for i in range(bucket['fullness']):
+            data_file.seek(bucket['records'][i] * self.RT.size)
+            record = self.RT.from_bytes(data_file.read(self.RT.size))
+            if self.RT.get_key(record) == key:
+                return record
 
 
-
-
-table_format = {"nombre":"10s", "edad": "i"}
+table_format = {"nombre":"10s", "edad": "d"}
 index_key = 1
 eh = ExtensibleHash(table_format, index_key)
 
 print(''.join(table_format.values()))
 
 nums = random.sample(range(100,1000), 200)
+nums = [1,2,3,4,5,6,7,8]
+
+for i in range(len(nums)):
+    nums[i] = nums[i] + random.random()
 
 placed = nums[0:100]
 not_placed = nums[100:200]
@@ -472,8 +495,8 @@ test_passed = True
 try:
     for i in placed:
         eh.insert([f"data_{i}", i])
-except:
-    print("Error al insertar")
+except Exception as e:
+    print(f"Error al insertar: {e}")
     test_passed = False
 
 if test_passed:
@@ -512,7 +535,7 @@ while True:
         eh.imprimir()
     elif choice == '3':
         # Buscar elemento
-        key = int(input("Ingrese la clave a buscar: "))
+        key = input("Ingrese la clave a buscar: ")
         result = eh.search(key)
         if result:
             print(f"Elemento encontrado: {result}")

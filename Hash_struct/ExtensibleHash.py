@@ -1,5 +1,4 @@
 import pickle
-import random
 import struct
 import os
 
@@ -346,7 +345,7 @@ class ExtensibleHash:
 
 
 
-table_format = {"nombre":"10s", "edad": "i"}
+table_format = {"nombre":"10s", "edad": "f"}
 index_key = 1
 eh = ExtensibleHash(table_format, index_key)
 
