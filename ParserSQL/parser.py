@@ -9,12 +9,16 @@ stmt: create_stmt ";"
     | select_stmt ";" 
     | insert_stmt ";" 
     | delete_stmt ";"
+    | index_stmt ";"
+    | copy_stmt ";"
 
-create_stmt: "create" "table" NAME ("(" create_attr_list ")" | create_file)
-create_file: "from" "file" VALUE ["using" "index" INDEX "(" VALUE ")"]
-create_attr_list: NAME (TYPE | array_type) [ KEY ] ["index" INDEX] ("," NAME (TYPE | array_type) ["primary" "key"] ["index" INDEX])*
+create_stmt: "create" "table" NAME "(" create_attr_list ")"
+copy_stmt: "copy" NAME "from" VALUE
+create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index" INDEX] ("," NAME (TYPE | varchar) ["primary" "key"] ["index" INDEX])*
 select_stmt: "select" (ALL | attr_list) "from" NAME ["where" condition ("and" condition)*]
 attr_list: NAME ("," NAME)*
+
+index_stmt: "create" "index" "on" NAME "using" INDEX "(" attr_list ")"
 
 insert_stmt: "insert" "into" NAME "(" attr_list ")" "values" "(" value_list ")"
 value_list: VALUE ("," VALUE)*
@@ -32,8 +36,8 @@ KEY: "primary key"
 BETWEEN: "between"
 ALL: "*"
 
-TYPE: "int" | "string" | "float" | "text" | "bool" | "date"
-array_type: "array[" TYPE "]"
+TYPE: "int" | "string" | "float" | "text" | "bool" | "date" 
+varchar: "varchar" "[" VALUE "]"
 
 %import common.ESCAPED_STRING
 %import common.WS
@@ -64,10 +68,30 @@ class SQLTransformer(Transformer):
     def delete_stmt(self, items):
         return {"action": "delete", "table": str(items[0]), "condition": items[1:]}
 
+    def index_stmt(self, items):
+        return {"action": "index", "table": str(items[0]), "index": items[1], "attr": items[2]}
+
+    def copy_stmt(self, items):
+        return {"action": "copy", "table": str(items[0]), "from": str(items[1])}
+
     def condition(self, items):
         if str(items[1]) == "between":
-            return {"field": str(items[0]), "range_start": items[2], "range_end": items[3]}
-        return {"field": str(items[0]), "op": str(items[1]), "value": items[2]}
+            return {"field": str(items[0]), "range_search": True, "range_start": items[2], "range_end": items[3]}
+        elif str(items[1]) == "==":
+            return {"field": str(items[0]), "range_search": False, "op": str(items[1]), "value": items[2]}
+        else:
+            range_start = "-infinity"
+            range_end =  "infinity"
+            if str(items[1]) == ">":
+                range_start = str(int(items[2])+1)
+            elif str(items[1]) == "<":
+                range_end = str(int(items[2])-1)
+            elif str(items[1]) == "<=":
+                range_end = items[2]
+            elif str(items[1]) == ">=":
+                range_start = items[2]
+
+            return {"field": str(items[0]), "range_search": True, "range_start": range_start, "range_end": range_end}
 
     def create_attr_list(self, items):
         result = {}
@@ -101,13 +125,6 @@ class SQLTransformer(Transformer):
             i+=1
         return result
 
-    def create_file(self, items):
-        result = {"file_path": str(items[0])}
-        if len(items) > 1:
-            result["index"] = str(items[1])
-            result["attribute"] = str(items[2])
-        return result
-
     def value_list(self, items):
         return [str(v) for v in items]
 
@@ -126,5 +143,19 @@ class SQLTransformer(Transformer):
     def VALUE(self, tok):
         return tok.value.strip('"')  # remove quotes if present
 
-    def array_type(self, items):
-        return f"array[{items[0]}]"
+    def varchar(self, items):
+        return f"varchar[{items[0]}]"
+
+
+if __name__ == "__main__":
+    parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
+
+    # Example: read SQL statements from a file
+    with open("test.txt", "r") as f:
+        sql_code = f.read()
+
+    try:
+        result = parser.parse(sql_code)
+        print(json.dumps(result, indent=4))
+    except Exception as e:
+        print("Error parsing input:", e)
