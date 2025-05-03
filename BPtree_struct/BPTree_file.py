@@ -401,8 +401,8 @@ class BPTree:
         """
         page = self._read_index_page(pos_page)
         index = self.find_index(page, key)
-        temp_keys = page.keys[:]
-        temp_childrens = page.childrens[:]
+        temp_keys = page.keys[:].copy()  # Copia las claves
+        temp_childrens = page.childrens[:].copy()
         # Desplaza las claves y punteros a la derecha para hacer espacio
         for i in range(page.key_count, index, -1):
             temp_keys[i] = temp_keys[i - 1]
@@ -415,22 +415,29 @@ class BPTree:
         new_page = IndexPage(leaf=page.leaf)  # Crea una nueva página de índic
         # Asigna las claves y punteros a la nueva página
         mid_index = (M - 1) // 2
-        new_page.keys[:mid_index] = temp_keys[mid_index + 1:]
-        new_page.childrens[:mid_index] = temp_childrens[mid_index + 1:]
-        new_page.key_count = mid_index
-        # Actualiza la página original
+        is_even = True
+        if M % 2 == 0:
+            is_even = False
         pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
-        page.keys = temp_keys[:mid_index + 1]
-        page.childrens = temp_childrens[:mid_index + 1]
-        page.key_count = mid_index + 1
+        # Reinicializa la página original
+        page.keys = [''] * (M-1)
+        page.childrens = [-1] * M
+        # Actualiza la página original
+        page.keys[:mid_index] = temp_keys[:mid_index]
+        page.childrens[:mid_index] = temp_childrens[:mid_index]
+        page.key_count = mid_index+1
+        # Asigna las claves y punteros a la nueva página
+        new_page.keys[:mid_index+is_even-(not(page.leaf))] = temp_keys[mid_index+1+(not(page.leaf)):]
+        new_page.childrens[:mid_index+is_even-(not(page.leaf))] = temp_childrens[:mid_index+1+(not(page.leaf)):]
+        new_page.key_count = mid_index +1 + is_even - (not(page.leaf)) 
         # Actualiza el puntero al siguiente nodo
         new_page.childrens[M-1] = pos_next_page
         page.childrens[M-1] = pos_new_page
         # Escribe las páginas actualizadas en el archivo
         self._write_index_page(pos_page, page)
         self._add_index_page(new_page)  # Agrega la nueva página al archivo de índice
-        return new_page.keys[0]  # Devuelve la clave que se sube al padre
-    
+        return temp_keys[mid_index + 1], pos_new_page  # Devuelve la clave que se sube al padre
+
     def add(self, record):
         """
         Inserta un registro en el árbol B+.
@@ -473,9 +480,6 @@ class BPTree:
         ### CASO 2.2: La raíz está llena ###
         else:
             key_up = self.split(pos_leaf, key, pos_new_record) # Divide la página llena
-
-
-
 
 
 
