@@ -229,7 +229,6 @@ class ExtensibleHash:
         self.Header.write(index_file,pos + 1, 1)
         offset = pos * self.RT.size
         data_file.seek(offset)
-        print(record)
         data_file.write(self.RT.to_bytes(record))
         return pos
 
@@ -281,8 +280,6 @@ class ExtensibleHash:
             else:
                 break
 
-        print(f"bucket_position: {bucket_position}")
-
         inserted = self._insert_value_in_bucket(buckets_file, index_file, bucket_position, data_position)
         if not inserted:
             print("Splitting")
@@ -323,7 +320,6 @@ class ExtensibleHash:
 
             # reinsertar elementos
             for i in range(old_bucket['fullness']):
-                print(f"reinserta {old_bucket['records'][i]}")
                 data_file.seek(old_bucket['records'][i] * self.RT.size)
                 record = self.RT.from_bytes(data_file.read(self.RT.size))
                 self._aux_insert(buckets_file, index_file, data_file, record, old_bucket['records'][i])
@@ -404,52 +400,52 @@ class ExtensibleHash:
                     print(f"    {record}")
                 overflow_position = bucket['overflow_position']
 
-
-
-class ExtensibleHash1:
-    def __init__(self, table_format, index_key, name_index_file='index_file.bin',
-                 name_data_file='data_file.bin', global_depth = 3, max_records = 3):
-        self.index_file = name_index_file
-        self.data_file = name_data_file
-        self.global_depth = global_depth
-        self.max_records = max_records
-        self.header = 3
-        self.header_size = 4 * self.header
-        self.hashindex = 2 ** global_depth
-        self.hashindex_size = 4 * self.hashindex
-
-        self.RT = RegistroType(table_format,index_key)
-        self.BT = BucketType(max_records)
-        self._initialize_files(global_depth, force=True)
-
-
     def search(self, key):
         """
         Busca un registro en el hash extensible.
-        :return: True si se encontro, False si no se encontro
+        :param key: clave a buscar
+        :return: registro encontrado o None si no se encuentra
         """
-        index_hash = getbits(key, self.global_depth)
-        bucket_index_position = int(index_hash, 2)
+        with open(self.index_file, 'r+b') as index_file, \
+                open(self.data_file, 'r+b') as data_file, \
+                open(self.buckets_file, 'r+b') as buckets_file:
+            index_hash = getbits(key, self.global_depth)
+            index_file.seek(self.Header.size)
+            root = self.NT.from_bytes(index_file.read(self.NT.size))
+            if index_hash[-1] == '0':
+                return self._aux_search(buckets_file, index_file, data_file, root['left'], index_hash[:-1], key)
+            else:
+                return self._aux_search(buckets_file, index_file, data_file, root['right'], index_hash[:-1], key)
 
-        with open(self.index_file, 'r+b') as index_file, open(self.data_file, 'r+b') as data_file:
-            index_file.seek(self.header_size + bucket_index_position * 4)
-            bucket_position = struct.unpack('i', index_file.read(4))[0]
-            index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
-            bucket = self.BT.from_bytes(index_file.read(self.BT.size))
-            # Iterar registros
-            goto_overflow = True
-            while goto_overflow:
+    def _aux_search(self, buckets_file, index_file, data_file, node_index, index_hash, key):
+        """
+        Funcion recursiva de busqueda
+        """
+        index_file.seek(self.Header.size + node_index * self.NT.size)
+        node = self.NT.from_bytes(index_file.read(self.NT.size))
+        if node['bucket_position'] == -1:
+            if index_hash[-1] == '0':
+                return self._aux_search(buckets_file, index_file, data_file, node['left'], index_hash[:-1], key)
+            else:
+                return self._aux_search(buckets_file, index_file, data_file, node['right'], index_hash[:-1], key)
+        else:
+            buckets_file.seek(node['bucket_position'] * self.BT.size)
+            bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+            for i in range(bucket['fullness']):
+                data_file.seek(bucket['records'][i] * self.RT.size)
+                record = self.RT.from_bytes(data_file.read(self.RT.size))
+                if self.RT.get_key(record) == key:
+                    return record
+            overflow_position = bucket['overflow_position']
+            while overflow_position != -1:
+                buckets_file.seek(overflow_position * self.BT.size)
+                bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
                     data_file.seek(bucket['records'][i] * self.RT.size)
-                    registro = self.RT.from_bytes(data_file.read(self.RT.size))
-                    if self.RT.get_key(registro) == key:
-                        return registro
-                if bucket['overflow_position'] != -1:
-                    bucket_position = bucket['overflow_position']
-                    index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
-                    bucket = self.BT.from_bytes(index_file.read(self.BT.size))
-                else:
-                    goto_overflow = False
+                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    if self.RT.get_key(record) == key:
+                        return record
+                overflow_position = bucket['overflow_position']
 
 
 
@@ -460,10 +456,41 @@ eh = ExtensibleHash(table_format, index_key)
 
 print(''.join(table_format.values()))
 
-nums = random.sample(range(50), 50)
+nums = random.sample(range(100,1000), 200)
 
-for i in nums:
-    eh.insert(["amen", i])
+placed = nums[0:100]
+not_placed = nums[100:200]
+
+for i in placed:
+    for j in not_placed:
+        if i == j:
+            print(f"Elemento {i} repetido")
+            break
+
+test_passed = True
+
+try:
+    for i in placed:
+        eh.insert([f"data_{i}", i])
+except:
+    print("Error al insertar")
+    test_passed = False
+
+if test_passed:
+    print("Test de insert pasado correctamente")
+
+for i in placed:
+    if eh.search(i) is None:
+        print(f"Elemento {i} no encontrado (falso negativo)")
+        test_passed = False
+
+for i in not_placed:
+    if eh.search(i) is not None:
+        print(f"Elemento {i} encontrado (falso positivo)")
+        test_passed = False
+
+if test_passed:
+    print("Test de search pasado correctamente")
 
 
 while True:
