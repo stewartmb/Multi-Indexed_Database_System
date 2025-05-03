@@ -258,11 +258,10 @@ class ExtensibleHash:
                                'local_depth': self.global_depth,
                                'fullness': 0,
                                'overflow_position': -1}
-                index_file.seek(bucket_position * self.BT.size)
-                index_file.write(self.BT.to_bytes(bucket))
-                index_file.seek(overflow_pos * self.BT.size)
-                index_file.write(self.BT.to_bytes(emptyBucket))
-
+                buckets_file.seek(bucket_position * self.BT.size)
+                buckets_file.write(self.BT.to_bytes(bucket))
+                buckets_file.seek(overflow_pos * self.BT.size)
+                buckets_file.write(self.BT.to_bytes(emptyBucket))
             self._insert_value_in_bucket(buckets_file, index_file, bucket['overflow_position'], data_position)
         return True
 
@@ -360,6 +359,8 @@ class ExtensibleHash:
             self._add_to_hash(buckets_file, index_file, data_file, data_position, index_hash)
 
 
+
+
     def imprimir(self):
         """
         Imprime todos los buckets y sus registros.
@@ -369,27 +370,41 @@ class ExtensibleHash:
                 open(self.buckets_file, 'r+b') as buckets_file:
             index_file.seek(self.Header.size)
             root = self.NT.from_bytes(index_file.read(self.NT.size))
+            suffix = ""
             if root['bucket_position'] == -1:
-                self._aux_imprimir(buckets_file, index_file, data_file, root['left'], 0)
-                self._aux_imprimir(buckets_file, index_file, data_file, root['right'], 0)
+                self._aux_imprimir(buckets_file, index_file, data_file, root['left'], "0" + suffix)
+                self._aux_imprimir(buckets_file, index_file, data_file, root['right'], "1" + suffix)
 
-    def _aux_imprimir(self, buckets_file, index_file, data_file, node_index, depth):
+    def _aux_imprimir(self, buckets_file, index_file, data_file, node_index, suffix):
         """
         Imprime los buckets y sus registros.
         """
         index_file.seek(self.Header.size + node_index * self.NT.size)
         node = self.NT.from_bytes(index_file.read(self.NT.size))
         if node['bucket_position'] == -1:
-            self._aux_imprimir(buckets_file, index_file, data_file, node['left'], depth + 1)
-            self._aux_imprimir(buckets_file, index_file, data_file, node['right'], depth + 1)
+            self._aux_imprimir(buckets_file, index_file, data_file, node['left'], "0" + suffix)
+            self._aux_imprimir(buckets_file, index_file, data_file, node['right'], "1" + suffix)
         else:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            print(f"Bucket {node_index}:")
+            print(f"Bucket {suffix}:")
             for i in range(bucket['fullness']):
                 data_file.seek(bucket['records'][i] * self.RT.size)
                 record = self.RT.from_bytes(data_file.read(self.RT.size))
                 print(f"  {record}")
+
+            overflow_position = bucket['overflow_position']
+            while overflow_position != -1:
+                buckets_file.seek(overflow_position * self.BT.size)
+                bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+                print(f"  Overflow Bucket {suffix}:")
+                for i in range(bucket['fullness']):
+                    data_file.seek(bucket['records'][i] * self.RT.size)
+                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    print(f"    {record}")
+                overflow_position = bucket['overflow_position']
+
+
 
 class ExtensibleHash1:
     def __init__(self, table_format, index_key, name_index_file='index_file.bin',
@@ -406,55 +421,6 @@ class ExtensibleHash1:
         self.RT = RegistroType(table_format,index_key)
         self.BT = BucketType(max_records)
         self._initialize_files(global_depth, force=True)
-
-
-
-
-
-
-    def _add_to_hash(self, index_file, data_file, bucket_index_position, register_position, index_hash):
-        index_file.seek(self.header_size + bucket_index_position * 4)
-        bucket_position = struct.unpack('i', index_file.read(4))[0]
-        inserted = self._insert_value_in_bucket(index_file, bucket_position, register_position)
-        if (not inserted):
-            print(f"No se pudo insertar { register_position} en el bucket {bucket_position}, se necesita dividir el bucket")
-            index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
-            old_bucket = self.BT.from_bytes(index_file.read(self.BT.size))
-            # crear nuevos buckets
-            bucket1_pos = bucket_position
-            bucket2_pos = self._read_header_variable(index_file, 2)
-            self._write_header_variable(index_file, bucket2_pos + 1, 2)
-            emptyBucket = {'records': [-1, -1, -1],
-                           'local_depth': old_bucket['local_depth'] + 1,
-                           'fullness': 0,
-                           'overflow_position': -1}
-            index_file.seek(self.header_size + self.hashindex_size + bucket1_pos * self.BT.size)
-            index_file.write(self.BT.to_bytes(emptyBucket))
-            index_file.seek(self.header_size + self.hashindex_size + bucket2_pos * self.BT.size)
-            index_file.write(self.BT.to_bytes(emptyBucket))
-
-            # actualizar punteros
-            current_pattern = index_hash[-old_bucket['local_depth']:]
-
-            for i in find_numbers_with_suffix(2**self.global_depth, '0' + current_pattern):
-                index_file.seek(self.header_size + i * 4)
-                index_file.write(struct.pack('i', bucket1_pos))
-            for i in find_numbers_with_suffix(2**self.global_depth, '1' + current_pattern):
-                index_file.seek(self.header_size + i * 4)
-                index_file.write(struct.pack('i', bucket2_pos))
-
-            # reinsertar elementos
-            for i in range(old_bucket['fullness']):
-                data_file.seek(old_bucket['records'][i] * self.RT.size)
-                registro = self.RT.from_bytes(data_file.read(self.RT.size))
-                self.insert_with_position(index_file, data_file, registro, old_bucket['records'][i])
-
-            # reinserta el nuevo registro
-            data_file.seek(register_position * self.RT.size)
-            registro = self.RT.from_bytes(data_file.read(self.RT.size))
-            self.insert_with_position(index_file, data_file, registro, register_position)
-
-
 
 
     def search(self, key):
@@ -485,30 +451,6 @@ class ExtensibleHash1:
                 else:
                     goto_overflow = False
 
-    def imprimir(self):
-        """
-        Imprime todos los buckets y sus registros.
-        """
-        with open(self.index_file, 'rb') as index_file, open(self.data_file, 'rb') as data_file:
-            index_file.seek(0)
-            global_depth = struct.unpack('i', index_file.read(4))[0]
-            print(f"Global depth: {global_depth}")
-            index_file.seek(4)
-            size = struct.unpack('i', index_file.read(4))[0]
-            print(f"Size: {size}")
-
-            printed = []
-            for i in range(self.hashindex):
-                index_file.seek(self.header_size + i * 4)
-                bucket_position = struct.unpack('i', index_file.read(4))[0]
-                index_file.seek(self.header_size + self.hashindex_size + bucket_position * self.BT.size)
-                bucket = self.BT.from_bytes(index_file.read(self.BT.size))
-                if bucket_position in printed:
-                    continue
-                print(f"Bucket {bin(i)[2:].rjust(bucket['local_depth'],'0')}:")
-                print(bucket)
-                printed.append(bucket_position)
-
 
 
 
@@ -518,10 +460,10 @@ eh = ExtensibleHash(table_format, index_key)
 
 print(''.join(table_format.values()))
 
-# nums = random.sample(range(100), 100)
-#
-# for i in nums:
-#     eh.insert(["Juan", i])
+nums = random.sample(range(50), 50)
+
+for i in nums:
+    eh.insert(["amen", i])
 
 
 while True:
