@@ -1,6 +1,9 @@
 import math
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
-b = 100
+b = 4
+
 INT_MAX = 2**31-1
 INT_MIN = -2**31
 
@@ -27,15 +30,15 @@ class MBR:
 
     def update_coords_point(self, point):
         prev_perimeter = self.perimeter()
-        for i in len(point.coords):
-            self.min_coords[i] = min(self.min_coords[i], point[i])
-            self.max_coords[i] = max(self.max_coords[i], point[i])
+        for i in range(len(point.coords)):
+            self.min_coords[i] = min(self.min_coords[i], point.coords[i])
+            self.max_coords[i] = max(self.max_coords[i], point.coords[i])
         new_perimeter = self.perimeter()
         return new_perimeter - prev_perimeter
 
     def update_coords_rec(self, rec):
         prev_perimeter = self.perimeter()
-        for i in range(len(rec.min_coords)):
+        for i in range(len(rec.mbr.min_coords)):
             self.min_coords[i] = min(self.min_coords[i], rec.mbr.min_coords[i])
             self.max_coords[i] = max(self.max_coords[i], rec.mbr.max_coords[i])
         new_perimeter = self.perimeter()
@@ -88,11 +91,17 @@ class Rectangle:
         self.mbr = mbr
 
     def add_point(self, point):
-        self.mbr.update_coords_point(point)
+        if self.mbr is None: # si no hay mbr, crearlo
+            self.mbr = MBR(point.coords[:], point.coords[:])
+        else:
+            self.mbr.update_coords_point(point)
         self.points.append(point)
 
     def add_rectangle(self, rec):
-        self.mbr.update_coords_rec(rec)
+        if self.mbr is None:
+            self.mbr = MBR(rec.mbr.min_coords[:], rec.mbr.max_coords[:])
+        else:
+            self.mbr.update_coords_rec(rec)
         rec.parent = self
         self.rectangles.append(rec)
 
@@ -129,7 +138,7 @@ class RTree:
         subtree = None
 
         for rec in u.rectangles:
-            mb = MBR(rec.min_coords, rec.max_coords) # mbr de rec
+            mb = MBR(rec.mbr.min_coords, rec.mbr.max_coords) # mbr de rec
             new_per = mb.update_coords_point(p) # simulamos añadir el nuevo punto y devuelve la diferencia de perimetros
             if new_per < min_per: # si el nuevo perimetro es menor al ya guardado
                 min_per = new_per # reemplazamos ese perimetro
@@ -158,7 +167,8 @@ class RTree:
 
                 if mbr1.perimeter() + mbr2.perimeter() < min_per:
                     min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = Rectangle(points=s1, mbr=mbr1), Rectangle(points=s2, mbr=mbr2)
+                    best_split = (Rectangle(points=s1, mbr=mbr1, is_leaf=True),
+                                  Rectangle(points=s2, mbr=mbr2, is_leaf=True))
 
         return best_split
 
@@ -202,16 +212,57 @@ class RTree:
 
     def handle_overflow(self, u):
         u, v = RTree.split(u)
-        if self.root == u:
+        w = u.parent
+        if w is None: # se crea un nuevo root if root overflows
             new_root = Rectangle(is_leaf=False)
             new_root.add_rectangle(u)
             new_root.add_rectangle(v)
+            self.root = new_root
+            self.visualize_tree(self.root)
         else:
-            w = u.parent
-            # update mbr de u
-            w.add_rectangle(u) # add v as child of w
-            if w == b+1: # si w overflows, llamar a handle overflow again con w
+            # Add u and v to the parent
+            w.rectangles.remove(u)
+            w.add_rectangle(u)
+            w.add_rectangle(v)
+            if len(w.rectangles) > b: # si w overflows, llamar a handle overflow again con w
                 self.handle_overflow(w)
+
+    def visualize_tree(self, node, ax=None, level=0, color='black'):
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as patches
+
+        if ax is None:
+            fig, ax = plt.subplots()
+            ax.set_xlim(0, 10)
+            ax.set_ylim(0, 10)
+            ax.set_title("R-tree Split Visualization")
+            ax.set_aspect('equal')
+
+        if node.mbr:
+            width = node.mbr.max_coords[0] - node.mbr.min_coords[0]
+            height = node.mbr.max_coords[1] - node.mbr.min_coords[1]
+            rect = patches.Rectangle(
+                (node.mbr.min_coords[0], node.mbr.min_coords[1]),
+                width,
+                height,
+                linewidth=1.5,
+                edgecolor=color,
+                facecolor='none'
+            )
+            ax.add_patch(rect)
+
+        if node.is_leaf:
+            for p in node.points:
+                ax.plot(p.coords[0], p.coords[1], 'ko')
+        else:
+            colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown']
+            for child in node.rectangles:
+                next_color = colors[level % len(colors)]
+                self.visualize_tree(child, ax=ax, level=level+1, color=next_color)
+
+        if level == 0:
+            print(f"Node level {level}: \n {len(node.points)} points, {len(node.rectangles)} rectangles, MBR: {node.mbr.min_coords} to {node.mbr.max_coords}")
+            plt.show()
 
 
     def __insert__(self, u, p):
@@ -229,4 +280,32 @@ class RTree:
         if self.root is None:
             self.root = Rectangle(is_leaf = True)
 
-        self.__insert__(self.root, point);
+        self.__insert__(self.root, point)
+
+
+if __name__ == "__main__":
+    # Create the R-tree
+    rtree = RTree()
+
+    # Sample 2D points to insert
+    points = [
+        Point([1, 2]),
+        Point([3, 4]),
+        Point([5, 6]),
+        Point([7, 8]),
+        Point([2, 5]),
+        Point([6, 1]),
+        Point([4, 7]),
+        Point([8, 3])  # This should cause a split
+    ]
+
+    # Insert points into the tree
+    for pt in points:
+        rtree.insert(pt)
+
+    rtree.visualize_tree(rtree.root)
+
+    # Print MBR of root
+    root = rtree.root
+    print("Root MBR Min Coords:", root.mbr.min_coords)
+    print("Root MBR Max Coords:", root.mbr.max_coords)
