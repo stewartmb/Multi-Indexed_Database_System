@@ -108,6 +108,9 @@ class Rectangle:
     def size(self):
         return len(self.points)
 
+    def __str__(self):
+        return f"{self.mbr.min_coords} {self.mbr.max_coords}"
+
     @staticmethod
     def sort_rectangles_by_dimension_min(rectangles):
         num_dims = len(rectangles[0].mbr.min_coords)
@@ -126,20 +129,34 @@ class Rectangle:
             sorted_by_dim.append(sorted_dim)
         return sorted_by_dim
 
+    def remove(self, obj):
+        if self.is_leaf and obj in self.points:
+            self.points.remove(obj)
+        elif not self.is_leaf and obj in self.rectangles:
+            self.rectangles.remove(obj)
+
+        if self.is_leaf and self.points:
+            self.mbr = MBR.calc_mbr(self.points)
+        elif not self.is_leaf and self.rectangles:
+            self.mbr = MBR.calc_mbr_rec(self.rectangles)
+        else:
+            self.mbr = None
+
 
 class RTree:
-    def __init__(self, root=None, b=6):
+    def __init__(self, root=None):
         self.root = root
+        self.b = b
 
     @staticmethod
     def choose_subtree(u, p):
         best_mbr = None
         min_per = INT_MAX
         subtree = None
-
         for rec in u.rectangles:
-            mb = MBR(rec.mbr.min_coords, rec.mbr.max_coords) # mbr de rec
+            mb = MBR(rec.mbr.min_coords[:], rec.mbr.max_coords[:]) # mbr de rec
             new_per = mb.update_coords_point(p) # simulamos añadir el nuevo punto y devuelve la diferencia de perimetros
+
             if new_per < min_per: # si el nuevo perimetro es menor al ya guardado
                 min_per = new_per # reemplazamos ese perimetro
                 best_mbr = mb # reemplazamos ese mbr
@@ -148,7 +165,6 @@ class RTree:
                 if mb.perimeter() < best_mbr.perimeter():
                     best_mbr = mb
                     subtree = rec
-        subtree.mbr = best_mbr
         return subtree
 
     @staticmethod
@@ -159,7 +175,7 @@ class RTree:
 
         all_sorted = Point.sort_points_by_dimension(u.points)
         for dim in all_sorted:
-            for i in range(math.ceil(0.4*b), m - math.ceil(0.4*b)):
+            for i in range(math.ceil(0.4*b), m - math.ceil(0.4*b)+1):
                 s1 = dim[0:i]
                 s2 = dim[i:]
                 mbr1 = MBR.calc_mbr(s1)
@@ -180,7 +196,7 @@ class RTree:
 
         all_sorted_min = Rectangle.sort_rectangles_by_dimension_min(u.rectangles)
         for dim in all_sorted_min:
-            for i in range(math.ceil(0.4*b), m - math.ceil(0.4*b)):
+            for i in range(math.ceil(0.4*b), m - math.ceil(0.4*b)+1):
                 s1 = dim[0:i]
                 s2 = dim[i:]
                 mbr1 = MBR.calc_mbr_rec(s1)
@@ -188,11 +204,12 @@ class RTree:
 
                 if mbr1.perimeter() + mbr2.perimeter() < min_per:
                     min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = Rectangle(points=s1, mbr=mbr1), Rectangle(points=s2, mbr=mbr2)
+                    best_split = (Rectangle(rectangles=s1, mbr=mbr1, is_leaf=False),
+                                  Rectangle(rectangles=s2, mbr=mbr2, is_leaf=False))
 
         all_sorted_max = Rectangle.sort_rectangles_by_dimension_max(u.rectangles)
         for dim in all_sorted_max:
-            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b)):
+            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b)+1):
                 s1 = dim[0:i]
                 s2 = dim[i:]
                 mbr1 = MBR.calc_mbr_rec(s1)
@@ -200,7 +217,8 @@ class RTree:
 
                 if mbr1.perimeter() + mbr2.perimeter() < min_per:
                     min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = Rectangle(points=s1, mbr=mbr1), Rectangle(points=s2, mbr=mbr2)
+                    best_split = (Rectangle(rectangles=s1, mbr=mbr1, is_leaf=False),
+                                  Rectangle(rectangles=s2, mbr=mbr2, is_leaf=False))
 
         return best_split
 
@@ -211,30 +229,69 @@ class RTree:
         return RTree.split_internal(u)
 
     def handle_overflow(self, u):
-        u, v = RTree.split(u)
+        x, y = RTree.split(u)
         w = u.parent
         if w is None: # se crea un nuevo root if root overflows
             new_root = Rectangle(is_leaf=False)
-            new_root.add_rectangle(u)
-            new_root.add_rectangle(v)
+            x.parent = new_root
+            y.parent = new_root
+            new_root.add_rectangle(x)
+            new_root.add_rectangle(y)
             self.root = new_root
-            self.visualize_tree(self.root)
+            self.print_tree(new_root)
         else:
+            w.remove(u)
             # Add u and v to the parent
-            w.rectangles.remove(u)
-            w.add_rectangle(u)
-            w.add_rectangle(v)
+            w.add_rectangle(x)
+            w.add_rectangle(y)
+            #self.print_tree(w)
+            x.parent = w
+            y.parent = w
             if len(w.rectangles) > b: # si w overflows, llamar a handle overflow again con w
                 self.handle_overflow(w)
+                self.print_tree(w)
+
+    def __insert__(self, u, p):
+        # u is rectangle
+        # p is point
+        if u.is_leaf:
+            u.add_point(p)
+            if u.size() == b+1:
+                self.handle_overflow(u)
+        else:
+            u.add_point(p)
+            v = RTree.choose_subtree(u, p)
+            self.__insert__(v, p)
+
+    def insert(self, point):
+        if self.root is None:
+            self.root = Rectangle(is_leaf = True)
+
+        print(point.coords)
+        self.__insert__(self.root, point)
+        self.visualize_tree(self.root)
+        #self.print_tree()
+
+    def print_tree(self, node=None, level=0):
+        if node is None:
+            node = self.root
+        indent = "  " * level
+        if node.is_leaf:
+            print(f"{indent}Leaf Node (Level {level}) with {len(node.points)} points:")
+            for p in node.points:
+                print(f"{indent}  Point: {p.coords}")
+        else:
+            print(f"{indent}Internal Node (Level {level}) with {len(node.rectangles)} children:")
+            for child in node.rectangles:
+                self.print_tree(child, level + 1)
+
 
     def visualize_tree(self, node, ax=None, level=0, color='black'):
-        import matplotlib.pyplot as plt
-        import matplotlib.patches as patches
 
         if ax is None:
             fig, ax = plt.subplots()
-            ax.set_xlim(0, 10)
-            ax.set_ylim(0, 10)
+            ax.set_xlim(0, 15)
+            ax.set_ylim(0, 15)
             ax.set_title("R-tree Split Visualization")
             ax.set_aspect('equal')
 
@@ -250,6 +307,16 @@ class RTree:
                 facecolor='none'
             )
             ax.add_patch(rect)
+            # Add label for level
+            ax.text(
+                node.mbr.min_coords[0] + width / 2,
+                node.mbr.min_coords[1] + height / 2,
+                f"L{level}",
+                color=color,
+                fontsize=8,
+                ha='center',
+                va='center'
+            )
 
         if node.is_leaf:
             for p in node.points:
@@ -257,55 +324,23 @@ class RTree:
         else:
             colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown']
             for child in node.rectangles:
-                next_color = colors[level % len(colors)]
+                next_color = colors[(level + 1) % len(colors)]
                 self.visualize_tree(child, ax=ax, level=level+1, color=next_color)
 
         if level == 0:
-            print(f"Node level {level}: \n {len(node.points)} points, {len(node.rectangles)} rectangles, MBR: {node.mbr.min_coords} to {node.mbr.max_coords}")
             plt.show()
 
 
-    def __insert__(self, u, p):
-        # u is rectangle
-        # p is point
-        if u.is_leaf:
-            u.add_point(p)
-            if u.size() == b+1:
-                self.handle_overflow(u)
-        else:
-            v = RTree.choose_subtree(u, p)
-            self.__insert__(v, p)
-
-    def insert(self, point):
-        if self.root is None:
-            self.root = Rectangle(is_leaf = True)
-
-        self.__insert__(self.root, point)
-
-
 if __name__ == "__main__":
-    # Create the R-tree
     rtree = RTree()
 
-    # Sample 2D points to insert
+    # Insert enough points to cause internal node split
     points = [
-        Point([1, 2]),
-        Point([3, 4]),
-        Point([5, 6]),
-        Point([7, 8]),
-        Point([2, 5]),
-        Point([6, 1]),
-        Point([4, 7]),
-        Point([8, 3])  # This should cause a split
+        Point([1, 1]), Point([2, 2]), Point([3, 3]), Point([4, 4]), Point([5, 5]),
+        Point([6, 6]), Point([7, 7]), Point([8, 8]), Point([9, 9]), Point([10, 10]),
+        Point([11, 11]), Point([12, 12]), Point([13, 13]), Point([14, 14]),
+        Point([15, 15])
     ]
 
-    # Insert points into the tree
     for pt in points:
         rtree.insert(pt)
-
-    rtree.visualize_tree(rtree.root)
-
-    # Print MBR of root
-    root = rtree.root
-    print("Root MBR Min Coords:", root.mbr.min_coords)
-    print("Root MBR Max Coords:", root.mbr.max_coords)
