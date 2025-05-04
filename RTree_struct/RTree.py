@@ -1,7 +1,7 @@
 import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-
+import heapq
 b = 4
 
 INT_MAX = 2**31-1
@@ -19,6 +19,37 @@ class Point:
             sorted_dim = sorted(points, key=lambda p: p.coords[i])
             sorted_by_dim.append(sorted_dim)
         return sorted_by_dim
+
+    def inside(self, min_coords, max_coords):
+        return all(min_coords[i] <= self.coords[i] <= max_coords[i] for i in range(len(self.coords)))
+
+    def __lt__(self, other):
+        return self.coords < other.coords
+
+    @staticmethod
+    def distance(p1, p2):
+        return math.sqrt(sum((p1.coords[i] - p2.coords[i]) ** 2 for i in range(len(p1.coords))))
+
+    @staticmethod
+    def mindist(q, mbr):
+        sum_sq = 0
+        for i in range(len(q.coords)):
+            qi = q.coords[i]
+            li = mbr.min_coords[i]
+            ui = mbr.max_coords[i]
+
+            if qi < li:
+                ri = li
+            elif qi > ui:
+                ri = ui
+            else:
+                ri = qi
+
+            sum_sq += (qi - ri) ** 2
+        return math.sqrt(sum_sq)
+
+    def __str__(self):
+        return str(self.coords)
 
 class MBR:
     def __init__(self, min_coords, max_coords):
@@ -142,6 +173,12 @@ class Rectangle:
         else:
             self.mbr = None
 
+    def intersects(self, min_coords, max_coords):
+        for i in range(len(self.mbr.min_coords)):
+            if self.mbr.max_coords[i] < min_coords[i] or self.mbr.min_coords[i] > max_coords[i]:
+                return False
+        return True
+
 
 class RTree:
     def __init__(self, root=None):
@@ -238,7 +275,7 @@ class RTree:
             new_root.add_rectangle(x)
             new_root.add_rectangle(y)
             self.root = new_root
-            self.print_tree(new_root)
+            #self.print_tree(new_root)
         else:
             w.remove(u)
             # Add u and v to the parent
@@ -249,7 +286,7 @@ class RTree:
             y.parent = w
             if len(w.rectangles) > b: # si w overflows, llamar a handle overflow again con w
                 self.handle_overflow(w)
-                self.print_tree(w)
+                #self.print_tree(w)
 
     def __insert__(self, u, p):
         # u is rectangle
@@ -267,10 +304,44 @@ class RTree:
         if self.root is None:
             self.root = Rectangle(is_leaf = True)
 
-        print(point.coords)
         self.__insert__(self.root, point)
         self.visualize_tree(self.root)
-        #self.print_tree()
+
+    def __ksearch__(self, node, k, point, maxh):
+        if node.is_leaf:
+            for p in node.points:
+                dist = Point.distance(p, point)
+                if len(maxh) < k:
+                    heapq.heappush(maxh, (-dist, p))
+                elif dist < -maxh[0][0]:
+                    heapq.heappushpop(maxh, (-dist, p))
+        else:
+            sorted_rec = sorted(node.rectangles, key=lambda rec: Point.mindist(point, rec.mbr))
+            for rec in sorted_rec:
+                if len(maxh) < k or Point.mindist(point, rec.mbr) < -maxh[0][0]:
+                    self.__ksearch__(rec, k, point, maxh)
+        return
+
+    def ksearch(self, k, point):
+        maxh = []
+        self.__ksearch__(self.root, k, point, maxh)
+        return [pt for (d, pt) in sorted(maxh, key=lambda x: x[0], reverse=True)]
+
+    def __range_search__(self, node, min_coords, max_coords, ans):
+        if node.is_leaf:
+            for p in node.points:
+                if p.inside(min_coords, max_coords):
+                    ans.append(p)
+        else:
+            for rec in node.rectangles:
+                if rec.intersects(min_coords, max_coords):
+                    self.__range_search__(rec, min_coords, max_coords, ans)
+
+
+    def range_search(self, point_start, point_end):
+        ans = []
+        self.__range_search__(self.root, point_start.coords, point_end.coords, ans)
+        return ans
 
     def print_tree(self, node=None, level=0):
         if node is None:
@@ -287,7 +358,6 @@ class RTree:
 
 
     def visualize_tree(self, node, ax=None, level=0, color='black'):
-
         if ax is None:
             fig, ax = plt.subplots()
             ax.set_xlim(0, 15)
@@ -344,3 +414,9 @@ if __name__ == "__main__":
 
     for pt in points:
         rtree.insert(pt)
+
+    #ans = rtree.ksearch(6, Point([6,3]))
+    #a = list(map(print, ans))
+
+    ans = rtree.range_search(Point([3,2]), Point([7, 6]))
+    a = list(map(print, ans))
