@@ -1,7 +1,7 @@
 import struct
 import os
-from collections import deque
 import bisect
+from collections import deque
 
 # Constantes
 TAM_ENCABEZADO = 4  # Tamaño del encabezado en bytes (número de páginas)
@@ -13,6 +13,135 @@ REGISTROS_POR_PAGINA = TAM_PAGINA // TAM_REGISTRO  # Registros por página prima
 RECORD_FORMAT = '3s20s2s'  # codigo (3), nombre (20), ciclo (2)
 INDEX_FORMAT = '3si'       # clave (3), puntero (4)
 
+# =============================================
+# Clases independientes
+# =============================================
+
+class Registro:
+    def __init__(self, codigo, nombre, ciclo):
+        self.codigo = codigo
+        self.nombre = nombre
+        self.ciclo = ciclo
+    
+    def to_bytes(self):
+        return struct.pack(RECORD_FORMAT, 
+                         self.codigo.encode('utf-8').ljust(3, b'\x00'),
+                         self.nombre.encode('utf-8').ljust(20, b'\x00'),
+                         self.ciclo.zfill(2).encode('utf-8'))
+    
+    @classmethod
+    def from_bytes(cls, data):
+        unpacked = struct.unpack(RECORD_FORMAT, data)
+        return cls(
+            unpacked[0].decode('utf-8').strip('\x00'),
+            unpacked[1].decode('utf-8').strip('\x00'),
+            unpacked[2].decode('utf-8').strip('\x00')
+        )
+    
+    def __lt__(self, other):
+        return self.codigo < other.codigo
+    
+    def __eq__(self, other):
+        return self.codigo == other.codigo
+    
+    def __str__(self):
+        return f"Código: {self.codigo}, Nombre: {self.nombre}, Ciclo: {self.ciclo}"
+
+class PageFile:
+    """Representa una página del archivo primario"""
+    def __init__(self):
+        self.records = [None] * REGISTROS_POR_PAGINA
+        self.record_count = 0
+        self.next_overflow = -1  # Puntero a página de overflow
+    
+    def add_record_sorted(self, record):
+        """Añade un registro manteniendo el orden"""
+        if self.record_count >= REGISTROS_POR_PAGINA:
+            return False
+            
+        # Encontrar posición para mantener ordenado
+        pos = bisect.bisect_left([r.codigo if r else '' for r in self.records[:self.record_count]], record.codigo)
+        
+        # Desplazar registros a la derecha
+        for i in range(self.record_count, pos, -1):
+            self.records[i] = self.records[i-1]
+        
+        # Insertar nuevo registro
+        self.records[pos] = record
+        self.record_count += 1
+        return True
+    
+    def to_bytes(self):
+        """Convierte la página a bytes"""
+        data = bytearray()
+        for record in self.records:
+            if record:
+                data.extend(record.to_bytes())
+            else:
+                data.extend(b'\x00' * TAM_REGISTRO)
+        data.extend(struct.pack('i', self.next_overflow))
+        return bytes(data)
+    
+    @classmethod
+    def from_bytes(cls, data):
+        """Reconstruye una página desde bytes"""
+        page = cls()
+        for i in range(REGISTROS_POR_PAGINA):
+            start = i * TAM_REGISTRO
+            record_data = data[start:start+TAM_REGISTRO]
+            if record_data != b'\x00' * TAM_REGISTRO:
+                page.records[i] = Registro.from_bytes(record_data)
+                page.record_count += 1
+        page.next_overflow = struct.unpack('i', data[-4:])[0]
+        return page
+
+class IndexPage:
+    """Representa una página del índice (para ambos niveles)"""
+    def __init__(self, is_leaf=False):
+        self.keys = []       # Lista de claves (códigos)
+        self.pointers = []   # Lista de punteros
+        self.is_leaf = is_leaf
+    
+    def add_entry_sorted(self, key, pointer):
+        """Añade una entrada manteniendo el orden"""
+        # Encontrar posición para mantener ordenado
+        pos = bisect.bisect_left(self.keys, key)
+        
+        # Insertar en las listas
+        self.keys.insert(pos, key)
+        self.pointers.insert(pos, pointer)
+    
+    def to_bytes(self):
+        """Convierte la página de índice a bytes"""
+        data = bytearray()
+        data.append(self.is_leaf)
+        for key, ptr in zip(self.keys, self.pointers):
+            data.extend(struct.pack(INDEX_FORMAT, key.encode('utf-8'), ptr))
+        # Rellenar con ceros el resto de la página
+        remaining_space = TAM_PAGINA - (1 + len(self.keys) * struct.calcsize(INDEX_FORMAT))
+        data.extend(b'\x00' * remaining_space)
+        return bytes(data)
+    
+    @classmethod
+    def from_bytes(cls, data):
+        """Reconstruye una página de índice desde bytes"""
+        page = cls()
+        page.is_leaf = bool(data[0])
+        offset = 1
+        entry_size = struct.calcsize(INDEX_FORMAT)
+        while offset + entry_size <= TAM_PAGINA:
+            key, ptr = struct.unpack(INDEX_FORMAT, data[offset:offset+entry_size])
+            if key == b'\x00' * 3:  # Fin de entradas válidas
+                break
+            page.keys.append(key.decode('utf-8').strip('\x00'))
+            page.pointers.append(ptr)
+            offset += entry_size
+        return page
+
+# =============================================
+# Clase ISAM principal
+# =============================================
+
 class ISAM:
     def __init__(self, data_file='data_file.bin', index_file='index_file.bin', overflow_file='overflow_file.bin'):
         self.data_file = data_file
@@ -20,6 +149,10 @@ class ISAM:
         self.overflow_file = overflow_file
         self._initialize_files()
 
+    # --------------------------
+    # Métodos de inicialización
+    # --------------------------
+    
     def _initialize_files(self):
         """Inicializa los archivos necesarios con sus encabezados"""
         # Archivo de datos primario
@@ -39,145 +172,12 @@ class ISAM:
                 f.write(struct.pack('i', 0))  # Contador de registros overflow
 
     # --------------------------
-    # Manejo de Registros
-    # --------------------------
-    
-    class Registro:
-        def __init__(self, codigo, nombre, ciclo):
-            self.codigo = codigo
-            self.nombre = nombre
-            self.ciclo = ciclo
-        
-        def to_bytes(self):
-            return struct.pack(RECORD_FORMAT, 
-                             self.codigo.encode('utf-8').ljust(3, b'\x00'),
-                             self.nombre.encode('utf-8').ljust(20, b'\x00'),
-                             self.ciclo.zfill(2).encode('utf-8'))
-        
-        @classmethod
-        def from_bytes(cls, data):
-            unpacked = struct.unpack(RECORD_FORMAT, data)
-            return cls(
-                unpacked[0].decode('utf-8').strip('\x00'),
-                unpacked[1].decode('utf-8').strip('\x00'),
-                unpacked[2].decode('utf-8').strip('\x00')
-            )
-        
-        def __lt__(self, other):
-            return self.codigo < other.codigo
-        
-        def __eq__(self, other):
-            return self.codigo == other.codigo
-        
-        def __str__(self):
-            return f"Código: {self.codigo}, Nombre: {self.nombre}, Ciclo: {self.ciclo}"
-    
-    # --------------------------
-    # Manejo de Páginas
-    # --------------------------
-    
-    class PageFile:
-        """Representa una página del archivo primario"""
-        def __init__(self):
-            self.records = [None] * REGISTROS_POR_PAGINA
-            self.record_count = 0
-            self.next_overflow = -1  # Puntero a página de overflow
-        
-        def add_record_sorted(self, record):
-            """Añade un registro manteniendo el orden"""
-            if self.record_count >= REGISTROS_POR_PAGINA:
-                return False
-                
-            # Encontrar posición para mantener ordenado
-            pos = bisect.bisect_left([r.codigo if r else '' for r in self.records[:self.record_count]], record.codigo)
-            
-            # Desplazar registros a la derecha
-            for i in range(self.record_count, pos, -1):
-                self.records[i] = self.records[i-1]
-            
-            # Insertar nuevo registro
-            self.records[pos] = record
-            self.record_count += 1
-            return True
-        
-        def to_bytes(self):
-            """Convierte la página a bytes"""
-            data = bytearray()
-            for record in self.records:
-                if record:
-                    data.extend(record.to_bytes())
-                else:
-                    data.extend(b'\x00' * TAM_REGISTRO)
-            data.extend(struct.pack('i', self.next_overflow))
-            return bytes(data)
-        
-        @classmethod
-        def from_bytes(cls, data):
-            """Reconstruye una página desde bytes"""
-            page = cls()
-            for i in range(REGISTROS_POR_PAGINA):
-                start = i * TAM_REGISTRO
-                record_data = data[start:start+TAM_REGISTRO]
-                if record_data != b'\x00' * TAM_REGISTRO:
-                    page.records[i] = ISAM.Registro.from_bytes(record_data)
-                    page.record_count += 1
-            page.next_overflow = struct.unpack('i', data[-4:])[0]
-            return page
-    
-    # --------------------------
-    # Manejo de Índices
-    # --------------------------
-    
-    class IndexPage:
-        """Representa una página del índice (para ambos niveles)"""
-        def __init__(self, is_leaf=False):
-            self.keys = []       # Lista de claves (códigos)
-            self.pointers = []   # Lista de punteros
-            self.is_leaf = is_leaf
-        
-        def add_entry_sorted(self, key, pointer):
-            """Añade una entrada manteniendo el orden"""
-            # Encontrar posición para mantener ordenado
-            pos = bisect.bisect_left(self.keys, key)
-            
-            # Insertar en las listas
-            self.keys.insert(pos, key)
-            self.pointers.insert(pos, pointer)
-        
-        def to_bytes(self):
-            """Convierte la página de índice a bytes"""
-            data = bytearray()
-            data.append(self.is_leaf)
-            for key, ptr in zip(self.keys, self.pointers):
-                data.extend(struct.pack(INDEX_FORMAT, key.encode('utf-8'), ptr))
-            # Rellenar con ceros el resto de la página
-            remaining_space = TAM_PAGINA - (1 + len(self.keys) * struct.calcsize(INDEX_FORMAT))
-            data.extend(b'\x00' * remaining_space)
-            return bytes(data)
-        
-        @classmethod
-        def from_bytes(cls, data):
-            """Reconstruye una página de índice desde bytes"""
-            page = cls()
-            page.is_leaf = bool(data[0])
-            offset = 1
-            entry_size = struct.calcsize(INDEX_FORMAT)
-            while offset + entry_size <= TAM_PAGINA:
-                key, ptr = struct.unpack(INDEX_FORMAT, data[offset:offset+entry_size])
-                if key == b'\x00' * 3:  # Fin de entradas válidas
-                    break
-                page.keys.append(key.decode('utf-8').strip('\x00'))
-                page.pointers.append(ptr)
-                offset += entry_size
-            return page
-    
-    # --------------------------
-    # Operaciones ISAM
+    # Operaciones principales
     # --------------------------
     
     def insert(self, codigo, nombre, ciclo):
         """Inserta un nuevo registro en la estructura ISAM"""
-        record = self.Registro(codigo, nombre, ciclo)
+        record = Registro(codigo, nombre, ciclo)
         
         # 1. Insertar en archivo primario o overflow
         primary_pages = self._read_primary_header()
@@ -185,7 +185,7 @@ class ISAM:
         
         # Caso especial: primera página
         if primary_pages == 0:
-            new_page = self.PageFile()
+            new_page = PageFile()
             new_page.add_record_sorted(record)
             self._add_primary_page(new_page)
             self._update_index(codigo)
@@ -212,7 +212,7 @@ class ISAM:
         
         if not inserted:
             # Crear nueva página primaria
-            new_page = self.PageFile()
+            new_page = PageFile()
             new_page.add_record_sorted(record)
             self._add_primary_page(new_page)
         
@@ -249,7 +249,7 @@ class ISAM:
             return self._search_overflow(page, codigo)
         
         return None
-    
+
     # --------------------------
     # Métodos auxiliares
     # --------------------------
@@ -287,7 +287,7 @@ class ISAM:
     def _create_first_level_index(self):
         """Crea el primer nivel de índice sparse"""
         primary_pages = self._read_primary_header()
-        index_page = self.IndexPage(is_leaf=True)
+        index_page = IndexPage(is_leaf=True)
         
         # Tomar el primer registro de cada página √n
         step = max(1, int(primary_pages ** 0.5))
@@ -302,13 +302,12 @@ class ISAM:
     
     def _create_second_level_index(self):
         """Crea el segundo nivel de índice sparse"""
-        l1_page, _ = self._read_index_headers()
+        count, l1_page, _ = self._read_index_header()
         l1 = self._read_index_page(l1_page)
-        num_index_pages = self._read_index_header()[0]
         
         # Tomar cada √n claves del nivel 1
         step = max(1, int(len(l1.keys) ** 0.5))
-        index_page = self.IndexPage(is_leaf=False)
+        index_page = IndexPage(is_leaf=False)
         
         for i in range(0, len(l1.keys), step):
             index_page.add_entry_sorted(l1.keys[i], l1_page)
@@ -323,8 +322,8 @@ class ISAM:
         sqrt_pages = int(primary_pages ** 0.5)
         
         # Reconstruir nivel 1
-        l1_page, _ = self._read_index_headers()
-        l1 = self.IndexPage(is_leaf=True)
+        count, l1_page, l2_page = self._read_index_header()
+        l1 = IndexPage(is_leaf=True)
         
         for page_num in range(0, primary_pages, sqrt_pages):
             page = self._read_primary_page(page_num)
@@ -334,9 +333,8 @@ class ISAM:
         self._write_index_page(l1_page, l1)
         
         # Reconstruir nivel 2 si existe
-        _, l2_page = self._read_index_headers()
         if l2_page != -1:
-            l2 = self.IndexPage(is_leaf=False)
+            l2 = IndexPage(is_leaf=False)
             step = max(1, int(len(l1.keys) ** 0.5))
             
             for i in range(0, len(l1.keys), step):
@@ -346,7 +344,6 @@ class ISAM:
     
     def _insert_overflow(self, page, page_num, record):
         """Inserta un registro en el área de overflow"""
-        # Implementación básica - en una implementación real se usaría una estructura más eficiente
         overflow_count = self._read_overflow_header()
         
         # Escribir el registro en overflow
@@ -367,14 +364,13 @@ class ISAM:
         if page.next_overflow == -1:
             return None
         
-        # Implementación básica - en una implementación real se optimizaría
         overflow_count = self._read_overflow_header()
         
         with open(self.overflow_file, 'rb') as f:
             f.seek(TAM_ENCABEZADO)
             for _ in range(overflow_count):
                 record_data = f.read(TAM_REGISTRO)
-                record = self.Registro.from_bytes(record_data)
+                record = Registro.from_bytes(record_data)
                 if record.codigo == codigo:
                     return record
         
@@ -396,7 +392,7 @@ class ISAM:
                 return result
         
         return None
-    
+
     # --------------------------
     # Operaciones de archivo
     # --------------------------
@@ -416,7 +412,7 @@ class ISAM:
         with open(self.data_file, 'rb') as f:
             f.seek(TAM_ENCABEZADO + page_num * TAM_PAGINA)
             data = f.read(TAM_PAGINA)
-            return self.PageFile.from_bytes(data)
+            return PageFile.from_bytes(data)
     
     def _write_primary_page(self, page_num, page):
         """Escribe una página del archivo primario"""
@@ -433,19 +429,20 @@ class ISAM:
         self._write_primary_header(page_count + 1)
     
     def _read_index_header(self):
+        """Lee el encabezado completo del archivo de índice"""
         with open(self.index_file, 'rb') as f:
-            return struct.unpack('iii', f.read(12))  # Devuelve una tupla con tres enteros
+            data = f.read(3 * TAM_ENCABEZADO)
+            return struct.unpack('iii', data)  # (count, l1_ptr, l2_ptr)
     
     def _read_index_headers(self):
         """Lee los punteros a los niveles de índice"""
-        with open(self.index_file, 'rb') as f:
-            data = f.read(3 * TAM_ENCABEZADO)
-            return struct.unpack('iii', data)[1:]  # Devuelve (ptr_nivel1, ptr_nivel2)
+        header = self._read_index_header()
+        return header[1], header[2]  # (l1_ptr, l2_ptr)
     
     def _write_index_headers(self, l1_ptr, l2_ptr):
         """Escribe los punteros a los niveles de índice"""
+        count = self._read_index_header()[0]
         with open(self.index_file, 'r+b') as f:
-            count = self._read_index_header()
             f.seek(0)
             f.write(struct.pack('iii', count, l1_ptr, l2_ptr))
     
@@ -454,7 +451,7 @@ class ISAM:
         with open(self.index_file, 'rb') as f:
             f.seek(3 * TAM_ENCABEZADO + page_num * TAM_PAGINA)
             data = f.read(TAM_PAGINA)
-            return self.IndexPage.from_bytes(data)
+            return IndexPage.from_bytes(data)
     
     def _write_index_page(self, page_num, page):
         """Escribe una página de índice"""
@@ -462,20 +459,19 @@ class ISAM:
             f.seek(3 * TAM_ENCABEZADO + page_num * TAM_PAGINA)
             f.write(page.to_bytes())
     
-    def _add_index_page(self, index_page):
+    def _add_index_page(self, page):
+        """Añade una nueva página de índice"""
+        count = self._read_index_header()[0]
         with open(self.index_file, 'r+b') as f:
-            # Leer el número de páginas de índice
-            page_count = self._read_index_header()[0]  # Asegúrate de extraer el valor correcto
-
-            # Mover el puntero al final del archivo de índice
-            f.seek(3 * TAM_ENCABEZADO + page_count * TAM_PAGINA)
-
-            # Escribir la nueva página de índice
-            f.write(index_page.to_bytes())
-
-            # Actualizar el contador de páginas de índice
-            self._write_index_header(page_count + 1)
-        return page_count
+            f.seek(3 * TAM_ENCABEZADO + count * TAM_PAGINA)
+            f.write(page.to_bytes())
+        
+        # Actualizar contador
+        with open(self.index_file, 'r+b') as f:
+            f.seek(0)
+            f.write(struct.pack('i', count + 1))
+        
+        return count
     
     def _read_overflow_header(self):
         """Lee el encabezado del archivo de overflow"""
@@ -522,5 +518,3 @@ class ISAM:
         # Mostrar overflow
         overflow_count = self._read_overflow_header()
         print(f"\nOverflow ({overflow_count} registros)")
-
-
