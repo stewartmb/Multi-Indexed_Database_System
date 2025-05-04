@@ -100,14 +100,14 @@ def test_codigo():
 
 
     # Buscar el registro en el árbol
-    resultado1 = arbol.search("A1")
-    resultado2 = arbol.search("B2")
-    resultado3 = arbol.search("C3")
+    resultado1 = arbol.search("M13")
+    resultado2 = arbol.search("E5")
+    resultado3 = arbol.search("R18")
 
     print("Resultado de la búsqueda:")
-    print("Registro A1 encontrado:", resultado1)
-    print("Registro B2 encontrado:", resultado2)
-    print("Registro C3 encontrado:", resultado3)
+    print("Registro M13 encontrado:", resultado1)
+    print("Registro E5 encontrado:", resultado2)
+    print("Registro R18 encontrado:", resultado3)
 
     print ("==========================")
     # imprimir arbol 
@@ -116,6 +116,12 @@ def test_codigo():
 
 
     print("Prueba exitosa: El registro se insertó y se encontró correctamente.")
+    try:
+        import os
+        os.remove('BPtree_struct/index_file.bin')
+        os.remove('BPtree_struct/data_file.bin')
+    except FileNotFoundError:
+        pass
 
 
 def test_producto():

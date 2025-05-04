@@ -416,9 +416,9 @@ class BPTree:
         page.key_count += 1
         return page
 
-    def split(self, pos_page , key, pos_record):
+    def split_leaf(self, pos_page , key, pos_record):
         """
-        Divide una página llena en dos páginas.
+        Divide una page_leaf llena en dos páginas.
         """
         page = self._read_index_page(pos_page)
         index = self.find_index(page, key)
@@ -440,44 +440,83 @@ class BPTree:
         # Reinicializa la página original
         page.keys = [''] * (M-1)
         page.childrens = [-1] * M
-        if page.leaf:
-            # Actualiza la página original
-            page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
-            page.childrens[:mid_index+is_even] = temp_childrens[:mid_index+is_even]
-            page.key_count = mid_index+is_even 
-            # Asigna las claves y punteros a la nueva página
-            new_page.keys[:mid_index+1] = temp_keys[mid_index+is_even:]
-            new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
-            new_page.key_count = mid_index +1
-            new_page.father = page.father  # Asigna el padre
-            up = temp_keys[mid_index + 1]
-        else:
-            # Actualiza la página original
-            page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
-            page.childrens[:mid_index+is_even] = temp_childrens[:mid_index+is_even]
-            page.key_count = mid_index+is_even 
-            # Asigna las claves y punteros a la nueva página
-            new_page.keys[:mid_index+1] = temp_keys[mid_index+is_even:]
-            new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
-            new_page.key_count = mid_index +1 
-            new_page.father = page.father  # Asigna el padre
-            up = temp_keys[mid_index+2]
-            print ("up:", up)
-            # Actualizar padres de los nodos hijos
-            for i in range(new_page.key_count):
-                if page.childrens[i] != -1:
-                    child_page = self._read_index_page(page.childrens[i])
-                    child_page.father = pos_new_page
-                    self._write_index_page(page.childrens[i], child_page) 
+        # Actualiza la página original
+        page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
+        page.childrens[:mid_index+is_even] = temp_childrens[:mid_index+is_even]
+        page.key_count = mid_index+is_even 
+        # Asigna las claves y punteros a la nueva página
+        new_page.keys[:mid_index+1] = temp_keys[mid_index+is_even:]
+        new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
+        new_page.key_count = mid_index +1
+        new_page.father = page.father  # Asigna el padre
+        up = temp_keys[mid_index + 1]
         # Actualiza el puntero al siguiente nodo
         new_page.childrens[M-1] = pos_next_page
-        page.childrens[M-1] = pos_new_page
+        page.childrens[M-1] = pos_new_page 
         # Escribe las páginas actualizadas en el archivo
         self._write_index_page(pos_page, page)
         self._add_index_page(new_page)
+        return up, pos_new_page  # Devuelve la clave que se sube al padre
+    
+    def split_parent(self, pos_page , key, pos_record):
+        """
+        Divide una página llena en dos páginas.
+        """
+        page = self._read_index_page(pos_page)
+        index = self.find_index(page, key)
+        temp_keys = page.keys[:M-1].copy()  # Copia las claves
+        print("page childrens: ",page.childrens)
+        temp_childrens = page.childrens[:M].copy()
+        # Desplaza las claves y punteros a la derecha para hacer espacio
+        temp_keys.insert(index, key)  # Inserta la nueva clave
+        temp_childrens.insert(index+1, pos_record)  # Inserta el puntero al registro
+        # Divide la página en dos
+        header = self._read_header_index()
+        pos_new_page = header[0]  # posición de la nueva página
+        new_page = IndexPage(leaf=page.leaf)  # Crea una nueva página de índic
+        # Asigna las claves y punteros a la nueva página
+        mid_index = (M - 1) // 2
+        is_even = False
+        if M % 2 == 0:
+            is_even = True
+        pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
+        # Reinicializa la página original
+        page.keys = [''] * (M-1)
+        page.childrens = [-1] * M
+        print(temp_keys)
+        print(temp_childrens)
+        # Actualiza la página original
+        page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
+        page.childrens[:mid_index+is_even+1] = temp_childrens[:mid_index+is_even+1]
+        page.key_count = mid_index+is_even 
+        # Asigna las claves y punteros a la nueva página
+        new_page.keys[:mid_index] = temp_keys[mid_index+1+is_even:]
+        new_page.childrens[:mid_index+is_even] = temp_childrens[mid_index+1+is_even:]
+        new_page.key_count = mid_index 
+        new_page.father = page.father  # Asigna el padre
+        up = temp_keys[mid_index+1]
+        print ("up", up)
+        # Actualizar padres de los nodos hijos
+        for i in range(page.key_count+1):
+            if page.childrens[i] != -1:
+                child_page = self._read_index_page(page.childrens[i])
+                child_page.father = pos_new_page
+                self._write_index_page(page.childrens[i], child_page)
+        for i in range(new_page.key_count+1):
+            if new_page.childrens[i] != -1:
+                child_page = self._read_index_page(new_page.childrens[i])
+                child_page.father = pos_new_page
+                self._write_index_page(new_page.childrens[i], child_page)
         print("Se dividió la página en dos")
+        print("page")
         print(page.keys)
-        print(new_page.keys)  
+        print(page.childrens)
+        print("new_page")
+        print(new_page.keys) 
+        print(new_page.childrens)  
+        # Escribe las páginas actualizadas en el archivo
+        self._write_index_page(pos_page, page)
+        self._add_index_page(new_page)
         return up, pos_new_page  # Devuelve la clave que se sube al padre
 
     def add(self, record):
@@ -520,7 +559,7 @@ class BPTree:
             return
         ### CASO 2.2: La raíz está llena ###
         else:
-            key_up,pos_new_index = self.split(pos_leaf, key, pos_new_record) # Divide la página llena
+            key_up,pos_new_index = self.split_leaf(pos_leaf, key, pos_new_record) # Divide la página llena
 
             # Comienza el proceso de propagación hacia arriba
             current_pos = pos_leaf
@@ -560,9 +599,9 @@ class BPTree:
                         break
                     # Si el padre está lleno, se divide
                     else:
-                        key_up, pos_new_index = self.split(parent_pos, key_up, pos_new_index)
+                        key_up, pos_new_index = self.split_parent(parent_pos, key_up, pos_new_index)
                         current_pos = parent_pos
-                        current_page = parent_page
+                        current_page = self._read_index_page(current_pos)
                         parent_pos = current_page.father
 
 
