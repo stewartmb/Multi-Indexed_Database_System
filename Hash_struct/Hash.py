@@ -1,8 +1,10 @@
 import pickle
 import struct
+import sys
 import os
 import random
-from Utils.Registro import RegistroType
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+from Utils.Registro import *
 
 
 

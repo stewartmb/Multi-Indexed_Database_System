@@ -1,6 +1,9 @@
 import struct 
+import sys
 import os
 from collections import deque
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+from Utils import *
 
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de registros y puntero al root)
