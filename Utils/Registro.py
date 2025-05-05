@@ -75,7 +75,7 @@ class RegistroType:
         return unpacked
 
     def get_key(self, lista: list) -> any:
-        key = self._decode_value(lista[self.key_index], self.dict_format[self.key])
+        key = lista[self.key_index]
         return key
 
     def _decode_value(self, value, type):

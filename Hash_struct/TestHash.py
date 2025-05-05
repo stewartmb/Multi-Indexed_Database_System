@@ -29,3 +29,7 @@ class TestHash(unittest.TestCase):
     def test_search(self):
         # Insert a record
         self.hash_table.insert(["NOMBRE", 25, 1.75])
+
+        for i in range(self.K//2):
+            self.hash_table.insert(["NOMBRE", self.placed[i], 1.75])
+        self.hash_table.search(25)
