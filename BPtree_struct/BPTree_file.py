@@ -166,14 +166,12 @@ class BPTree:
 
     def print_tree_by_levels(self):
         """
-        Imprime el árbol B+ por niveles, mostrando claves en cada nodo.
+        Imprime el árbol B+ por niveles, mostrando claves y punteros en cada nodo.
         """
-        # conseguir encabezado del archivo de índice
         header = self._read_header_index()
         root = header[1]
 
-        if root is None:
-            print("Árbol vacío.")
+        if root == -2 or root == -1:
             return
 
         queue = deque()
@@ -187,18 +185,16 @@ class BPTree:
             for _ in range(level_size):
                 pos = queue.popleft()
                 page = self._read_index_page(pos)
-                # print(page.keys)
-
-                # Mostrar claves
                 keys_str = ', '.join(str(k) for k in page.keys[:page.key_count])
-                print(f"[{keys_str}] ", end="")
+                if page.leaf:
+                    print(f"{pos}[{keys_str}]{page.father} ", end="")
+                else:
+                    childrens_str = ', '.join(str(c) for c in page.childrens[:page.key_count + 1])
+                    print(f"{pos}[{keys_str}]{page.father} -> [{childrens_str}] ", end="")
 
-                # Agregar hijos a la cola si no es hoja
-                if not page.leaf:
-                    # print(page.childrens)
-                    # print(page.key_count)
-                    for i in range(page.key_count + 1):  # M hijos = K + 1
-                        queue.append(page.childrens[i])
+                    for i in range(page.key_count + 1):
+                        if page.childrens[i] != -1:
+                            queue.append(page.childrens[i])
             
             print()  # Salto de línea al final del nivel
             level += 1
@@ -248,9 +244,6 @@ class BPTree:
         """
         Lee una página de índice del archivo.
         """
-        if page_number < 0:
-            print(f"Depuración: Número de página inválido: {page_number}")
-            raise ValueError(f"El número de página es inválido: {page_number}")
 
         with open(self.index_file, 'rb') as f:
             offset = TAM_ENCABEZAD_IND + page_number * TAM_INDEXP
@@ -375,6 +368,32 @@ class BPTree:
         else:
             record = self._read_record(pos_record)
             return record  # Regresa la tupla del registro encontrado
+        
+    def search_range(self, key1, key2):
+        """
+        Busca un rango de registros en el árbol B+.
+        """
+        root = self._read_header_index()[1]  # posición de la raíz
+        pos_leaf = self.search_leaf(key1)  # Busca la posición de la hoja donde se debe insertar el registro
+        if pos_leaf == -1:
+            return None
+        leaf_page = self._read_index_page(pos_leaf)  # Lee la página
+        records = []
+        # Recorre la página y sus siguientes hojas
+        while leaf_page:
+            for i in range(leaf_page.key_count):
+                if key1 <= leaf_page.keys[i] <= key2:
+                    pos_record = leaf_page.childrens[i]
+                    record = self._read_record(pos_record)
+                    records.append(record)
+            # Mueve a la siguiente hoja
+            pos_leaf = leaf_page.childrens[M-1]
+            if pos_leaf != -1:
+                leaf_page = self._read_index_page(pos_leaf)
+            else:
+                break
+        return records  # Regresa la lista de registros encontrados
+    
     
     ## INSERCION ##
 
@@ -416,9 +435,9 @@ class BPTree:
         page.key_count += 1
         return page
 
-    def split(self, pos_page , key, pos_record):
+    def split_leaf(self, pos_page , key, pos_record):
         """
-        Divide una página llena en dos páginas.
+        Divide una page_leaf llena en dos páginas.
         """
         page = self._read_index_page(pos_page)
         index = self.find_index(page, key)
@@ -440,45 +459,75 @@ class BPTree:
         # Reinicializa la página original
         page.keys = [''] * (M-1)
         page.childrens = [-1] * M
-        if page.leaf:
-            # Actualiza la página original
-            page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
-            page.childrens[:mid_index+is_even] = temp_childrens[:mid_index+is_even]
-            page.key_count = mid_index+is_even 
-            # Asigna las claves y punteros a la nueva página
-            new_page.keys[:mid_index+1] = temp_keys[mid_index+is_even:]
-            new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
-            new_page.key_count = mid_index +1
-            new_page.father = page.father  # Asigna el padre
-            up = temp_keys[mid_index + 1]
-        else:
-            # Actualiza la página original
-            page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
-            page.childrens[:mid_index+is_even] = temp_childrens[:mid_index+is_even]
-            page.key_count = mid_index+is_even 
-            # Asigna las claves y punteros a la nueva página
-            new_page.keys[:mid_index+1] = temp_keys[mid_index+is_even:]
-            new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
-            new_page.key_count = mid_index +1 
-            new_page.father = page.father  # Asigna el padre
-            up = temp_keys[mid_index+2]
-            print ("up:", up)
-            # Actualizar padres de los nodos hijos
-            for i in range(new_page.key_count):
-                if page.childrens[i] != -1:
-                    child_page = self._read_index_page(page.childrens[i])
-                    child_page.father = pos_new_page
-                    self._write_index_page(page.childrens[i], child_page) 
+        # Actualiza la página original
+        page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
+        page.childrens[:mid_index+is_even] = temp_childrens[:mid_index+is_even]
+        page.key_count = mid_index+is_even 
+        # Asigna las claves y punteros a la nueva página
+        new_page.keys[:mid_index+1] = temp_keys[mid_index+is_even:]
+        new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
+        new_page.key_count = mid_index +1
+        new_page.father = page.father  # Asigna el padre
+        up = temp_keys[mid_index + 1]
         # Actualiza el puntero al siguiente nodo
         new_page.childrens[M-1] = pos_next_page
-        page.childrens[M-1] = pos_new_page
+        page.childrens[M-1] = pos_new_page 
         # Escribe las páginas actualizadas en el archivo
         self._write_index_page(pos_page, page)
         self._add_index_page(new_page)
-        print("Se dividió la página en dos")
-        print(page.keys)
-        print(new_page.keys)  
         return up, pos_new_page  # Devuelve la clave que se sube al padre
+    
+    def split_parent(self, pos_page , key, pos_record):
+        """
+        Divide una página llena en dos páginas.
+        """
+        page = self._read_index_page(pos_page)
+        index = self.find_index(page, key)
+        temp_keys = page.keys[:M-1].copy()  # Copia las claves
+        temp_childrens = page.childrens[:M].copy()
+        # Desplaza las claves y punteros a la derecha para hacer espacio
+        temp_keys.insert(index, key)  # Inserta la nueva clave
+        temp_childrens.insert(index+1, pos_record)  # Inserta el puntero al registro
+        # Divide la página en dos
+        header = self._read_header_index()
+        pos_new_page = header[0]  # posición de la nueva página
+        new_page = IndexPage(leaf=page.leaf)  # Crea una nueva página de índic
+        # Asigna las claves y punteros a la nueva página
+        mid_index = (M - 1) // 2
+        is_even = False
+        if M % 2 == 0:
+            is_even = True
+        pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
+        # Reinicializa la página original
+        page.keys = [''] * (M-1)
+        page.childrens = [-1] * M
+        # Actualiza la página original
+        page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
+        page.childrens[:mid_index+is_even+1] = temp_childrens[:mid_index+is_even+1]
+        page.key_count = mid_index+is_even 
+        # Asigna las claves y punteros a la nueva página
+        new_page.keys[:mid_index] = temp_keys[mid_index+1+is_even:]
+        new_page.childrens[:mid_index+is_even] = temp_childrens[mid_index+1+is_even:]
+        new_page.key_count = mid_index 
+        new_page.father = page.father  # Asigna el padre
+        up = temp_keys[mid_index+1]
+        # Actualizar padres de los nodos hijos
+        for i in range(page.key_count+1):
+            if page.childrens[i] != -1:
+                child_page = self._read_index_page(page.childrens[i])
+                child_page.father = pos_page
+                self._write_index_page(page.childrens[i], child_page)
+        for i in range(new_page.key_count+1):
+            if new_page.childrens[i] != -1:
+                child_page = self._read_index_page(new_page.childrens[i])
+                child_page.father = pos_new_page
+                self._write_index_page(new_page.childrens[i], child_page)
+        # Escribe las páginas actualizadas en el archivo
+        self._write_index_page(pos_page, page)
+        self._add_index_page(new_page)
+        return up, pos_new_page  # Devuelve la clave que se sube al padre
+    
+
 
     def add(self, record):
         """
@@ -520,7 +569,7 @@ class BPTree:
             return
         ### CASO 2.2: La raíz está llena ###
         else:
-            key_up,pos_new_index = self.split(pos_leaf, key, pos_new_record) # Divide la página llena
+            key_up,pos_new_index = self.split_leaf(pos_leaf, key, pos_new_record) # Divide la página llena
 
             # Comienza el proceso de propagación hacia arriba
             current_pos = pos_leaf
@@ -547,22 +596,20 @@ class BPTree:
                     # Actualizar la raíz del árbol
                     self._update_root(pos_new_root)
                     self._add_index_page(new_root)
-                    print("Se creó una nueva raíz")
                     break
                 else:
                     parent_page = self._read_index_page(parent_pos)
                     # Si el padre no está lleno, se inserta la clave
                     if parent_page.key_count < M - 1:
                         new_parent_page = self.key_insert_internal(parent_page, key_up, pos_new_index)
-                        print(new_parent_page.keys)
-                        print(new_parent_page.childrens)
                         self._write_index_page(parent_pos, new_parent_page)
                         break
                     # Si el padre está lleno, se divide
                     else:
-                        key_up, pos_new_index = self.split(parent_pos, key_up, pos_new_index)
+                        key_up, pos_new_index = self.split_parent(parent_pos, key_up, pos_new_index)
                         current_pos = parent_pos
-                        current_page = parent_page
+                        current_page = self._read_index_page(current_pos)
                         parent_pos = current_page.father
+
 
 
