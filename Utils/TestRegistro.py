@@ -4,18 +4,7 @@ from Utils.Registro import RegistroType
 class TestRegistroType(unittest.TestCase):
 
     def setUp(self):
-
-        self.registro_int = RegistroType({'INT': 'i'}, key_index=0)  # Entero (4 bytes)
-        self.registro_uint = RegistroType({'UINT': 'I'}, key_index=0)  # Entero sin signo (4 bytes)
-        self.registro_short = RegistroType({'SHORT': 'h'}, key_index=0)  # Entero corto (2 bytes)
-        self.registro_ushort = RegistroType({'USHORT': 'H'}, key_index=0)  # Entero corto sin signo
-        self.registro_long = RegistroType({'LONG': 'l'}, key_index=0)  # Entero largo
-        self.registro_ulong = RegistroType({'ULONG': 'L'}, key_index=0)  # Entero largo sin signo
-        self.registro_float = RegistroType({'FLOAT': 'f'}, key_index=0)  # Flotante (4 bytes)
-        self.registro_double = RegistroType({'DOUBLE': 'd'}, key_index=0)  # Doble precisión (8 bytes)
-        self.registro_bool = RegistroType({'BOOL': '?'}, key_index=0)  # Booleano (1 byte)
-        self.registro_char = RegistroType({'CHAR': 'c'}, key_index=0)  # Caracter (1 byte)
-
+        self.dict_format = {'id': 'Q', 'name': '20s', 'age': 'i'}
 
     def test_strings(self):
         self.registro_string = RegistroType({'STRING': '20s'}, key_index=0)  # Cadena de 20 caracteres
@@ -79,3 +68,30 @@ class TestRegistroType(unittest.TestCase):
             byte_data = self.registro_ulonglong.to_bytes([v])
             restored = self.registro_ulonglong.from_bytes(byte_data)
             self.assertEqual(restored[0], v)
+
+    def test_init_with_key_name(self):
+        reg = RegistroType(self.dict_format, key_name='name')
+        self.assertEqual(reg.key, 'name')
+        self.assertEqual(reg.key_index, 1)
+
+    def test_init_with_key_index(self):
+        reg = RegistroType(self.dict_format, key_index=2)
+        self.assertEqual(reg.key, 'age')
+        self.assertEqual(reg.key_index, 2)
+
+    def test_key_name_priority_over_index(self):
+        reg = RegistroType(self.dict_format, key_index=0, key_name='age')
+        self.assertEqual(reg.key, 'age')
+        self.assertEqual(reg.key_index, 2)
+
+    def test_invalid_key_name_raises(self):
+        with self.assertRaises(ValueError):
+            RegistroType(self.dict_format, key_name='not_found')
+
+    def test_invalid_key_index_raises(self):
+        with self.assertRaises(IndexError):
+            RegistroType(self.dict_format, key_index=5)
+
+    def test_no_key_name_or_index_raises(self):
+        with self.assertRaises(ValueError):
+            RegistroType(self.dict_format)
