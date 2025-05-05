@@ -360,6 +360,47 @@ class Hash:
                 overflow_position = bucket['overflow_position']
         return None
 
+    def _aux_delete(self, buckets_file, index_file, data_file, node_index, index_hash, key):
+        """
+        Funcion recursiva de busqueda
+        """
+        index_file.seek(self.Header.size + node_index * self.NT.size)
+        node = self.NT.from_bytes(index_file.read(self.NT.size))
+        if node['bucket_position'] == -1:
+            if index_hash[-1] == '0':
+                return self._aux_delete(buckets_file, index_file, data_file, node['left'], index_hash[:-1], key)
+            else:
+                return self._aux_delete(buckets_file, index_file, data_file, node['right'], index_hash[:-1], key)
+        else:
+            buckets_file.seek(node['bucket_position'] * self.BT.size)
+            bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+            for i in range(bucket['fullness']):
+                data_file.seek(bucket['records'][i] * self.RT.size)
+                record = self.RT.from_bytes(data_file.read(self.RT.size))
+                if self.RT.get_key(record) == key:
+                    # Eliminar el registro
+                    bucket['records'][i] = bucket['records'][bucket['fullness'] - 1]
+                    bucket['records'][bucket['fullness'] - 1] = -1
+                    bucket['fullness'] -= 1
+                    buckets_file.seek(node['bucket_position'] * self.BT.size)
+                    buckets_file.write(self.BT.to_bytes(bucket))
+                    return True
+            overflow_position = bucket['overflow_position']
+            while overflow_position != -1:
+                buckets_file.seek(overflow_position * self.BT.size)
+                bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+                for i in range(bucket['fullness']):
+                    data_file.seek(bucket['records'][i] * self.RT.size)
+                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    if self.RT.get_key(record) == key:
+                        # Eliminar el registro
+                        bucket['records'][i] = -1
+                        bucket['fullness'] -= 1
+                        buckets_file.seek(node['bucket_position'] * self.BT.size)
+                        buckets_file.write(self.BT.to_bytes(bucket))
+                        return True
+        return False
+
     def _aux_range_search(self, buckets_file, index_file, data_file, node_index, lower, upper):
         lista = []
         index_file.seek(self.Header.size + node_index * self.NT.size)
@@ -460,3 +501,26 @@ class Hash:
                 lista.extend(self._aux_range_search(buckets_file, index_file, data_file, root['right'], lower, upper))
 
         return lista
+
+    def delete(self, key):
+        """
+        Elimina un registro del hash extensible.
+        :param key: clave a eliminar
+        """
+        if self.RT.dict_format[self.RT.key] == 'i':
+            key = int(key)
+        elif self.RT.dict_format[self.RT.key] == 'f':
+            key = float(key)
+        elif self.RT.dict_format[self.RT.key] == 'd':
+            key = float(key)
+
+        with open(self.index_file, 'r+b') as index_file, \
+                open(self.data_file, 'r+b') as data_file, \
+                open(self.buckets_file, 'r+b') as buckets_file:
+            index_hash = get_bits(key, self.global_depth)
+            index_file.seek(self.Header.size)
+            root = self.NT.from_bytes(index_file.read(self.NT.size))
+            if index_hash[-1] == '0':
+                return self._aux_delete(buckets_file, index_file, data_file, root['left'], index_hash[:-1], key)
+            else:
+                return self._aux_delete(buckets_file, index_file, data_file, root['right'], index_hash[:-1], key)
