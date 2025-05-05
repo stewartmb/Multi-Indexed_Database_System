@@ -1,4 +1,5 @@
-from isam import ISAM, Registro
+# Pruebas del ISAM (Con archivos)
+from ISAM_struct.ISAM_File import ISAM, Registro
 
 # Crear/abrir estructura ISAM
 isam = ISAM('ISAM_struct/data_file.bin', 'ISAM_struct/index_file.bin', 'ISAM_struct/overflow_file.bin')

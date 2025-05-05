@@ -1,2 +1,1 @@
-import isam as ISAM
-import random
+# Preubas para el ISAM (sin archivos)
