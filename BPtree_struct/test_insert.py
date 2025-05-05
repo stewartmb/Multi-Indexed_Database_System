@@ -1,6 +1,6 @@
 import csv
 import os
-import BPTree_file as BPT
+import Independ_BPTree_file as BPT
 import random
 
 # Lista fija de códigos a usar
@@ -66,9 +66,9 @@ if __name__ == "__main__":
     for registro in resultado_rango:
         print(f"{registro.codigo}, {registro.nombre}, {registro.ciclo}")
 
-    # eliminar archivos existentes
-    try:
-        os.remove(index_file)
-        os.remove(data_file)
-    except FileNotFoundError:
-        pass
+    # # eliminar archivos existentes
+    # try:
+    #     os.remove(index_file)
+    #     os.remove(data_file)
+    # except FileNotFoundError:
+    #     pass

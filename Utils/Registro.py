@@ -24,6 +24,7 @@ class RegistroType:
         """
         self.dict_format = dict_format
         self.FORMAT = ''.join(dict_format.values())
+        print(f"Formato de registro: {self.FORMAT}")
         self.size = struct.calcsize(self.FORMAT)
 
         if key_name is not None:
