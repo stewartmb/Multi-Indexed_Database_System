@@ -11,7 +11,7 @@ class RegistroType:
         key (str): El nombre de la clave que se utilizará como índice.
     """
 
-    def __init__(self, dict_format: dict, key_index: int = None, key_name: str = None):
+    def __init__(self, dict_format: dict, key_name: str = None, key_index: int = None):
         """
         Inicializa la clase RegistroType. Necesita un diccionario donde las claves
         son los nombres de los atributos del registro y los valores son los tipos de datos

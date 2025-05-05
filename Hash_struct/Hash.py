@@ -122,8 +122,8 @@ class HeaderType:
         file.write(struct.pack('i', value))
 
 
-class ExtensibleHash:
-    def __init__(self, table_format, index_key: int,
+class Hash:
+    def __init__(self, table_format, key: str,
                  buckets_file_name: str = 'hash_buckets.bin',
                  index_file_name: str = 'hash_index.bin',
                  data_file_name: str = 'data_file.bin',
@@ -132,7 +132,7 @@ class ExtensibleHash:
         """
         Inicializa el hash extensible.
         :param table_format: formato de la tabla
-        :param index_key: indice de ordenamiento
+        :param key: indice de ordenamiento
         :param buckets_file_name: nombre del archivo de buckets
         :param index_file_name: nombre del archivo de índice
         :param data_file_name: nombre del archivo de datos
@@ -146,7 +146,7 @@ class ExtensibleHash:
         self.max_records = max_records_per_bucket
 
         self.NT = TreeNodeType()
-        self.RT = RegistroType(table_format, index_key)
+        self.RT = RegistroType(table_format, key)
         self.BT = BucketType(max_records_per_bucket)
         self.Header = HeaderType()
         self._initialize_files(global_depth, force=True)
@@ -418,8 +418,8 @@ class ExtensibleHash:
 
 
 table_format = {"nombre":"10s", "edad": "d"}
-index_key = 1
-eh = ExtensibleHash(table_format, index_key)
+index_key = "nombre"
+eh = Hash(table_format, index_key)
 
 print(''.join(table_format.values()))
 
