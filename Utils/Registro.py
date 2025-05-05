@@ -40,11 +40,12 @@ class RegistroType:
         else:
             raise ValueError("You must provide either key_name or key_index.")
 
-    def to_bytes(self, args: list) -> bytes:
+    def to_bytes(self, register: list) -> bytes:
         """
         Convierte el registro (como lista de python) a bytes.
         """
         types = list(self.dict_format.values())
+        args = register.copy()
         for i in range(len(args)):
             if types[i] == 'i':
                 args[i] = int(args[i])
@@ -70,21 +71,29 @@ class RegistroType:
         unpacked = list(struct.unpack(self.FORMAT, data))
         types = list(self.dict_format.values())
         for i in range(len(unpacked)):
-            if types[i] == 'i':
-                unpacked[i] = int(unpacked[i])
-            elif types[i] == 'q':
-                unpacked[i] = int(unpacked[i])
-            elif types[i] == 'Q':
-                unpacked[i] = int(unpacked[i])
-            elif types[i] == 'f':
-                unpacked[i] = float(unpacked[i])
-            elif types[i] == 'd':
-                unpacked[i] = float(unpacked[i])
-            elif types[i] == '?':
-                unpacked[i] = bool(unpacked[i])
-            else:
-                unpacked[i] = unpacked[i].decode('utf-8').strip('\x00')
+            unpacked[i] = self._decode_value(unpacked[i], types[i])
         return unpacked
 
     def get_key(self, lista: list) -> any:
-        return lista[self.key_index]
+        key = self._decode_value(lista[self.key_index], self.dict_format[self.key])
+        return key
+
+    def _decode_value(self, value, type):
+        """
+        Convierte el valor desempaquetado a su equivalente de python
+        """
+        if type == 'i':
+            value = int(value)
+        elif type == 'q':
+            value = int(value)
+        elif type == 'Q':
+            value = int(value)
+        elif type == 'f':
+            value = float(value)
+        elif type == 'd':
+            value = float(value)
+        elif type == '?':
+            value = bool(value)
+        else:
+            value = value.decode('utf-8').strip('\x00')
+        return value

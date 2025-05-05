@@ -419,81 +419,82 @@ class Hash:
                 return record
 
 
-table_format = {"nombre":"10s", "edad": "d"}
-index_key = "nombre"
-eh = Hash(table_format, index_key)
 
-print(''.join(table_format.values()))
-
-nums = random.sample(range(100,1000), 200)
-nums = [1,2,3,4,5,6,7,8]
-
-for i in range(len(nums)):
-    nums[i] = nums[i] + random.random()
-
-placed = nums[0:100]
-not_placed = nums[100:200]
-
-for i in placed:
-    for j in not_placed:
-        if i == j:
-            print(f"Elemento {i} repetido")
-            break
-
-test_passed = True
-
-try:
-    for i in placed:
-        eh.insert([f"data_{i}", i])
-except Exception as e:
-    print(f"Error al insertar: {e}")
-    test_passed = False
-
-if test_passed:
-    print("Test de insert pasado correctamente")
-
-for i in placed:
-    if eh.search(i) is None:
-        print(f"Elemento {i} no encontrado (falso negativo)")
-        test_passed = False
-
-for i in not_placed:
-    if eh.search(i) is not None:
-        print(f"Elemento {i} encontrado (falso positivo)")
-        test_passed = False
-
-if test_passed:
-    print("Test de search pasado correctamente")
-
-
-while True:
-    print("\nSeleccione una opción:")
-    print("1. Insertar elementos")
-    print("2. Imprimir elementos")
-    print("3. Buscar elemento")
-    print("4. Salir")
-
-    choice = input("Ingrese su opción: ")
-
-    if choice == '1':
-        # Insertar elementos
-        elements = input("Ingrese los elementos a insertar (separados por comas, ej. 033, g, 02): ")
-        elements = elements.split(",")
-        eh.insert([elem.strip() for elem in elements])
-    elif choice == '2':
-        # Imprimir elementos
-        eh.imprimir()
-    elif choice == '3':
-        # Buscar elemento
-        key = input("Ingrese la clave a buscar: ")
-        result = eh.search(key)
-        if result:
-            print(f"Elemento encontrado: {result}")
-        else:
-            print("Elemento no encontrado.")
-    elif choice == '4':
-        # Salir del programa
-        print("Terminando")
-        break
-    else:
-        print("Opción inválida. Intente de nuevo.")
+# table_format = {"nombre":"10s", "edad": "d"}
+# index_key = "nombre"
+# eh = Hash(table_format, index_key)
+#
+# print(''.join(table_format.values()))
+#
+# nums = random.sample(range(100,1000), 200)
+# nums = [1,2,3,4,5,6,7,8]
+#
+# for i in range(len(nums)):
+#     nums[i] = nums[i] + random.random()
+#
+# placed = nums[0:100]
+# not_placed = nums[100:200]
+#
+# for i in placed:
+#     for j in not_placed:
+#         if i == j:
+#             print(f"Elemento {i} repetido")
+#             break
+#
+# test_passed = True
+#
+# try:
+#     for i in placed:
+#         eh.insert([f"data_{i}", i])
+# except Exception as e:
+#     print(f"Error al insertar: {e}")
+#     test_passed = False
+#
+# if test_passed:
+#     print("Test de insert pasado correctamente")
+#
+# for i in placed:
+#     if eh.search(i) is None:
+#         print(f"Elemento {i} no encontrado (falso negativo)")
+#         test_passed = False
+#
+# for i in not_placed:
+#     if eh.search(i) is not None:
+#         print(f"Elemento {i} encontrado (falso positivo)")
+#         test_passed = False
+#
+# if test_passed:
+#     print("Test de search pasado correctamente")
+#
+#
+# while True:
+#     print("\nSeleccione una opción:")
+#     print("1. Insertar elementos")
+#     print("2. Imprimir elementos")
+#     print("3. Buscar elemento")
+#     print("4. Salir")
+#
+#     choice = input("Ingrese su opción: ")
+#
+#     if choice == '1':
+#         # Insertar elementos
+#         elements = input("Ingrese los elementos a insertar (separados por comas, ej. 033, g, 02): ")
+#         elements = elements.split(",")
+#         eh.insert([elem.strip() for elem in elements])
+#     elif choice == '2':
+#         # Imprimir elementos
+#         eh.imprimir()
+#     elif choice == '3':
+#         # Buscar elemento
+#         key = input("Ingrese la clave a buscar: ")
+#         result = eh.search(key)
+#         if result:
+#             print(f"Elemento encontrado: {result}")
+#         else:
+#             print("Elemento no encontrado.")
+#     elif choice == '4':
+#         # Salir del programa
+#         print("Terminando")
+#         break
+#     else:
+#         print("Opción inválida. Intente de nuevo.")
