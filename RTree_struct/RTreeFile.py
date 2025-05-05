@@ -18,19 +18,20 @@ tipo="i"
 
 
 class Point:
-    def __init__(self, coords, placeholder=False):
+    def __init__(self, coords, placeholder=False, index=-1):
         self.coords = coords
         self.placeholder = placeholder
+        self.index = index
 
     def to_binary(self):
         global point_format
-        return struct.pack(point_format, *self.coords, self.placeholder)
+        return struct.pack(point_format, *self.coords, self.placeholder, self.index)
 
     @staticmethod
     def from_binary(binary):
         global point_format
-        coords, placeholder = struct.unpack(point_format, binary)
-        return Point(list(coords), placeholder)
+        coords, placeholder, index = struct.unpack(point_format, binary)
+        return Point(list(coords), placeholder, index)
 
     @staticmethod
     def sort_points_by_dimension(points):
@@ -75,7 +76,8 @@ class Point:
         return math.sqrt(sum_sq)
 
     def __str__(self):
-        return str(self.coords)
+        ret_str = f"{self.index}: {self.coords}"
+        return ret_str
 
 
 class MBR:
@@ -95,6 +97,9 @@ class MBR:
         min_coords = coords[: len(coords) // 2]
         max_coords = coords[len(coords) // 2 :]
         return MBR(min_coords, max_coords)
+
+    def __str__(self):
+        return f"MBR: {self.min_coords}, {self.max_coords}"
 
     def perimeter(self):
         return 2 * sum(
@@ -173,6 +178,22 @@ class Rectangle:
         self.parent = parent  # int
         self.mbr = mbr  # mbr
         self.deleted = deleted # bool
+
+    def __str__(self):
+        ret_str = f"pos: {self.pos}\n"
+        ret_str += f"points: "
+        for p in self.points:
+            ret_str += f"[{p}] "
+        ret_str += f"\n"
+        ret_str += "rectangles: "
+        for rec in self.rectangles:
+            ret_str += f"{rec} "
+        ret_str += f"\n"
+        ret_str += f"is_leaf: {self.is_leaf}\n"
+        ret_str += f"deleted: {self.deleted}\n"
+        ret_str += f"parent: {self.parent}\n"
+        ret_str += f"mbr: {self.mbr}\n"
+        return ret_str
 
     def to_binary(self):
         global rect_format
@@ -264,9 +285,6 @@ class Rectangle:
     def size(self):
         return len(self.points)
 
-    def __str__(self):
-        return f"{self.mbr.min_coords} {self.mbr.max_coords}"
-
     @staticmethod
     def sort_rectangles_by_dimension_min(rectangles):
         num_dims = len(rectangles[0].mbr.min_coords)
@@ -314,26 +332,38 @@ class RTreeFile:
         global point_format, mbr_format, rect_format, b, dim, tipo
         with open(self.filename, "ab+") as f:
             if f.tell() == 0:
-                self.root = -1  # int
+                root = -1  # int
                 b = bf
                 dim = dimf
                 tipo = typef
-                self.size = 0
-                point_format = dim * typef + "?"
+                size = 0
+                point_format = dim * typef + "?i"
                 mbr_format = 2 * point_format
                 rect_format = (
                     "i" + (b + 1) * point_format + (b + 1) * "i" + "?i?" + mbr_format
                 )
                 self.write_header(
-                    self.root, self.size, b, dim, point_format, mbr_format, rect_format
+                    root, size, b, dim, point_format, mbr_format, rect_format
                 )
             else:
-                self.root, self.size, b, dim, point_format, mbr_format, rect_format = (
+                root, size, b, dim, point_format, mbr_format, rect_format = (
                     self.get_header()
                 )
 
+    def get_root(self):
+        return self.get_header()[0]
+
+    def get_size(self):
+        return self.get_header()[1]
+
+    def write_root(self, root):
+        self.write_header(root, self.get_size(), b, dim, point_format, mbr_format, rect_format)
+
+    def write_size(self, size):
+        self.write_header(self.get_root(), size, b, dim, point_format, mbr_format, rect_format)
+
     def write_header(self, root, size, bf, dimf, point_f, mbr_f, rect_f):
-        with open(self.filename, "wb+") as f:
+        with open(self.filename, "ab+") as f:
             f.seek(0)
             f.write(
                 struct.pack(
@@ -366,13 +396,13 @@ class RTreeFile:
             )
 
     def write_rec_at(self, pos, rec):
-        with open(self.filename, "wb") as f:
+        with open(self.filename, "ab") as f:
             global rect_format
             rect_format_size = struct.calcsize(rect_format)
             f.seek(header_size + pos * rect_format_size)
             f.write(rec.to_binary())
 
-    def get_rec_at(self, pos, rec):
+    def get_rec_at(self, pos):
         with open(self.filename, "rb") as f:
             global rect_format
             rect_format_size = struct.calcsize(rect_format)
@@ -465,19 +495,41 @@ class RTreeFile:
     @staticmethod
     def split(u):
         if u.is_leaf:
-            return RTree.split_leaf(u)
-        return RTree.split_internal(u)
+            return RTreeFile.split_leaf(u)
+        return RTreeFile.split_internal(u)
 
-    def handle_overflow(self, u):
-        x, y = RTree.split(u)
+    def handle_overflow(self, u_pos):
+        x, y = RTreeFile.split(u_pos)
+        u = self.get_rec_at(u_pos)
         w = u.parent
-        if w is None:  # se crea un nuevo root if root overflows
+        if w == -1:  # se crea un nuevo root if root overflows
+            u.deleted = True
+            self.write_rec_at(u_pos, u)
+
+            end = self.get_size()
+
+            new_root_pos = end
+            end += 1
+
             new_root = Rectangle(is_leaf=False)
-            x.parent = new_root
-            y.parent = new_root
-            new_root.add_rectangle(x)
-            new_root.add_rectangle(y)
-            self.root = new_root
+            x.parent = new_root_pos
+            y.parent = new_root_pos
+
+            x_pos = end
+            end += 1
+
+            y_pos = end
+            end += 1
+
+            new_root.add_rectangle(x_pos)
+            new_root.add_rectangle(y_pos)
+
+            self.write_rec_at(new_root_pos, new_root)
+            self.write_rec_at(x_pos, x)
+            self.write_rec_at(y_pos, y)
+
+            self.write_size(end)
+            self.write_root(new_root)
             # self.print_tree(new_root)
         else:
             w.remove(u)
@@ -493,24 +545,31 @@ class RTreeFile:
                 self.handle_overflow(w)
                 # self.print_tree(w)
 
-    def __insert__(self, u, p):
+    def __insert__(self, u_pos, p):
         # u is rectangle
         # p is point
+        u = self.get_rec_at(u_pos)
         if u.is_leaf:
             u.add_point(p)
+            self.write_rec_at(u_pos, u)
             if u.size() == b + 1:
-                self.handle_overflow(u)
+                self.handle_overflow(u_pos)
         else:
             u.add_point(p)
-            v = RTree.choose_subtree(u, p)
+            v = RTreeFile.choose_subtree(u, p)
             self.__insert__(v, p)
 
     def insert(self, point):
-        if self.root is None:
-            self.root = Rectangle(is_leaf=True)
+        root = self.get_root()
+        if self.get_root() == -1:
+            pos = self.get_size()
+            self.write_root(pos)
+            self.write_size(pos+1)
+            new_root = Rectangle(pos=pos,is_leaf=True)
+            self.write_rec_at(pos, new_root)
 
-        self.__insert__(self.root, point)
-        self.visualize_tree(self.root)
+        self.__insert__(root, point)
+        # self.visualize_tree(self.root)
 
     def __ksearch__(self, node, k, point, maxh):
         if node.is_leaf:
