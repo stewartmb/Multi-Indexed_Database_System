@@ -175,9 +175,10 @@ class ISAM:
     # Operaciones principales
     # --------------------------
     
-    def insert(self, codigo, nombre, ciclo):
-        """Inserta un nuevo registro en la estructura ISAM"""
-        record = Registro(codigo, nombre, ciclo)
+    def insert_record(self, registro):
+        """Inserta un objeto Registro en la estructura ISAM"""
+        if not isinstance(registro, Registro):
+            raise ValueError("Debe proporcionar un objeto de tipo Registro")
         
         # 1. Insertar en archivo primario o overflow
         primary_pages = self._read_primary_header()
@@ -186,9 +187,9 @@ class ISAM:
         # Caso especial: primera página
         if primary_pages == 0:
             new_page = PageFile()
-            new_page.add_record_sorted(record)
+            new_page.add_record_sorted(registro)
             self._add_primary_page(new_page)
-            self._update_index(codigo)
+            self._update_index(registro.codigo)
             return
         
         # Buscar página primaria adecuada
@@ -197,30 +198,30 @@ class ISAM:
             last_key = page.records[page.record_count-1].codigo if page.record_count > 0 else ''
             
             # Si el código es menor que el último de la página o es la última página
-            if not last_key or codigo <= last_key or page_num == primary_pages-1:
+            if not last_key or registro.codigo <= last_key or page_num == primary_pages-1:
                 if page.record_count < REGISTROS_POR_PAGINA:
                     # Insertar en página primaria manteniendo orden
-                    if page.add_record_sorted(record):
+                    if page.add_record_sorted(registro):
                         self._write_primary_page(page_num, page)
                         inserted = True
                         break
                 else:
                     # Insertar en overflow
-                    self._insert_overflow(page, page_num, record)
+                    self._insert_overflow(page, page_num, registro)
                     inserted = True
                     break
         
         if not inserted:
             # Crear nueva página primaria
             new_page = PageFile()
-            new_page.add_record_sorted(record)
+            new_page.add_record_sorted(registro)
             self._add_primary_page(new_page)
         
         # 2. Actualizar índices si es necesario (sparse index)
-        self._update_index(codigo)
+        self._update_index(registro.codigo)
     
-    def search(self, codigo):
-        """Busca un registro por su código"""
+    def search_record(self, codigo):
+        """Busca un registro por su código y devuelve objeto Registro"""
         # 1. Buscar en el índice de nivel 1
         l1_page, l2_page = self._read_index_headers()
         
