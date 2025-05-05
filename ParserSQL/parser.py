@@ -14,7 +14,7 @@ stmt: create_stmt ";"
 
 create_stmt: "create" "table" NAME "(" create_attr_list ")"
 copy_stmt: "copy" NAME "from" VALUE
-create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index" INDEX] ("," NAME (TYPE | varchar) ["primary" "key"] ["index" INDEX])*
+create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index" INDEX] ("," NAME (TYPE | varchar) [ KEY ] ["index" INDEX])*
 select_stmt: "select" (ALL | attr_list) "from" NAME ["where" condition ("and" condition)*]
 attr_list: NAME ("," NAME)*
 
@@ -98,22 +98,25 @@ class SQLTransformer(Transformer):
         dict = {}
         i = 0
         while i < len(items):
-            while items[i] is None:
+            while i < len(items) and items[i] is None:
                 i+=1
+            if i == len(items):
+                break
             attr_name = str(items[i])
             attr_type = items[i+1]
             key = None
             key_index = None
             i+=2
-            if i < len(items):
-                if str(items[i]) == "primary key":
-                    result["key"] = attr_name
-                    i+=2
-                if items[i] in ["rtree", "btree", "seq", "isam", "hash"]:
-                    key_index = items[i]
-                    i+=1
+            if i < len(items) and items[i] is not None and str(items[i]) == "primary key":
+                result["key"] = attr_name
+                i+=1
+            if i < len(items) and items[i] is None:
+                i+=1
+            if i < len(items) and items[i] is not None and items[i] in ["rtree", "btree", "seq", "isam", "hash"]:
+                key_index = items[i]
+                i+=1
             dict[attr_name] = {"type": attr_type, "index": key_index}
-            result["columns"] = dict
+        result["columns"] = dict
         return result
 
     def attr_list(self, items):
