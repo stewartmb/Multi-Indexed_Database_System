@@ -19,9 +19,10 @@ format_tables = [{"codigo": "i", "nombre": "20s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
                  {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
 
-name_keys = ["codigo", "iata", "zip_code"]
+name_keys = ["nombre", "iata", "zip_code"]
+
 # numero aleatorio entre 1 y 3
-random_index = 1
+random_index = 0
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -62,15 +63,16 @@ def test_insert_CSV(csv_path, index_file, data_file):
         i = 0         
         for row in registros:
             i += 1
-            if i % N == 0:
+            m = N
+            if random_index == 0:
+                m = m / N
+            if i % m == 0:
                 print("|", end="")
             key = arbol.RT.get_key(row)
             KEYS.append(key)
             arbol.add(row)
         print()
-        print("Registros del CSV insertados en el árbol B+.")
-        if i <= 200:
-            arbol.print_tree_by_levels()
+
 
     return arbol
 
@@ -82,7 +84,10 @@ def test_search():
     for key in KEYS:
         i+=1
         resultado = arbol.search(key)
-        if i % N == 0:
+        m = N
+        if random_index == 0:
+            m = m / N
+        if i % m == 0:
             print("|", end="")
         if resultado is None:
             print(f"{key} No encontrado")
@@ -92,10 +97,19 @@ def test_search():
     print("Búsqueda de prueba finalizada.")
 
 
-def test_search_range(inferior, superior):
+def test_search_range():
     # BUSQUEDAS POR RANGO
-    print("\nBúsquedas por rango:")
     arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
+
+    if 's' in arbol.format_key:
+        inferior = 'A'
+        superior = 'D'
+    else:
+        inferior = 101
+        superior = 140
+    print(f"\nBúsquedas por rango: {inferior} y {superior}:")
+    print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {arbol.format_key}\n")
+    
     resultado_rango = arbol.search_range(inferior, superior)
     for registro in resultado_rango:
         print(registro)
@@ -113,10 +127,7 @@ if __name__ == "__main__":
     # Prueba de búsqueda
     test_search()
     # Prueba de búsqueda por rango
-    if random_index == 1:
-        test_search_range("9G5", "AG6")
-    elif random_index == 2:
-        test_search_range(101,120)
+    test_search_range()
  
 
 
