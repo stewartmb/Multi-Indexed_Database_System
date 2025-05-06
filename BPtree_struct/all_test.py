@@ -15,7 +15,7 @@ index_file = "BPtree_struct/index_file.bin"
 data_file = "BPtree_struct/data_file.bin"
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv"]
 
-format_tables = [{"codigo": "i", "nombre": "20s", "ciclo": "i"},
+format_tables = [{"codigo": "q", "nombre": "100s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
                  {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
 
@@ -84,6 +84,7 @@ def test_search():
     for key in KEYS:
         i+=1
         resultado = arbol.search(key)
+        print(resultado)
         m = N
         if random_index == 0:
             m = m / N
