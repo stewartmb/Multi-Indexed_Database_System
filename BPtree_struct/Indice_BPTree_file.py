@@ -533,7 +533,9 @@ class IndexPage():
             else:
                 # Convertir a bytes si es string
                 if 's' in format_key and isinstance(key, str):
-                    packed_keys.append(key.encode('utf-8'))
+                    max_length = int(format_key[:-1])  # Elimina la 's' y convierte a entero
+                    truncated_key = key[:max_length]
+                    packed_keys.append(truncated_key.encode('utf-8'))
                 # Asegurar tipo correcto
                 elif format_key == 'i' and isinstance(key, float):
                     packed_keys.append(int(key))
