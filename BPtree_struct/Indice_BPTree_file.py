@@ -15,7 +15,8 @@ def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M,
     """
     Genera el formato del índice dinámicamente basado en M.
     """
-    return f'b{(M-1) * format_key}{M * "i"}ii'
+    format = f'b{(M-1) * format_key}{M * "i"}ii'
+    return format
 
 class BPTree:
     """
@@ -24,7 +25,7 @@ class BPTree:
     def __init__(self, table_format , name_key: str ,
                  name_index_file = 'BPTree_struct/index_file.bin', 
                  name_data_file = 'BPTree_struct/data_file.bin',
-                 max_num_child = 4,):
+                 max_num_child = None,):
         
         self.index_file = name_index_file
         self.data_file = name_data_file
@@ -356,7 +357,7 @@ class BPTree:
         new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
         new_page.key_count = mid_index +1
         new_page.father = page.father  # Asigna el padre
-        up = temp_keys[mid_index + 1]
+        up = temp_keys[mid_index + is_even]
         # Actualiza el puntero al siguiente nodo
         new_page.childrens[self.M-1] = pos_next_page
         page.childrens[self.M-1] = pos_new_page 
@@ -395,10 +396,10 @@ class BPTree:
         page.key_count = mid_index+is_even 
         # Asigna las claves y punteros a la nueva página
         new_page.keys[:mid_index] = temp_keys[mid_index+1+is_even:]
-        new_page.childrens[:mid_index+is_even] = temp_childrens[mid_index+1+is_even:]
+        new_page.childrens[:mid_index+1] = temp_childrens[mid_index+1+is_even:]
         new_page.key_count = mid_index 
         new_page.father = page.father  # Asigna el padre
-        up = temp_keys[mid_index+1]
+        up = temp_keys[mid_index+is_even]
         # Actualizar padres de los nodos hijos
         for i in range(page.key_count+1):
             if page.childrens[i] != -1:
@@ -543,7 +544,6 @@ class IndexPage():
 
         # Prepare all arguments for packing
         pack_args = [leaf_int] + packed_keys + self.childrens + [self.father, self.key_count]
-
         return struct.pack(indexp_format, *pack_args)
 
     @classmethod

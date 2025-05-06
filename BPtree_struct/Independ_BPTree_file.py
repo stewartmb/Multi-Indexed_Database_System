@@ -7,7 +7,7 @@ from Utils import *
 
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de registros y puntero al root)
-M = 4  # Grado del árbol B+ (número máximo de hijos por nodo)
+M = 5  # Grado del árbol B+ (número máximo de hijos por nodo)
 
 ### RECORD FORMAT ###
 RECORD_FORMAT = '3s20s2s'  # Formato de los datos: 3s (codigo), 20s (nombre), 2s (ciclo)
@@ -471,7 +471,7 @@ class BPTree:
         new_page.childrens[:mid_index+1] = temp_childrens[mid_index+is_even:]
         new_page.key_count = mid_index +1
         new_page.father = page.father  # Asigna el padre
-        up = temp_keys[mid_index + 1]
+        up = temp_keys[mid_index + is_even]
         # Actualiza el puntero al siguiente nodo
         new_page.childrens[M-1] = pos_next_page
         page.childrens[M-1] = pos_new_page 
@@ -513,7 +513,7 @@ class BPTree:
         new_page.childrens[:mid_index+is_even] = temp_childrens[mid_index+1+is_even:]
         new_page.key_count = mid_index 
         new_page.father = page.father  # Asigna el padre
-        up = temp_keys[mid_index+1]
+        up = temp_keys[mid_index+is_even]
         # Actualizar padres de los nodos hijos
         for i in range(page.key_count+1):
             if page.childrens[i] != -1:
