@@ -148,7 +148,7 @@ class BPTree:
         with open(self.index_file, 'r+b') as f:
             offset = TAM_ENCABEZAD_IND + page_number * self.tam_indexp
             f.seek(offset)
-            f.write(page.to_bytes(self.indexp_format, self.format_key))  
+            f.write(page.to_bytes(self.format_key, self.indexp_format))  # Escribe la página en la posición especificada
 
     def _add_index_page(self, page):
         """
@@ -186,7 +186,7 @@ class BPTree:
         with open(self.data_file, 'r+b') as f:
             offset = TAM_ENCABEZAD_DAT + position * self.tam_registro
             f.seek(offset)
-            f.write(record.to_bytes())  # Escribe el registro en la posición especificada
+            f.write(self.RT.to_bytes(record))  # Escribe el registro en la posición especificada
             
     def _add_record(self, record):
         """
@@ -345,7 +345,7 @@ class BPTree:
             is_even = True
         pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
         # Reinicializa la página original
-        page.keys = [''] * (self.M-1)
+        page.keys = [None] * (self.M-1)
         page.childrens = [-1] * self.M
         # Actualiza la página original
         page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
@@ -387,7 +387,7 @@ class BPTree:
             is_even = True
         pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
         # Reinicializa la página original
-        page.keys = [''] * (self.M-1)
+        page.keys = [None] * (self.M-1)
         page.childrens = [-1] * self.M
         # Actualiza la página original
         page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
@@ -417,11 +417,20 @@ class BPTree:
     
 
 
-    def add(self, pos_new_record, key):
+    def add(self, record: list = None, pos_new_record :int = None):
         """
         Inserta un registro en el árbol B+.
         """
         # Le el encabezado del archivo de índice
+        if record is not None and pos_new_record is not None:
+            return "Error: Debe ingresar solo uno de los dos argumentos (record o pos_new_record)"
+        if record is None and pos_new_record is None:
+            return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
+        if record is not None:
+            pos_new_record = self._read_header_data() 
+            self._add_record(record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro 
+
         header = self._read_header_index()
         root = header[1] # posición de la raíz
         pos_new_index = header[0] # cantidad de páginas
