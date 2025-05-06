@@ -24,7 +24,6 @@ class RegistroType:
         """
         self.dict_format = dict_format
         self.FORMAT = ''.join(dict_format.values())
-        print(f"Formato de registro: {self.FORMAT}")
         self.size = struct.calcsize(self.FORMAT)
 
         if key_name is not None:
@@ -76,7 +75,7 @@ class RegistroType:
         return unpacked
 
     def get_key(self, lista: list) -> any:
-        key = lista[self.key_index]
+        key = self._decode_value(lista[self.key_index], self.dict_format[self.key])
         return key
 
     def _decode_value(self, value, type):
