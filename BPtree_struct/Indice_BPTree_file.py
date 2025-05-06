@@ -1,6 +1,7 @@
 import struct 
 import sys
 import os
+import math
 from collections import deque
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
@@ -492,69 +493,80 @@ class BPTree:
                         parent_pos = current_page.father
 
 class IndexPage():
-    """
-    Clase que representa una página de índices (nodo del b+tree) en el archivo.
-    """
-    def __init__(self, leaf=True, M = None, format_key = None , indexp_format = None):
-        self.leaf = leaf  # Indica si es una hoja 'bool'
-        self.keys = [''] * (M-1) # claves de orden (codigo o ciclo o nombre)
-        """
-        self.childrens = []  
-        Si hoja != True ---->  M Punteros a hijos (nodos) 'lista de posiciones en "index_file.bin" '
-        Si hoja == True ---->  M-1 Punteros a registros (hojas) 'lista de posiciones en "data_file.bin" '
-                               1 Puntero a siguiente hoja (hoja) 'lista de posiciones en "index_file.bin" '
-        """
-        self.childrens = [-1] * M # POSICION DE HIJOS (Inicialmente -1 ,sin hijos)
-        self.father = -1  # Enlace al padre
-        self.key_count = 0  # Claves ocupadas en el nodo
-        self.M = M  # Orden del árbol B+
+    def __init__(self, leaf=True, M=None, format_key=None, indexp_format=None):
+        self.leaf = leaf
+        self.keys = [None] * (M-1)
+        self.childrens = [-1] * M
+        self.father = -1
+        self.key_count = 0
+        self.M = M
 
-    def to_bytes(self,indexp_format, format_key):
-        # Encode keys with proper padding
-        encoded_keys = []
+    def to_bytes(self, format_key, indexp_format):
+        # Convert leaf to integer (1 for True, 0 for False)
+        leaf_int = 1 if self.leaf else 0
+        
+        # Prepare keys for packing
+        packed_keys = []
         for key in self.keys:
-            key_str = str(key) if key else ''
-            key_bytes = key_str.encode('utf-8')
-            # Pad to the specified key length
-            padded_key = key_bytes.ljust(struct.calcsize(format_key), b'\x00')
-            encoded_keys.append(padded_key)
+            if key is None:
+                # For None values, use a sentinel value that fits the format
+                if format_key == 'i':  # Entero
+                    packed_keys.append(-2147483648)  # -2³¹ (fuera del rango normal)
+                elif format_key == 'f':  # Float
+                    packed_keys.append(float('nan'))  # NaN representa None
+                elif format_key == 'b':
+                    packed_keys.append(-128)  # Special value for None
+                elif 's' in format_key:  # String (ej: '3s')
+                    packed_keys.append(b'\x00' * int(format_key[:-1]))  # Bytes nulos
+                else:
+                    packed_keys.append(0)  # Default fallback
+            else:
+                # Convertir a bytes si es string
+                if 's' in format_key and isinstance(key, str):
+                    packed_keys.append(key.encode('utf-8'))
+                # Asegurar tipo correcto
+                elif format_key == 'i' and isinstance(key, float):
+                    packed_keys.append(int(key))
+                elif format_key == 'f' and isinstance(key, int):
+                    packed_keys.append(float(key))
+                else:
+                    packed_keys.append(key)
 
-        # Pack all data according to the format
-        return struct.pack(
-            indexp_format,
-            self.leaf,
-            *encoded_keys,
-            *self.childrens,
-            self.father,
-            self.key_count
-        )
+        # Prepare all arguments for packing
+        pack_args = [leaf_int] + packed_keys + self.childrens + [self.father, self.key_count]
+
+        return struct.pack(indexp_format, *pack_args)
 
     @classmethod
     def from_bytes(cls, data, M, format_key, indexp_format):
-        """
-        Reconstruye una página de índice desde bytes usando los atributos proporcionados.
-        """
-        # Verificar el tamaño de los datos
+        # Verify data size
         expected_size = struct.calcsize(indexp_format)
         if len(data) != expected_size:
-            raise ValueError(f"Tamaño incorrecto: esperado {expected_size}, obtenido {len(data)}")
+            raise ValueError(f"Data size mismatch: expected {expected_size}, got {len(data)}")
 
-        # Desempaquetar los datos
-        unpacked = struct.unpack(indexp_format, data)
+        # Unpack all data
+        unpacked = list(struct.unpack(indexp_format, data))
 
-        # Crear una nueva instancia de IndexPage
-        instance = cls(leaf=unpacked[0], M=M, format_key=format_key, indexp_format=indexp_format)
+        # Create instance
+        instance = cls(leaf=bool(unpacked[0]), M=M, format_key=format_key, indexp_format=indexp_format)
 
-        # Extraer las claves (M-1 claves)
+        # Handle keys
         for i in range(M - 1):
-            key_bytes = unpacked[i + 1]
-            instance.keys[i] = key_bytes.decode('utf-8').strip('\x00')
+            key_value = unpacked[i + 1]
+            if format_key == 'i':
+                instance.keys[i] = key_value if key_value != -2147483648 else None
+            elif format_key == 'f':
+                instance.keys[i] = key_value if not math.isnan(key_value) else None
+            elif format_key == 'b':
+                instance.keys[i] = key_value if key_value != -128 else None
+            elif 's' in format_key:  # String (bytes → str)
+                instance.keys[i] = key_value.decode('utf-8').strip('\x00') if key_value != b'\x00' * len(key_value) else None
+            else:
+                instance.keys[i] = key_value
 
-        # Extraer los hijos (M punteros)
+        # Handle children and metadata
         children_start = M
         instance.childrens = list(unpacked[children_start:children_start + M])
-
-        # Extraer padre y contador de claves
         instance.father = unpacked[-2]
         instance.key_count = unpacked[-1]
 

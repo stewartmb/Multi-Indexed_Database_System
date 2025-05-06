@@ -1,5 +1,5 @@
 import unittest
-from Utils.Registro import RegistroType
+from Registro import RegistroType
 
 class TestRegistroType(unittest.TestCase):
 

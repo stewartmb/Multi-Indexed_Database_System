@@ -70,8 +70,8 @@ def test_index_page():
 
 def test_index_page_indice():
     # Create format specifications
-    table_format = {"nombre": "12s", "edad": "i", "altura": "d"}
-    name_key = "nombre"
+    table_format = {"codigo": "d", "nombre": "d", "ciclo": "d"}
+    name_key = "codigo"
     
     # Create B+ tree instance (order M=4)
     btree = archivo.BPTree(table_format=table_format, name_key=name_key, max_num_child=4)
@@ -83,7 +83,7 @@ def test_index_page_indice():
         format_key=btree.format_key,
         indexp_format=btree.indexp_format
     )
-    page.keys = ['ASF', 'ASD', 'EDW']  # M-1 keys (M=4, so 3 keys)
+    page.keys = [1235.1234, 1234.1346, 1123.54735]  # M-1 keys (M=4, so 3 keys)
     page.childrens = [1, 2, 3, 4]     # M children pointers
     page.father = 0                    # Parent index
     page.key_count = 3                 # Number of keys in node
@@ -96,11 +96,11 @@ def test_index_page_indice():
     print("Parent:", page.father)
     
     # Convert to bytes
-    page_bytes = page.to_bytes()
+    page_bytes = page.to_bytes(btree.format_key, btree.indexp_format)
     print("Page bytes:", page_bytes)
 
     # Reconstruct from bytes
-    reconstructed_page = page.from_bytes(page_bytes)
+    reconstructed_page = page.from_bytes(page_bytes, btree.M, btree.format_key, btree.indexp_format)
 
     print("\nReconstructed page:")
     print("Leaf:", reconstructed_page.leaf)
@@ -142,5 +142,5 @@ def test_indice_bptree_search():
     for registro in resultado_rango:
         print(f"{registro[0]}, {registro[1]}, {registro[2]}")
 
-test_indice_bptree_search()
+test_index_page_indice()
     
