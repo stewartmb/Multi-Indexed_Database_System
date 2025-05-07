@@ -4,6 +4,7 @@ import matplotlib.patches as patches
 import heapq
 
 b = 4
+m = 2
 
 INT_MAX = 2**31 - 1
 INT_MIN = -(2**31)
@@ -30,6 +31,14 @@ class Point:
 
     def __lt__(self, other):
         return self.coords < other.coords
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return False
+        return self.coords == other.coords
+
+    def __hash__(self):
+        return hash(tuple(self.coords))
 
     @staticmethod
     def distance(p1, p2):
@@ -68,7 +77,16 @@ class MBR:
         return 2 * sum(
             self.max_coords[i] - self.min_coords[i] for i in range(len(self.min_coords))
         )
+    def __str__(self):
+        return f"{self.min_coords} {self.max_coords}"
 
+    def __eq__(self, other):
+        if not isinstance(other, MBR):
+            return False
+        return self.min_coords == other.min_coords and self.max_coords == other.max_coords
+
+    def __hash__(self):
+        return hash((tuple(self.min_coords), tuple(self.max_coords)))
     def update_coords_point(self, point):
         prev_perimeter = self.perimeter()
         for i in range(len(point.coords)):
@@ -133,6 +151,19 @@ class Rectangle:
         self.parent = parent
         self.mbr = mbr
 
+    def __eq__(self, other):
+        if not isinstance(other, Rectangle):
+            return False
+        return (
+            self.is_leaf == other.is_leaf and
+            self.points == other.points and
+            self.rectangles == other.rectangles and
+            self.mbr == other.mbr
+        )
+
+    def __hash__(self):
+        return hash((tuple(self.points), tuple(self.rectangles), self.is_leaf, self.mbr))
+
     def add_point(self, point):
         if self.mbr is None:  # si no hay mbr, crearlo
             self.mbr = MBR(point.coords[:], point.coords[:])
@@ -152,7 +183,8 @@ class Rectangle:
         return len(self.points)
 
     def __str__(self):
-        return f"{self.mbr.min_coords} {self.mbr.max_coords}"
+        ret = f"RECTANGLE:\npoints: {[str(p) for p in self.points]}\n rectangles: {[str(rec.mbr) for rec in self.rectangles]}\n is_leaf: {self.is_leaf}\n mbr:{self.mbr}\n parent: {str(self.parent.mbr) if self.parent is not None else None}"
+        return ret
 
     @staticmethod
     def sort_rectangles_by_dimension_min(rectangles):
@@ -199,6 +231,7 @@ class RTree:
     def __init__(self, root=None):
         self.root = root
         self.b = b
+        self.m = m
 
     @staticmethod
     def choose_subtree(u, p):
@@ -330,7 +363,7 @@ class RTree:
             self.root = Rectangle(is_leaf=True)
 
         self.__insert__(self.root, point)
-        self.visualize_tree(self.root)
+        # self.visualize_tree(self.root)
 
     def __ksearch__(self, node, k, point, maxh):
         if node.is_leaf:
@@ -422,10 +455,81 @@ class RTree:
             colors = ["red", "blue", "green", "orange", "purple", "brown"]
             for child in node.rectangles:
                 next_color = colors[(level + 1) % len(colors)]
-                self.visualize_tree(child, ax=ax, level=level + 1, color=next_color)
+                # self.visualize_tree(child, ax=ax, level=level + 1, color=next_color)
 
         if level == 0:
             plt.show()
+    
+    def find_rec(self, node, point):
+        if node.is_leaf:
+            for p in node.points:
+                if p.coords == point.coords:
+                    return node
+            return None
+        else:
+            found = None
+            for rec in node.rectangles:
+                if point.inside(rec.mbr.min_coords, rec.mbr.max_coords):
+                    found = self.find_rec(rec, point)
+                    if found is not None:
+                        return found
+            return found
+        
+    def get_leaves(self, node):
+        leaves = []
+
+        def traverse(n):
+            if n.is_leaf:
+                leaves.append(n)
+            else:
+                for child in n.rectangles:
+                    traverse(child)
+
+        traverse(node)
+        return leaves
+
+    def condense_tree(self, node):
+        temp = node
+        eliminated = []
+
+        while True:
+            if temp is None:
+                break
+            parent = temp.parent
+
+            if (temp.is_leaf and len(temp.points) < self.m) or (not temp.is_leaf and len(temp.rectangles) < self.m):
+                print("before remove:")
+                self.print_tree(parent)
+                print("after remove")
+                parent.remove(temp)
+                self.print_tree(parent)
+                leaf_rec = self.get_leaves(temp)
+                for r in leaf_rec:
+                    eliminated.append(r)
+            
+            temp = parent
+    
+        unique_points = set()
+        for rec in eliminated:
+            unique_points.update(rec.points)
+
+        print("before reinserting: ")
+        self.print_tree()
+        for p in unique_points:
+            print(p)
+            self.insert(p)
+        
+        self.print_tree()
+        return
+    
+    def delete(self, point):
+        rec = self.find_rec(self.root, point)
+        rec.remove(point)
+        print("condense")
+        self.condense_tree(rec)
+        if len(self.root.rectangles) == 1:
+            self.root = self.root.rec[0]
+            
 
 
 if __name__ == "__main__":
@@ -456,5 +560,12 @@ if __name__ == "__main__":
     # ans = rtree.ksearch(6, Point([6,3]))
     # a = list(map(print, ans))
 
-    ans = rtree.range_search(Point([3, 2]), Point([7, 6]))
-    a = list(map(print, ans))
+    # ans = rtree.range_search(Point([3, 2]), Point([7, 6]))
+    # a = list(map(print, ans))
+
+    rtree.print_tree()
+
+    rtree.delete(Point([1, 1]))
+    # rtree.remove(Point([2, 2]))
+
+    rtree.print_tree()

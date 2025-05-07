@@ -1,6 +1,4 @@
 import math
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 import heapq
 import struct
 
@@ -10,9 +8,10 @@ INT_MIN = -(2**31)
 point_format = ""
 mbr_format = ""
 rect_format = ""
-header_format = "iiii255s255s255s"
+header_format = "iiiii255s255s255s"
 header_size = struct.calcsize(header_format)
 b=16
+m=2
 dim=2
 tipo="i"
 
@@ -35,6 +34,9 @@ class RTreeFile:
             global point_format
             return struct.pack(point_format, *self.coords, self.placeholder, self.index)
 
+        def __hash__(self):
+            return hash(tuple(self.coords))
+    
         @staticmethod
         def from_binary(binary):
             global point_format
@@ -208,6 +210,8 @@ class RTreeFile:
 
         def to_binary(self):
             global rect_format, point_format, b, tipo
+            if self.mbr is None:
+                raise ValueError(f"Rectangle at position {self.pos} has no MBR during serialization.")
             points = [
                 p.to_binary() for p in self.points
             ]  # pos puntos rectangles is_leaf parent mbr
@@ -298,8 +302,10 @@ class RTreeFile:
             return sorted_by_dim
 
         def remove(self, file, obj):
-            if self.is_leaf and obj in self.points:
-                self.points.remove(obj)
+            if self.is_leaf:
+                for p in self.points:
+                    if p.coords == obj.coords:
+                        self.points.remove(p)
             elif not self.is_leaf and obj.pos in self.rectangles:
                 self.rectangles.remove(obj.pos)
                 rec = file.get_rec_at(obj.pos)
@@ -311,7 +317,7 @@ class RTreeFile:
             elif not self.is_leaf and self.rectangles:
                 self.mbr = RTreeFile.MBR.calc_mbr_rec(file, self.rectangles)
             else:
-                self.mbr = None
+                self.mbr = RTreeFile.MBR(RTreeFile.Point().coords, RTreeFile.Point().coords)
 
         def intersects(self, min_coords, max_coords):
             for i in range(len(self.mbr.min_coords)):
@@ -321,24 +327,25 @@ class RTreeFile:
                 ):
                     return False
             return True
-    def __init__(self, filename="index.bin", bf=16, dimf=2, typef="i"):
+    def __init__(self, filename="index.bin", bf=16, dimf=2, typef="i", mf=2):
         self.filename = filename
-        global point_format, mbr_format, rect_format, b, dim, tipo
+        global point_format, mbr_format, rect_format, b, m, dim, tipo
         with open(self.filename, "ab+") as f:
             if f.tell() == 0:
                 root = -1  # int
                 b = bf
                 dim = dimf
                 tipo = typef
+                m = mf
                 size = 0
                 point_format = dim * typef + "?i"
                 mbr_format = 2 * (dim * typef)
                 rect_format = "i?i?" + ((b + 1) * typef)
                 self.write_header(
-                    root, size, b, dim, point_format, mbr_format, rect_format
+                    root, size, b, m, dim, point_format, mbr_format, rect_format
                 )
             else:
-                root, size, b, dim, point_format, mbr_format, rect_format = (
+                root, size, b, m, dim, point_format, mbr_format, rect_format = (
                     self.get_header()
                 )
                 # Print formats for debugging
@@ -353,12 +360,14 @@ class RTreeFile:
         return self.get_header()[1]
 
     def write_root(self, root):
-        self.write_header(root, self.get_size(), b, dim, point_format, mbr_format, rect_format)
+        global point_format, mbr_format, rect_format, b, m, dim, tipo
+        self.write_header(root, self.get_size(), b, m, dim, point_format, mbr_format, rect_format)
 
     def write_size(self, size):
-        self.write_header(self.get_root(), size, b, dim, point_format, mbr_format, rect_format)
+        global point_format, mbr_format, rect_format, b, m, dim, tipo
+        self.write_header(self.get_root(), size, b, m, dim, point_format, mbr_format, rect_format)
 
-    def write_header(self, root, size, bf, dimf, point_f, mbr_f, rect_f):
+    def write_header(self, root, size, bf, mf, dimf, point_f, mbr_f, rect_f):
         with open(self.filename, "r+b") as f:
             f.seek(0)
             f.write(
@@ -367,6 +376,7 @@ class RTreeFile:
                     root,
                     size,
                     bf,
+                    mf, 
                     dimf,
                     point_f.encode(),
                     mbr_f.encode(),
@@ -378,13 +388,14 @@ class RTreeFile:
         with open(self.filename, "r+b") as f:
             global header_format, header_size
             f.seek(0)
-            root, size, bf, df, point_f, mbr_f, rect_f = struct.unpack(
+            root, size, bf, mf, df, point_f, mbr_f, rect_f = struct.unpack(
                 header_format, f.read(header_size)
             )
             return (
                 root,
                 size,
                 bf,
+                mf,
                 df,
                 point_f.decode().strip("\x00"),
                 mbr_f.decode().strip("\x00"),
@@ -627,8 +638,7 @@ class RTreeFile:
             sorted_rec, key=lambda rec:RTreeFile.Point.mindist(point, rec.mbr)
         )
         ans = [rec.pos for rec in sorted_rec]
-        return ans
-            
+        return ans          
 
     def __ksearch__(self, node_pos, k, point, maxh):
         node = self.get_rec_at(node_pos)
@@ -672,6 +682,7 @@ class RTreeFile:
     def print_tree(self, node_pos=None, level=0):
         if node_pos is None:
             node_pos = self.get_root()
+        
         indent = "  " * level
         node = self.get_rec_at(node_pos)
         if node.is_leaf:
@@ -738,30 +749,114 @@ class RTreeFile:
             if not rec.deleted:
                 print(f"Rectangle at position {i}: \n{rec}\n")
 
+    def find_rec(self, node_pos, point):
+        node = self.get_rec_at(node_pos)
+        if node.is_leaf:
+            for p in node.points:
+                if p.coords == point.coords:
+                    return node_pos
+            return -1
+        else:
+            found = -1
+            for rec_pos in node.rectangles:
+                rec = self.get_rec_at(rec_pos)
+                if point.inside(rec.mbr.min_coords, rec.mbr.max_coords):
+                    found = self.find_rec(rec_pos, point)
+                    if found != -1:
+                        return found
+            return found
+        
+    def get_leaves(self, node_pos):
+        leaves = []
+
+        def traverse(n_pos):
+            n = self.get_rec_at(n_pos)
+            if n.is_leaf:
+                leaves.append(n_pos)
+            else:
+                for child in n.rectangles:
+                    traverse(child)
+
+        traverse(node_pos)
+        return leaves
+
+    def condense_tree(self, node_pos):
+        global m
+        temp_pos = node_pos
+        eliminated = []
+
+        while True:
+            if temp_pos == -1:
+                break
+            temp = self.get_rec_at(temp_pos)
+            parent_pos = temp.parent
+
+            if (temp.is_leaf and len(temp.points) < m) or (not temp.is_leaf and len(temp.rectangles) < m):
+                parent = self.get_rec_at(parent_pos)
+                parent.remove(self, temp)
+                temp.deleted = True
+                self.write_rec_at(temp.pos, temp)
+                self.write_rec_at(parent_pos, parent)
+
+                if temp_pos == self.get_root():
+                    self.write_root(-1)
+
+                leaf_rec = self.get_leaves(temp_pos)
+                for r in leaf_rec:
+                    eliminated.append(r)
+            
+            temp_pos = parent_pos
+    
+        unique_points = set()
+        for rec_pos in eliminated:
+            rec = self.get_rec_at(rec_pos)
+            unique_points.update(rec.points)
+
+        #self.print_file()
+        for p in unique_points:
+            self.insert(p)
+        #self.print_file()
+
+        return
+    
+    def delete(self, point):
+        rec_pos = self.find_rec(self.get_root(), point)
+        rec = self.get_rec_at(rec_pos)
+        rec.remove(self, point)
+        self.write_rec_at(rec_pos, rec)
+        self.condense_tree(rec_pos)
+
+        raiz = self.get_rec_at(self.get_root())
+        if len(raiz.rectangles) == 1:
+            raiz_pos = raiz.rec[0]
+            self.write_root(raiz_pos)
+            
 
 if __name__ == "__main__":
     rtree = RTreeFile(bf = 5)
 
     points = [
-        RTreeFile.Point(coords=[1, 1]),
-        RTreeFile.Point(coords=[2, 2]),
-        RTreeFile.Point(coords=[3, 3]),
-        RTreeFile.Point(coords=[4, 4]),
-        RTreeFile.Point(coords=[5, 5]),
-        RTreeFile.Point(coords=[6, 6]),
-        RTreeFile.Point(coords=[7, 7]),
-        RTreeFile.Point(coords=[8, 8]),
-        RTreeFile.Point(coords=[9, 9]),
-        RTreeFile.Point(coords=[10, 10]),
-        RTreeFile.Point(coords=[11, 11]),
-        RTreeFile.Point(coords=[12, 12]),
-        RTreeFile.Point(coords=[13, 13]),
-        RTreeFile.Point(coords=[14, 14]),
-        RTreeFile.Point(coords=[15, 15]),
-        RTreeFile.Point(coords=[3, 2]),
-        RTreeFile.Point(coords=[1, 12]),
-        RTreeFile.Point(coords=[18, 12]),
-    
+        # RTreeFile.Point(coords=[1, 1]),
+        # RTreeFile.Point(coords=[2, 2]),
+        # RTreeFile.Point(coords=[3, 3]),
+        # RTreeFile.Point(coords=[4, 4]),
+        # RTreeFile.Point(coords=[5, 5]),
+        # RTreeFile.Point(coords=[6, 6]),
+        # RTreeFile.Point(coords=[7, 7]),
+        # RTreeFile.Point(coords=[8, 8]),
+        # RTreeFile.Point(coords=[9, 9]),
+        # RTreeFile.Point(coords=[10, 10]),
+        # RTreeFile.Point(coords=[11, 11]),
+        # RTreeFile.Point(coords=[12, 12]),
+        # RTreeFile.Point(coords=[13, 13]),
+        # RTreeFile.Point(coords=[14, 14]),
+        # RTreeFile.Point(coords=[15, 15]),
+        # RTreeFile.Point(coords=[3, 2]),
+        # RTreeFile.Point(coords=[1, 12]),
+        # RTreeFile.Point(coords=[18, 12]),
+        RTreeFile.Point(coords=[1, 3]),
+        RTreeFile.Point(coords=[2, 3]),
+        RTreeFile.Point(coords=[1, 2])
     ]
 
     for pt in points:
@@ -771,16 +866,21 @@ if __name__ == "__main__":
         # rtree.print_file()
         # print("----------------FILE-END----------------")
 
-    # rtree.print_tree()
+    print(50*"-")
 
-    points = rtree.ksearch(3, RTreeFile.Point(coords=[4,2]))
+    # points = rtree.ksearch(3, RTreeFile.Point(coords=[4,2]))
 
-    print("K SEARCH")
-    for pt in points:
-        print(pt)
+    # print("K SEARCH")
+    # for pt in points:
+    #     print(pt)
 
-    print("RANGE SEARCH")
+    # print("RANGE SEARCH")
 
-    points = rtree.range_search(RTreeFile.Point(coords=[0,0]), RTreeFile.Point(coords=[5, 6]))
-    for pt in points:
-        print(pt)
+    # points = rtree.range_search(RTreeFile.Point(coords=[0,0]), RTreeFile.Point(coords=[5, 6]))
+    # for pt in points:
+    #     print(pt)
+
+    # rtree.delete(RTreeFile.Point(coords=[4, 4]))
+
+    rtree.print_tree()
+    
