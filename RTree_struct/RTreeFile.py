@@ -618,42 +618,55 @@ class RTreeFile:
 
         self.__insert__(root, point)
         # self.visualize_tree(self.root)
+    
+    def sort_by_mindist(self, rectangles, point):
+        sorted_rec = []
+        for rec_pos in rectangles:
+            sorted_rec.append(self.get_rec_at(rec_pos))
+        sorted(
+            sorted_rec, key=lambda rec:RTreeFile.Point.mindist(point, rec.mbr)
+        )
+        ans = [rec.pos for rec in sorted_rec]
+        return ans
+            
 
-    def __ksearch__(self, node, k, point, maxh):
+    def __ksearch__(self, node_pos, k, point, maxh):
+        node = self.get_rec_at(node_pos)
         if node.is_leaf:
             for p in node.points:
-                dist = Point.distance(p, point)
+                dist = RTreeFile.Point.distance(p, point)
                 if len(maxh) < k:
                     heapq.heappush(maxh, (-dist, p))
                 elif dist < -maxh[0][0]:
                     heapq.heappushpop(maxh, (-dist, p))
         else:
-            sorted_rec = sorted(
-                node.rectangles, key=lambda rec: Point.mindist(point, rec.mbr)
-            )
-            for rec in sorted_rec:
-                if len(maxh) < k or Point.mindist(point, rec.mbr) < -maxh[0][0]:
-                    self.__ksearch__(rec, k, point, maxh)
+            sorted_rec = self.sort_by_mindist(node.rectangles, point)
+            for rec_pos in sorted_rec:
+                rec = self.get_rec_at(rec_pos)
+                if len(maxh) < k or RTreeFile.Point.mindist(point, rec.mbr) < -maxh[0][0]:
+                    self.__ksearch__(rec_pos, k, point, maxh)
         return
 
     def ksearch(self, k, point):
         maxh = []
-        self.__ksearch__(self.root, k, point, maxh)
+        self.__ksearch__(self.get_root(), k, point, maxh)
         return [pt for (d, pt) in sorted(maxh, key=lambda x: x[0], reverse=True)]
 
-    def __range_search__(self, node, min_coords, max_coords, ans):
+    def __range_search__(self, node_pos, min_coords, max_coords, ans):
+        node = self.get_rec_at(node_pos)
         if node.is_leaf:
             for p in node.points:
                 if p.inside(min_coords, max_coords):
                     ans.append(p)
         else:
-            for rec in node.rectangles:
+            for rec_pos in node.rectangles:
+                rec = self.get_rec_at(node_pos)
                 if rec.intersects(min_coords, max_coords):
-                    self.__range_search__(rec, min_coords, max_coords, ans)
+                    self.__range_search__(rec_pos, min_coords, max_coords, ans)
 
     def range_search(self, point_start, point_end):
         ans = []
-        self.__range_search__(self.root, point_start.coords, point_end.coords, ans)
+        self.__range_search__(self.get_root(), point_start.coords, point_end.coords, ans)
         return ans
 
     def print_tree(self, node_pos=None, level=0):
@@ -730,21 +743,21 @@ if __name__ == "__main__":
     rtree = RTreeFile(bf = 5)
 
     points = [
-        # RTreeFile.Point(coords=[1, 1]),
-        # RTreeFile.Point(coords=[2, 2]),
-        # RTreeFile.Point(coords=[3, 3]),
-        # RTreeFile.Point(coords=[4, 4]),
-        # RTreeFile.Point(coords=[5, 5]),
-        # RTreeFile.Point(coords=[6, 6]),
-        # RTreeFile.Point(coords=[7, 7]),
-        # RTreeFile.Point(coords=[8, 8]),
-        # RTreeFile.Point(coords=[9, 9]),
-        # RTreeFile.Point(coords=[10, 10]),
-        # RTreeFile.Point(coords=[11, 11]),
-        # RTreeFile.Point(coords=[12, 12]),
-        # RTreeFile.Point(coords=[13, 13]),
-        # RTreeFile.Point(coords=[14, 14]),
-        # RTreeFile.Point(coords=[15, 15]),
+        RTreeFile.Point(coords=[1, 1]),
+        RTreeFile.Point(coords=[2, 2]),
+        RTreeFile.Point(coords=[3, 3]),
+        RTreeFile.Point(coords=[4, 4]),
+        RTreeFile.Point(coords=[5, 5]),
+        RTreeFile.Point(coords=[6, 6]),
+        RTreeFile.Point(coords=[7, 7]),
+        RTreeFile.Point(coords=[8, 8]),
+        RTreeFile.Point(coords=[9, 9]),
+        RTreeFile.Point(coords=[10, 10]),
+        RTreeFile.Point(coords=[11, 11]),
+        RTreeFile.Point(coords=[12, 12]),
+        RTreeFile.Point(coords=[13, 13]),
+        RTreeFile.Point(coords=[14, 14]),
+        RTreeFile.Point(coords=[15, 15]),
         RTreeFile.Point(coords=[3, 2]),
         RTreeFile.Point(coords=[1, 12]),
         RTreeFile.Point(coords=[18, 12]),
@@ -758,4 +771,16 @@ if __name__ == "__main__":
         # rtree.print_file()
         # print("----------------FILE-END----------------")
 
-        rtree.print_tree()
+    # rtree.print_tree()
+
+    points = rtree.ksearch(3, RTreeFile.Point(coords=[4,2]))
+
+    print("K SEARCH")
+    for pt in points:
+        print(pt)
+
+    print("RANGE SEARCH")
+
+    points = rtree.range_search(RTreeFile.Point(coords=[0,0]), RTreeFile.Point(coords=[5, 6]))
+    for pt in points:
+        print(pt)
