@@ -22,6 +22,36 @@ class TestRegistroType(unittest.TestCase):
         self.assertEqual(restored_data3[0], "texto con espacios")
         self.assertEqual(restored_data4[0], "12345678901234567890")
 
+        self.registro_string = RegistroType({'STRING': '5s'}, key_index=0)  # Cadena de 20 caracteres
+        byte_data = self.registro_string.to_bytes(["Texto"])
+        restored_data1 = self.registro_string.from_bytes(byte_data)
+        byte_data = self.registro_string.to_bytes([""])
+        restored_data2 = self.registro_string.from_bytes(byte_data)
+        byte_data = self.registro_string.to_bytes(["texto con espacios"])
+        restored_data3 = self.registro_string.from_bytes(byte_data)
+        byte_data = self.registro_string.to_bytes(["12345678901234567890123"])
+        restored_data4 = self.registro_string.from_bytes(byte_data)
+
+        self.assertEqual(restored_data1[0], "Texto")
+        self.assertEqual(restored_data2[0], "")
+        self.assertEqual(restored_data3[0], "texto")
+        self.assertEqual(restored_data4[0], "12345")
+
+        self.registro_string = RegistroType({'STRING': '200s'}, key_index=0)  # Cadena de 20 caracteres
+        byte_data = self.registro_string.to_bytes(["Texto"])
+        restored_data1 = self.registro_string.from_bytes(byte_data)
+        byte_data = self.registro_string.to_bytes([""])
+        restored_data2 = self.registro_string.from_bytes(byte_data)
+        byte_data = self.registro_string.to_bytes(["lorem ipsum. \\habia una vez \n wa"])
+        restored_data3 = self.registro_string.from_bytes(byte_data)
+        byte_data = self.registro_string.to_bytes(["1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"])
+        restored_data4 = self.registro_string.from_bytes(byte_data)
+
+        self.assertEqual(restored_data1[0], "Texto")
+        self.assertEqual(restored_data2[0], "")
+        self.assertEqual(restored_data3[0], "lorem ipsum. \\habia una vez \n wa")
+        self.assertEqual(restored_data4[0], "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890")
+
     def test_integers(self):
         self.registro_int = RegistroType({'INT': 'i'}, key_index=0)
         valores = [0, 1, -1, 2147483647, -2147483648]
