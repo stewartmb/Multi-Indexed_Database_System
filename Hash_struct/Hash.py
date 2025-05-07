@@ -121,9 +121,9 @@ class HeaderType:
 
 class Hash:
     def __init__(self, table_format, key: str,
-                 buckets_file_name: str = 'Hash_struct/hash_buckets.bin',
-                 index_file_name: str = 'Hash_struct/hash_index.bin',
-                 data_file_name: str = 'Hash_struct/data_file.bin',
+                 buckets_file_name: str = 'hash_buckets.bin',
+                 index_file_name: str = 'hash_index.bin',
+                 data_file_name: str = 'data_file.bin',
                  global_depth: int = 8,
                  max_records_per_bucket: int = 4):
         """

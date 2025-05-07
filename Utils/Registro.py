@@ -94,10 +94,6 @@ class RegistroType:
             value = float(value)
         elif type == '?':
             value = bool(value)
-        # else:
-        #     value = value.decode('utf-8').strip('\x00')  # no se puede decodificar un string
-        elif isinstance(value, bytes):
-            value = value.decode('utf-8').strip('\x00')  # Decodificar si es bytes
         else:
-            value = value.strip('\x00') 
+            value = value.decode('utf-8').strip('\x00')  # no se puede decodificar un string
         return value
