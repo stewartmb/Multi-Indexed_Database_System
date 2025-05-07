@@ -48,12 +48,12 @@ class Registro:
 class ArchivoSecuencial:
     def __init__(self, table_format , name_key: str ,
                  nombre_datos='Secuencial_Struct/datos.bin', 
-                 nombre_aux='Secuencial_Struct/aux.bin', 
+                 nombre_aux='Secuencial_Struct/secuencial_aux.bin', 
                  num_aux = None):
         
         self.RT = RegistroType(table_format, name_key)               # Formato de los datos
         self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
-        self.tam_registro = self.RT.size                             # Tamaño del registro
+        self.tam_registro = self.RT.size+5                           # Tamaño del registro
 
 
         self.K = num_aux
@@ -103,12 +103,24 @@ class ArchivoSecuencial:
                 offset = TAM_ENCABEZADO + pos * self.tam_registro
             else:
                 offset = AUX_ENCABEZADO_SIZE + pos * self.tam_registro
-            f.seek(offset)
-            data = f.read(self.tam_registro)
+            f.seek(offset)    
+            data = f.readdd(self.tam_registro)
             if len(data) < self.tam_registro:
                 raise ValueError(f"No se puede leer registro en {archivo} en posición {pos}")
             return self.RT.from_bytes(data)
-
+    
+    def _leer_puntero(self, archivo, pos):
+        with open(archivo, 'rb') as f:
+            if archivo == self.nombre_datos:
+                offset = TAM_ENCABEZADO + pos * self.tam_registro
+            else:
+                offset = AUX_ENCABEZADO_SIZE + pos * self.tam_registro
+            f.seek(offset+self.RT.size)
+            data = f.read(8)
+            if len(data) < 8:
+                raise ValueError(f"No se puede leer puntero en {archivo} en posición {pos}")
+            return struct.unpack('ib', data)  # Devuelve tupla (sig, lugar)
+         
     def _escribir_registro(self, archivo, pos, registro):
         with open(archivo, 'r+b') as f:
             if archivo == self.nombre_datos:
@@ -117,7 +129,7 @@ class ArchivoSecuencial:
                 offset = AUX_ENCABEZADO_SIZE + pos * self.tam_registro
             f.seek(offset)
             f.write(self.RT.to_bytes(registro))
-
+    
     # Agregar registro a aux.bin
     def _agregar_aux(self, registro):
         efectivos, totales = self._leer_encabezado_aux()
@@ -585,6 +597,6 @@ if __name__ == "__main__":
 
     if os.path.exists('Secuencial_Struct/datos.bin'):
         os.remove('Secuencial_Struct/datos.bin')
-    if os.path.exists('Secuencial_Struct/aux.bin'):
-        os.remove('Secuencial_Struct/aux.bin')
+    if os.path.exists('Secuencial_Struct/secuencial_aux.bin'):
+        os.remove('Secuencial_Struct/secuencial_aux.bin')
     menu_principal()
