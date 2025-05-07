@@ -41,7 +41,7 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python tests.Python tests for TestRegistro.TestRegistroType.test_floats">
+  <component name="RunManager">
     <configuration name="Python tests for TestRegistro.TestRegistroType" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="Proyecto_BD2" />
       <option name="ENV_FILES" value="" />
@@ -90,6 +90,11 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Python tests.Python tests for TestRegistro.TestRegistroType" />
+      <item itemvalue="Python tests.Python tests for TestRegistro.TestRegistroType.test_floats" />
+      <item itemvalue="Python tests.Python tests for TestRegistro.TestRegistroType.test_strings" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python tests.Python tests for TestRegistro.TestRegistroType.test_floats" />
