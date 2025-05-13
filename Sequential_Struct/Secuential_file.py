@@ -4,50 +4,17 @@ import struct
 import csv
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
+import math
 
 # Constantes generales
 AUX_ENCABEZADO_SIZE = 8   # Tamaño del encabezado en aux.bin (8 bytes para un int)
 TAM_ENCABEZADO = 9        # Encabezado de datos.bin: 4+4+1 = 9 bytes
 
-# class Registro:
-    
-#     def __init__(self, id_venta, nombre, cantidad, precio, fecha, sig=-1, lugar=1):
-#         self.id = id_venta
-#         self.nombre = nombre
-#         self.cantidad = cantidad
-#         self.precio = precio
-#         self.fecha = fecha
-#         self.sig = sig
-#         self.lugar = lugar
-
-#     def to_bytes(self):
-#         return struct.pack(self.formato,
-#                            self.id,
-#                            self.nombre.encode('utf-8').ljust(30, b'\x00'),
-#                            self.cantidad,
-#                            self.precio,
-#                            self.fecha.encode('utf-8').ljust(10, b'\x00'),
-#                            self.sig,
-#                            self.lugar)
-
-#     @classmethod
-#     def from_bytes(cls, data):
-#         if len(data) != struct.calcsize(cls.formato):
-#             raise ValueError("Tamaño incorrecto al leer registro")
-#         unpacked = struct.unpack(cls.formato, data)
-#         return cls(unpacked[0],
-#                    unpacked[1].decode('utf-8').strip('\x00'),
-#                    unpacked[2],
-#                    round(unpacked[3],2),
-#                    unpacked[4].decode('utf-8').strip('\x00'),
-#                    unpacked[5],
-#                    unpacked[6])
-
 class Sequential:
     def __init__(self, table_format , name_key: str ,
                  nombre_datos='Sequential_Struct/datos.bin', 
                  nombre_aux='Sequential_Struct/sequencial_aux.bin', 
-                 num_aux = 1):
+                 num_aux = 100):
         
         self.RT = RegistroType(table_format, name_key)               # Formato de los datos
         self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
@@ -314,7 +281,6 @@ class Sequential:
         count = num_reg + num_reg_aux
         current_ptr = ptr_inicio
         current_lugar = lugar_inicio
-        # imprimir todo
 
         # En nuestro record archivo datos.bin, el número total de registros será 'count'.
         # Se crea temp.bin y se escribe el encabezado con (count, 0, 1).

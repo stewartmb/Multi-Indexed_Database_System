@@ -525,7 +525,7 @@ class IndexPage():
                     packed_keys.append(-2147483648)  # -2³¹ (fuera del rango normal)
                 elif format_key == 'f':  # Float
                     packed_keys.append(float('nan'))  # NaN representa None
-                elif format_key == 'b':
+                elif format_key == 'b' or format_key == '?':  # Boolean
                     packed_keys.append(-128)  # Special value for None
                 elif 's' in format_key:  # String (ej: '3s')
                     packed_keys.append(b'\x00' * int(format_key[:-1]))  # Bytes nulos
@@ -538,10 +538,12 @@ class IndexPage():
                     truncated_key = key[:max_length]
                     packed_keys.append(truncated_key.encode('utf-8'))
                 # Asegurar tipo correcto
-                elif format_key == 'i' and isinstance(key, float):
+                elif format_key == 'i' or format_key == 'q' or format_key == 'Q':
                     packed_keys.append(int(key))
-                elif format_key == 'f' and isinstance(key, int):
+                elif format_key == 'f' or format_key == 'd':
                     packed_keys.append(float(key))
+                elif format_key == 'b' or format_key == '?':
+                    packed_keys.append(bool(key))
                 else:
                     packed_keys.append(key)
 
@@ -565,11 +567,11 @@ class IndexPage():
         # Handle keys
         for i in range(M - 1):
             key_value = unpacked[i + 1]
-            if format_key == 'i':
+            if format_key == 'i' or format_key == 'q' or format_key == 'Q':
                 instance.keys[i] = key_value if key_value != -2147483648 else None
-            elif format_key == 'f':
+            elif format_key == 'f' or format_key == 'd':
                 instance.keys[i] = key_value if not math.isnan(key_value) else None
-            elif format_key == 'b':
+            elif format_key == 'b' or format_key == '?':
                 instance.keys[i] = key_value if key_value != -128 else None
             elif 's' in format_key:  # String (bytes → str)
                 instance.keys[i] = key_value.decode('utf-8').strip('\x00') if key_value != b'\x00' * len(key_value) else None

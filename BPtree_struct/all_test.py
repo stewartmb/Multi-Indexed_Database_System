@@ -22,7 +22,7 @@ format_tables = [{"codigo": "q", "nombre": "100s", "ciclo": "i"},
 name_keys = ["codigo", "iata", "zip_code"]
 
 # numero aleatorio entre 1 y 3
-random_index = 0
+random_index = 2
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -36,7 +36,7 @@ print("csv_path", csv_path)
 name_key = name_keys[random_index]
 print("name_key", name_key)
 
-ma = 11 # orden del árbol B+
+ma = 10 # orden del árbol B+
 
 N = 100 # cada cuántos registros se imprime una barra de progreso
 
@@ -133,9 +133,9 @@ if __name__ == "__main__":
  
 
 
-    # eliminar archivos existentes
-    try:
-        os.remove(index_file)
-        os.remove(data_file)
-    except FileNotFoundError:
-        pass
+    # # eliminar archivos existentes
+    # try:
+    #     os.remove(index_file)
+    #     os.remove(data_file)
+    # except FileNotFoundError:
+    #     pass

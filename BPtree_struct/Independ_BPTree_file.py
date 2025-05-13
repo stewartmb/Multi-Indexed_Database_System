@@ -1,158 +1,44 @@
 import struct 
 import sys
 import os
+import math
 from collections import deque
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-from Utils import *
+from Utils.Registro import *
 
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de registros y puntero al root)
-M = 5  # Grado del árbol B+ (número máximo de hijos por nodo)
-
-### RECORD FORMAT ###
-RECORD_FORMAT = '3s20s2s'  # Formato de los datos: 3s (codigo), 20s (nombre), 2s (ciclo)
-TAM_REGISTRO = struct.calcsize(RECORD_FORMAT)  # Tamaño del registro en bytes
 
 
-### INDEX FORMAT ###
-ORDEN_KEY = 1 # Orden de la clave (1: codigo, 2: nombre, 3: ciclo)
 
-def get_key_format(orden_key):
-    """
-    Genera el formato de la clave dinámicamente basado en el orden de la clave.
-    """
-    if orden_key == 1:
-        return '3s'
-    elif orden_key == 2:
-        return '20s'
-    elif orden_key == 3:
-        return '2s'
-    else:
-        raise ValueError("Orden de clave no válido")
-FORMAT_KEY = get_key_format(ORDEN_KEY)  # Formato de la clave (3s, 20s o 2s)
-
-def get_index_format(M): # Se hizo con la finalidad que al variar M, el formato del índice cambie automáticamente
+def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M, el formato del índice cambie automáticamente
     """
     Genera el formato del índice dinámicamente basado en M.
     """
-    return f'b{(M-1) * FORMAT_KEY}{M * "i"}ii'
-
-INDEXP_FORMAT = get_index_format(M)
-TAM_INDEXP = struct.calcsize(INDEXP_FORMAT)
-
-
-class Registro:
-    """
-    Clase que representa un registro en el archivo.  
-    """
-
-    def __init__(self, codigo, nombre, ciclo):
-        self.codigo = codigo
-        self.nombre = nombre
-        self.ciclo = ciclo
-
-    
-    def to_bytes(self):
-        """
-        Convierte el registro a bytes.
-        """
-        return struct.pack(RECORD_FORMAT, 
-                           self.codigo.encode('utf-8').ljust(3, b'\x00'), 
-                           self.nombre.encode('utf-8').ljust(20, b'\x00'), 
-                           self.ciclo.zfill(2).encode('utf-8')  
-        )
-    
-    @classmethod
-    def from_bytes(cls, data):
-        """
-        Convierte bytes a un registro.
-        """
-        if len(data) != TAM_REGISTRO:
-            raise ValueError("Tamaño incorrecto al leer registro")
-        unpacked = struct.unpack(RECORD_FORMAT, data)
-        return cls(
-            codigo=unpacked[0].decode('utf-8').strip('\x00'),
-            nombre=unpacked[1].decode('utf-8').strip('\x00'),
-            ciclo=unpacked[2].decode('utf-8').strip('\x00')
-        )
-    
-    def __str__(self):
-        """
-        Representación en cadena del registro.
-        """
-        list = [self.codigo, self.nombre, self.ciclo]
-        return str(list)  # Devuelve una lista con los atributos del registro
-
-    
-class IndexPage:
-    """
-    Clase que representa una página de índices (nodo del b+tree) en el archivo.
-    """
-    def __init__(self, leaf=True):
-        self.leaf = leaf  # Indica si es una hoja 'bool'
-        self.keys = [''] * (M-1) # claves de orden (codigo o ciclo o nombre)
-        """
-        self.childrens = []  
-        Si hoja != True ---->  M Punteros a hijos (nodos) 'lista de posiciones en "index_file.bin" '
-        Si hoja == True ---->  M-1 Punteros a registros (hojas) 'lista de posiciones en "data_file.bin" '
-                               1 Puntero a siguiente hoja (hoja) 'lista de posiciones en "index_file.bin" '
-        """
-        self.childrens = [-1] * M # POSICION DE HIJOS (Inicialmente -1 ,sin hijos)
-        self.father = -1  # Enlace al padre
-        self.key_count = 0  # Claves ocupadas en el nodo
-
-    def to_bytes(self):
-        """
-        Convierte la página de índice a bytes.
-        """
-        encoded_keys = []
-        for i in range(M - 1):  # Para que soporte dinamicamente el tamaño de la clave
-            key = str(self.keys[i]) if self.keys[i] else ''
-            key = key.encode('utf-8')
-            key = key.ljust(struct.calcsize(FORMAT_KEY), b'\x00')
-            encoded_keys.append(key)
-
-        return struct.pack(
-            INDEXP_FORMAT,
-            self.leaf,  
-            *encoded_keys, 
-            *self.childrens,
-            self.father,  
-            self.key_count  
-
-    )
-
-    
-    @classmethod
-    def from_bytes(cls, data):
-        """
-        Convierte bytes a una página de índice.
-        """
-        if len(data) != TAM_INDEXP:
-            raise ValueError("Tamaño incorrecto al leer página de índice")
-
-        unpacked = struct.unpack(INDEXP_FORMAT, data)
-
-        leaf_flag = bool(unpacked[0])
-        raw_keys = unpacked[1:M]  # M-1 claves
-        childrens = list(unpacked[M:-2])  # M punteros
-
-        page = cls(leaf=leaf_flag)
-        page.keys = [k.decode('utf-8').strip('\x00') for k in raw_keys]
-        page.childrens = childrens
-        page.father = unpacked[-2]  # Enlace al padre
-        page.key_count = unpacked[-1]  # Claves ocupadas en el nodo
-
-        return page
+    format = f'b{(M-1) * format_key}{M * "i"}ii'
+    return format
 
 class BPTree:
     """
     Clase que representa un árbol B+.
     """
-    def __init__(self, name_index_file = 'BPTree_struct/index_file.bin', name_data_file = 'BPTree_struct/data_file.bin'):
+    def __init__(self, table_format , name_key: str ,
+                 name_index_file = 'BPTree_struct/index_file.bin', 
+                 name_data_file = 'BPTree_struct/data_file.bin',
+                 max_num_child = None,):
+        
         self.index_file = name_index_file
         self.data_file = name_data_file
-        self._initialize_files()  # Inicializa los archivos de índice y datos
+
+        self.RT = RegistroType(table_format, name_key)               # Formato de los datos
+
+        self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
+        self.indexp_format = get_index_format(max_num_child, self.format_key)    # Formato de la pagina (NODO)
+        self.tam_indexp = struct.calcsize(self.indexp_format)        # Tamaño de la página de índice
+        self._initialize_files()                                     # Inicializa los archivos de índice y datos
+        self.M = max_num_child  # Orden del árbol B+
+        self.tam_registro = self.RT.size                             # Tamaño del registro
+
     
     def _initialize_files (self):
         """
@@ -249,21 +135,21 @@ class BPTree:
         """
 
         with open(self.index_file, 'rb') as f:
-            offset = TAM_ENCABEZAD_IND + page_number * TAM_INDEXP
+            offset = TAM_ENCABEZAD_IND + page_number * self.tam_indexp
             f.seek(offset)
-            data = f.read(TAM_INDEXP)
-            if len(data) != TAM_INDEXP:
+            data = f.read(self.tam_indexp)
+            if len(data) != self.tam_indexp:
                 raise ValueError("Tamaño incorrecto al leer página de índice")
-            return IndexPage.from_bytes(data)  # Devuelve la página de índice reconstruida desde los bytes
-                      
+            return IndexPage.from_bytes(data, self.M, self.format_key, self.indexp_format)    
+                          
     def _write_index_page(self, page_number, page):
         """
         Escribe una página de índice al final del archivo.
         """
         with open(self.index_file, 'r+b') as f:
-            offset = TAM_ENCABEZAD_IND + page_number * TAM_INDEXP
+            offset = TAM_ENCABEZAD_IND + page_number * self.tam_indexp
             f.seek(offset)
-            f.write(page.to_bytes())  
+            f.write(page.to_bytes(self.format_key, self.indexp_format))  # Escribe la página en la posición especificada
 
     def _add_index_page(self, page):
         """
@@ -287,21 +173,21 @@ class BPTree:
         Lee un registro del archivo de datos.
         """
         with open(self.data_file, 'rb') as f:
-            offset = TAM_ENCABEZAD_DAT + position * TAM_REGISTRO
+            offset = TAM_ENCABEZAD_DAT + position * self.tam_registro
             f.seek(offset)
-            data = f.read(TAM_REGISTRO)
-            if len(data) != TAM_REGISTRO:
+            data = f.read(self.tam_registro)
+            if len(data) != self.tam_registro:
                 raise ValueError("Tamaño incorrecto al leer registro")
-            return Registro.from_bytes(data)  
+            return self.RT.from_bytes(data)  
         
     def _write_record(self, position, record):
         """
         Escribe un registro del archivo de datos.
         """
         with open(self.data_file, 'r+b') as f:
-            offset = TAM_ENCABEZAD_DAT + position * TAM_REGISTRO
+            offset = TAM_ENCABEZAD_DAT + position * self.tam_registro
             f.seek(offset)
-            f.write(record.to_bytes())  # Escribe el registro en la posición especificada
+            f.write(self.RT.to_bytes(record))  # Escribe el registro en la posición especificada
             
     def _add_record(self, record):
         """
@@ -390,7 +276,7 @@ class BPTree:
                     record = self._read_record(pos_record)
                     records.append(record)
             # Mueve a la siguiente hoja
-            pos_leaf = leaf_page.childrens[M-1]
+            pos_leaf = leaf_page.childrens[self.M-1]
             if pos_leaf != -1:
                 leaf_page = self._read_index_page(pos_leaf)
             else:
@@ -444,24 +330,24 @@ class BPTree:
         """
         page = self._read_index_page(pos_page)
         index = self.find_index(page, key)
-        temp_keys = page.keys[:M-1].copy()  # Copia las claves
-        temp_childrens = page.childrens[:M-1].copy()
+        temp_keys = page.keys[:self.M-1].copy()  # Copia las claves
+        temp_childrens = page.childrens[:self.M-1].copy()
         # Desplaza las claves y punteros a la derecha para hacer espacio
         temp_keys.insert(index, key)  # Inserta la nueva clave
         temp_childrens.insert(index, pos_record)  # Inserta el puntero al registro
         # Divide la página en dos
         header = self._read_header_index()
         pos_new_page = header[0]  # posición de la nueva página
-        new_page = IndexPage(leaf=page.leaf)  # Crea una nueva página de índic
+        new_page = IndexPage(leaf=page.leaf, M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)  # Crea una nueva página de índic
         # Asigna las claves y punteros a la nueva página
-        mid_index = (M - 1) // 2
+        mid_index = (self.M - 1) // 2
         is_even = False
-        if M % 2 == 0:
+        if self.M % 2 == 0:
             is_even = True
         pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
         # Reinicializa la página original
-        page.keys = [''] * (M-1)
-        page.childrens = [-1] * M
+        page.keys = [None] * (self.M-1)
+        page.childrens = [-1] * self.M
         # Actualiza la página original
         page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
         page.childrens[:mid_index+is_even] = temp_childrens[:mid_index+is_even]
@@ -473,8 +359,8 @@ class BPTree:
         new_page.father = page.father  # Asigna el padre
         up = temp_keys[mid_index + is_even]
         # Actualiza el puntero al siguiente nodo
-        new_page.childrens[M-1] = pos_next_page
-        page.childrens[M-1] = pos_new_page 
+        new_page.childrens[self.M-1] = pos_next_page
+        page.childrens[self.M-1] = pos_new_page 
         # Escribe las páginas actualizadas en el archivo
         self._write_index_page(pos_page, page)
         self._add_index_page(new_page)
@@ -486,31 +372,31 @@ class BPTree:
         """
         page = self._read_index_page(pos_page)
         index = self.find_index(page, key)
-        temp_keys = page.keys[:M-1].copy()  # Copia las claves
-        temp_childrens = page.childrens[:M].copy()
+        temp_keys = page.keys[:self.M-1].copy()  # Copia las claves
+        temp_childrens = page.childrens[:self.M].copy()
         # Desplaza las claves y punteros a la derecha para hacer espacio
         temp_keys.insert(index, key)  # Inserta la nueva clave
         temp_childrens.insert(index+1, pos_record)  # Inserta el puntero al registro
         # Divide la página en dos
         header = self._read_header_index()
         pos_new_page = header[0]  # posición de la nueva página
-        new_page = IndexPage(leaf=page.leaf)  # Crea una nueva página de índic
+        new_page = IndexPage(leaf=page.leaf,  M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)  # Crea una nueva página de índic
         # Asigna las claves y punteros a la nueva página
-        mid_index = (M - 1) // 2
+        mid_index = (self.M - 1) // 2
         is_even = False
-        if M % 2 == 0:
+        if self.M % 2 == 0:
             is_even = True
         pos_next_page = page.childrens[-1]  # Puntero al siguiente nodo
         # Reinicializa la página original
-        page.keys = [''] * (M-1)
-        page.childrens = [-1] * M
+        page.keys = [None] * (self.M-1)
+        page.childrens = [-1] * self.M
         # Actualiza la página original
         page.keys[:mid_index+is_even] = temp_keys[:mid_index+is_even]
         page.childrens[:mid_index+is_even+1] = temp_childrens[:mid_index+is_even+1]
         page.key_count = mid_index+is_even 
         # Asigna las claves y punteros a la nueva página
         new_page.keys[:mid_index] = temp_keys[mid_index+1+is_even:]
-        new_page.childrens[:mid_index+is_even] = temp_childrens[mid_index+1+is_even:]
+        new_page.childrens[:mid_index+1] = temp_childrens[mid_index+1+is_even:]
         new_page.key_count = mid_index 
         new_page.father = page.father  # Asigna el padre
         up = temp_keys[mid_index+is_even]
@@ -532,18 +418,21 @@ class BPTree:
     
 
 
-    def add(self, record):
+    def add(self, record: list = None, pos_new_record :int = None):
         """
         Inserta un registro en el árbol B+.
         """
-        # Agrega el registro al archivo de datos
-        pos_new_record = self._read_header_data() # posicion del nuevo registro
-        self._add_record(record) # se inserta el registro en el data_file.bin
-        # Extrae la clave del registro
-        key = record.codigo if ORDEN_KEY == 1 else record.nombre if ORDEN_KEY == 2 else record.ciclo
-
-
         # Le el encabezado del archivo de índice
+        if record is not None and pos_new_record is not None:
+            return "Error: Debe ingresar solo uno de los dos argumentos (record o pos_new_record)"
+        if record is None and pos_new_record is None:
+            return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
+        if record is not None:
+            pos_new_record = self._read_header_data() 
+            record = self.RT.correct_format(record)  # Formatea el registro
+            self._add_record(record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro 
+
         header = self._read_header_index()
         root = header[1] # posición de la raíz
         pos_new_index = header[0] # cantidad de páginas
@@ -551,7 +440,7 @@ class BPTree:
         ## CASO 1: El árbol está vacío ##
         if root == -2 or root == -1:
             # Crea una nueva página de índice
-            new_page = IndexPage(leaf=True)
+            new_page = IndexPage(leaf=True, M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)
             new_page.keys[0] = key
             new_page.childrens[0] = pos_new_record
             new_page.key_count = 1
@@ -565,7 +454,7 @@ class BPTree:
         ### CASO 2.1: La raíz no está llena ###
         leaf_page = self._read_index_page(pos_leaf) # Lee la página
         
-        if leaf_page.key_count < M - 1 : # Si la página tiene espacio
+        if leaf_page.key_count < self.M - 1 : # Si la página tiene espacio
             # Inserta la clave y el puntero al registro
             new_leaf_page = self.key_insert_left(leaf_page, key, pos_new_record)
             self._write_index_page(pos_leaf, new_leaf_page)
@@ -583,7 +472,7 @@ class BPTree:
                 ### CASO 2.2.1: Si el padre no existe, se crea uno nuevo ###
                 if parent_pos == -1:
                     pos_new_root = self._read_header_index()[0]
-                    new_root = IndexPage(leaf=False)
+                    new_root = IndexPage(leaf=False,  M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)
                     new_root.keys[0] = key_up
                     new_root.childrens[0] = current_pos
                     new_root.childrens[1] = pos_new_index
@@ -603,7 +492,7 @@ class BPTree:
                 else:
                     parent_page = self._read_index_page(parent_pos)
                     # Si el padre no está lleno, se inserta la clave
-                    if parent_page.key_count < M - 1:
+                    if parent_page.key_count < self.M - 1:
                         new_parent_page = self.key_insert_internal(parent_page, key_up, pos_new_index)
                         self._write_index_page(parent_pos, new_parent_page)
                         break
@@ -614,5 +503,85 @@ class BPTree:
                         current_page = self._read_index_page(current_pos)
                         parent_pos = current_page.father
 
+class IndexPage():
+    def __init__(self, leaf=True, M=None, format_key=None, indexp_format=None):
+        self.leaf = leaf
+        self.keys = [None] * (M-1)
+        self.childrens = [-1] * M
+        self.father = -1
+        self.key_count = 0
+        self.M = M
 
+    def to_bytes(self, format_key, indexp_format):
+        # Convert leaf to integer (1 for True, 0 for False)
+        leaf_int = 1 if self.leaf else 0
+        
+        # Prepare keys for packing
+        packed_keys = []
+        for key in self.keys:
+            if key is None:
+                # For None values, use a sentinel value that fits the format
+                if format_key == 'i':  # Entero
+                    packed_keys.append(-2147483648)  # -2³¹ (fuera del rango normal)
+                elif format_key == 'f':  # Float
+                    packed_keys.append(float('nan'))  # NaN representa None
+                elif format_key == 'b' or format_key == '?':  # Boolean
+                    packed_keys.append(-128)  # Special value for None
+                elif 's' in format_key:  # String (ej: '3s')
+                    packed_keys.append(b'\x00' * int(format_key[:-1]))  # Bytes nulos
+                else:
+                    packed_keys.append(0)  # Default fallback
+            else:
+                # Convertir a bytes si es string
+                if 's' in format_key and isinstance(key, str):
+                    max_length = int(format_key[:-1])  # Elimina la 's' y convierte a entero
+                    truncated_key = key[:max_length]
+                    packed_keys.append(truncated_key.encode('utf-8'))
+                # Asegurar tipo correcto
+                elif format_key == 'i' or format_key == 'q' or format_key == 'Q':
+                    packed_keys.append(int(key))
+                elif format_key == 'f' or format_key == 'd':
+                    packed_keys.append(float(key))
+                elif format_key == 'b' or format_key == '?':
+                    packed_keys.append(bool(key))
+                else:
+                    packed_keys.append(key)
 
+        # Prepare all arguments for packing
+        pack_args = [leaf_int] + packed_keys + self.childrens + [self.father, self.key_count]
+        return struct.pack(indexp_format, *pack_args)
+
+    @classmethod
+    def from_bytes(cls, data, M, format_key, indexp_format):
+        # Verify data size
+        expected_size = struct.calcsize(indexp_format)
+        if len(data) != expected_size:
+            raise ValueError(f"Data size mismatch: expected {expected_size}, got {len(data)}")
+
+        # Unpack all data
+        unpacked = list(struct.unpack(indexp_format, data))
+
+        # Create instance
+        instance = cls(leaf=bool(unpacked[0]), M=M, format_key=format_key, indexp_format=indexp_format)
+
+        # Handle keys
+        for i in range(M - 1):
+            key_value = unpacked[i + 1]
+            if format_key == 'i' or format_key == 'q' or format_key == 'Q':
+                instance.keys[i] = key_value if key_value != -2147483648 else None
+            elif format_key == 'f' or format_key == 'd':
+                instance.keys[i] = key_value if not math.isnan(key_value) else None
+            elif format_key == 'b' or format_key == '?':
+                instance.keys[i] = key_value if key_value != -128 else None
+            elif 's' in format_key:  # String (bytes → str)
+                instance.keys[i] = key_value.decode('utf-8').strip('\x00') if key_value != b'\x00' * len(key_value) else None
+            else:
+                instance.keys[i] = key_value
+
+        # Handle children and metadata
+        children_start = M
+        instance.childrens = list(unpacked[children_start:children_start + M])
+        instance.father = unpacked[-2]
+        instance.key_count = unpacked[-1]
+
+        return instance
