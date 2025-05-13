@@ -156,7 +156,6 @@ if __name__ == "__main__":
     # Example: read SQL statements from a file
     with open("test.txt", "r") as f:
         sql_code = f.read()
-
     try:
         result = parser.parse(sql_code)
         print(json.dumps(result, indent=4))
