@@ -5,9 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="22ca581f-0064-496c-af75-c3e82632dbf8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/BPtree_struct/Indice_BPTree_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/BPtree_struct/Indice_BPTree_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BPtree_struct/binary_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/BPtree_struct/binary_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Utils/TestRegistro.py" beforeDir="false" afterPath="$PROJECT_DIR$/Utils/TestRegistro.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Secuencial_Struct/Secuential_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/Secuencial_Struct/Secuential_file.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,23 +23,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python tests.Python tests for TestRegistro.TestRegistroType.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for TestRegistro.TestRegistroType.test_floats.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for TestRegistro.TestRegistroType.test_strings.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/stewart/2025-1/BD2/Proyecto_BD2&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python tests.Python tests for TestRegistro.TestRegistroType.executor": "Run",
+    "Python tests.Python tests for TestRegistro.TestRegistroType.test_floats.executor": "Run",
+    "Python tests.Python tests for TestRegistro.TestRegistroType.test_strings.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "amen2.0",
+    "last_opened_file_path": "/Users/stewart/2025-1/BD2/Proyecto_BD2",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
-  <component name="RunManager">
+}]]></component>
+  <component name="RunManager" selected="Python tests.Python tests for TestRegistro.TestRegistroType">
     <configuration name="Python tests for TestRegistro.TestRegistroType" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="Proyecto_BD2" />
       <option name="ENV_FILES" value="" />
@@ -120,6 +118,7 @@
       <option name="presentableId" value="Default" />
       <updated>1746499105681</updated>
       <workItem from="1746499106827" duration="2643000" />
+      <workItem from="1746741615219" duration="13000" />
     </task>
     <servers />
   </component>

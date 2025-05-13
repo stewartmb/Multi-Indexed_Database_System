@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-import Indice_BPTree_file as archivo
+import Secuential_file as archivo
 import random
 import sys
 import csv
@@ -11,18 +11,18 @@ from pathlib import Path
 KEYS = []
 PATH = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
 print("PATH", PATH)
-index_file = "BPtree_struct/index_file.bin"
-data_file = "BPtree_struct/data_file.bin"
+index_file = 'Sequential_Struct/datos.bin'
+data_file = 'Sequential_Struct/sequencial_aux.bin'
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv"]
 
-format_tables = [{"codigo": "q", "nombre": "100s", "ciclo": "i"},
+format_tables = [{"codigo": "i", "nombre": "100s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
                  {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
 
 name_keys = ["codigo", "iata", "zip_code"]
 
 # numero aleatorio entre 1 y 3
-random_index = 0
+random_index = 1
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -36,7 +36,7 @@ print("csv_path", csv_path)
 name_key = name_keys[random_index]
 print("name_key", name_key)
 
-ma = 11 # orden del árbol B+
+ma = 100 # tamaño del aux
 
 N = 100 # cada cuántos registros se imprime una barra de progreso
 
@@ -54,7 +54,7 @@ def test_insert_CSV(csv_path, index_file, data_file):
         pass
 
     # Leer todos los registros del CSV y guardarlos en un diccionario por código
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
+    Sequential = archivo.Sequential(table_format, name_key, num_aux=ma)
     registros_dict = {}
     with open(csv_path, mode='r', encoding='utf-8') as file:
         reader = csv.reader(file)
@@ -68,23 +68,24 @@ def test_insert_CSV(csv_path, index_file, data_file):
                 m = m / N
             if i % m == 0:
                 print("|", end="")
-            row = arbol.RT.correct_format(row)
-            key = arbol.RT.get_key(row)
+            row = Sequential.RT.correct_format(row)
+            key = Sequential.RT.get_key(row)
+            type_key = type(key)
             KEYS.append(key)
-            arbol.add(row)
+            Sequential.add(row)
         print()
 
 
-    return arbol
+    return Sequential
 
 def test_search():
     # BUSQUEDAS
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
+    Sequential = archivo.Sequential(table_format, name_key, num_aux=ma)
     print("\nBúsquedas de prueba:")
     i=0
     for key in KEYS:
         i+=1
-        resultado = arbol.search(key)
+        resultado = Sequential.search(key)
         print(resultado)
         m = N
         if random_index == 0:
@@ -101,22 +102,21 @@ def test_search():
 
 def test_search_range():
     # BUSQUEDAS POR RANGO
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
+    Sequential = archivo.Sequential(table_format, name_key, num_aux=ma)
 
-    if 's' in arbol.format_key:
+    if 's' in Sequential.format_key:
         inferior = 'A'
         superior = 'D'
     else:
         inferior = 101
         superior = 140
     print(f"\nBúsquedas por rango: {inferior} y {superior}:")
-    print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {arbol.format_key}\n")
+    print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {Sequential.format_key}\n")
     
-    resultado_rango = arbol.search_range(inferior, superior)
+    resultado_rango = Sequential.search_range(inferior, superior)
     for registro in resultado_rango:
         print(registro)
     
-
 
 
 

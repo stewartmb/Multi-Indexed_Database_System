@@ -73,10 +73,36 @@ class RegistroType:
         for i in range(len(unpacked)):
             unpacked[i] = self._decode_value(unpacked[i], types[i])
         return unpacked
+    
+    def correct_format(self, register: list) -> list:
+        types = list(self.dict_format.values())
+        for i in range(len(register)):
+            register[i] = self._decode(register[i], types[i])
+        return register
 
     def get_key(self, lista: list) -> any:
         key = lista[self.key_index]
         return key
+    
+    def _decode(self, value, type):
+        """
+        Convierte el valor desempaquetado a su equivalente de python
+        """
+        if type == 'i':
+            value = int(value)
+        elif type == 'q':
+            value = int(value)
+        elif type == 'Q':
+            value = int(value)
+        elif type == 'f':
+            value = float(value)
+        elif type == 'd':
+            value = float(value)
+        elif type == '?':
+            value = bool(value)
+        else:
+            value = value  # no se puede decodificar un string
+        return value
 
     def _decode_value(self, value, type):
         """
@@ -97,3 +123,12 @@ class RegistroType:
         else:
             value = value.decode('utf-8').strip('\x00')  # no se puede decodificar un string
         return value
+    
+    def _print(self , register: list):
+        """
+        Imprime el registro en un formato legible.
+        """
+        i = 0
+        for name , type in enumerate(self.dict_format):
+            print(f"{name}: {register[i]}")
+            i += 1
