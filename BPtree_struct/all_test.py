@@ -133,9 +133,9 @@ if __name__ == "__main__":
  
 
 
-    # # eliminar archivos existentes
-    # try:
-    #     os.remove(index_file)
-    #     os.remove(data_file)
-    # except FileNotFoundError:
-    #     pass
+    # eliminar archivos existentes
+    try:
+        os.remove(index_file)
+        os.remove(data_file)
+    except FileNotFoundError:
+        pass

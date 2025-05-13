@@ -431,6 +431,10 @@ class BPTree:
             pos_new_record = self._read_header_data() 
             record = self.RT.correct_format(record)  # Formatea el registro
             self._add_record(record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
+
+        if pos_new_record is not None:
+            record = self._read_record(pos_new_record)
             key = self.RT.get_key(record)  # Obtiene la clave del registro 
 
         header = self._read_header_index()

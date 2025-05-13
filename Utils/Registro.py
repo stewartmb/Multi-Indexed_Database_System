@@ -23,7 +23,7 @@ class RegistroType:
             key_name: Nombre del campo clave en el registro.
         """
         self.dict_format = dict_format
-        self.FORMAT = ''.join(dict_format.values())
+        self.FORMAT = '=' + ''.join(dict_format.values())
         self.size = struct.calcsize(self.FORMAT)
 
         if key_name is not None:

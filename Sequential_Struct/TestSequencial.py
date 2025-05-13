@@ -22,7 +22,7 @@ format_tables = [{"codigo": "i", "nombre": "100s", "ciclo": "i"},
 name_keys = ["codigo", "iata", "zip_code"]
 
 # numero aleatorio entre 1 y 3
-random_index = 1
+random_index = 2
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -36,7 +36,7 @@ print("csv_path", csv_path)
 name_key = name_keys[random_index]
 print("name_key", name_key)
 
-ma = 100 # tamaño del aux
+ma = 500 # tamaño del aux
 
 N = 100 # cada cuántos registros se imprime una barra de progreso
 
@@ -114,8 +114,8 @@ def test_search_range():
     print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {Sequential.format_key}\n")
     
     resultado_rango = Sequential.search_range(inferior, superior)
-    for registro in resultado_rango:
-        print(registro)
+    # for registro in resultado_rango:
+    #     print(registro)
     
 
 
