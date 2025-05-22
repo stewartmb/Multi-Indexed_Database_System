@@ -3,14 +3,14 @@ import os
 import sys
 import re
 
-from numpy.ma.core import nomask
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-from Utils.Format_Meta import create, select
+from Utils.Format_Meta import *
+from Utils.file_format import *
 from Heap_struct.Heap import *
 from Hash_struct.Hash import Hash
+from BPtree_struct.Indice_BPTree_file import BPTree as Btree
+from Sequential_Struct.Indice_Sequential_file import Sequential
 
-"varchar[20]"
 def to_struct(type):
     varchar_match = re.match(r"varchar\[(\d+)\]", type)
 
@@ -28,29 +28,41 @@ def convert(query):
     print(json.dumps(query, indent=2))
     if query["action"] == "create_table":
         # crear tabla y añadir a metadata
-        with open(query["name"] + "_table.bin", "w") as f:
+        with open(table_filename(query["name"]), "w") as f:
             pass
         create(query["data"], query["name"])
         format = {}
-        for key in query["data"]["columns"].keys():
-            format[key] = to_struct(query["data"]["columns"][key]["type"])
+        cols = query["data"]["columns"]
+        for key in cols.keys():
+            format[key] = to_struct(cols[key]["type"])
 
         # crear indices
-        for key in query["data"]["columns"].keys():
-            index = query["data"]["columns"][key]["index"]
+        for key in cols.keys():
+            index = cols[key]["index"]
             if index == None:
                 pass
             elif index == "hash":
-                buckets_file_name = query["name"] + "_" + key + "_buckets.bin"
-                index_file_name = query["name"] + "_" + key + "_index.bin"
-
                 hash = Hash(format,
                             key,
-                            buckets_file_name,
-                            index_file_name,
-                            query["name"] + "_table.bin")
+                            index_filename(query["name"], key, "buckets"),
+                            index_filename(query["name"], key, "index"),
+                            table_filename(query["name"]))
+            elif index == "seq":
+                seq = Sequential(format,
+                          key,
+                          index_filename(query["name"], key, "index"),
+                          table_filename(query["name"]))
+
+            elif index == "btree":
+                btree = Btree(format,
+                               key,
+                               index_filename(query["name"], key, "index"),
+                               table_filename(query["name"]),
+                               4)
+
             else:
                 print("INDICE NO IMPLEMENTADO AUN")
+
 
     elif query["action"] == "insert":
         nombre_tabla = query["table"]
@@ -62,7 +74,7 @@ def convert(query):
         # insertar en tabla
         heap = Heap(format,
                     data["key"],
-                    nombre_tabla + "_table.bin")
+                    table_filename(nombre_tabla))
 
         position = heap.insert(query["values"][1])
 
@@ -72,18 +84,20 @@ def convert(query):
             if index == None:
                 pass
             elif index == "hash":
-                buckets_file_name = nombre_tabla + "_" + key + "_buckets.bin"
-                index_file_name = nombre_tabla + "_" + key + "_index.bin"
-
                 hash = Hash(format,
                             key,
-                            buckets_file_name,
-                            index_file_name,
-                            nombre_tabla + "_table.bin")
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla))
 
                 hash.insert(query["values"][1], position)
+            elif index == "seq":
+                seq = Sequential(format,
+                          key,
+                          index_filename(nombre_tabla, key, "index"),
+                          table_filename(nombre_tabla))
 
-
+                seq.add(query["values"][1], position)
 
     elif query["action"] == "select":
         print("Y")

@@ -33,8 +33,8 @@ def parse_sql_query(input: QueryInput):
 
 print("comenzar")
 
-#consulta = "consultas/crear_tabla.txt"
-consulta = "consultas/insertar_datos.txt"
+#consulta = "API/consultas/crear_tabla.txt"
+consulta = "API/consultas/insertar_datos.txt"
 with open(consulta, "r") as f:
     sql_code = f.read()
 
