@@ -10,7 +10,7 @@ class Heap:
     HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
     def __init__(self, table_format, key: str,
-                 data_file_name: str = 'data_file.bin', force_create: bool = False):
+                 data_file_name: str, force_create: bool = False):
         self.filename = data_file_name
         self.RT = RegistroType(table_format, key)
         self.record_total_size = self.RT.size + 1  # +1 byte para el flag de eliminado
@@ -81,33 +81,3 @@ class Heap:
                 registro = self.RT.from_bytes(data)
                 registros.append(registro)
         return registros
-
-
-# Define el formato del registro
-format_dict = {
-    "id": "i",
-    "nombre": "20s",
-    "activo": "?"
-}
-
-
-
-
-# Crear la instancia del Heap
-h = Heap(format_dict, key="id", data_file_name="data_test.bin", force_create=True)
-
-
-# Insertar registros
-pos1 = h.insert([1, "Alice", True])
-pos2 = h.insert([2, "Bob", False])
-
-print(h.read(pos1))
-print(h.read(pos2))
-
-h.mark_deleted(pos1)
-print(h.read(pos1))
-
-pos3 = h.insert([3, "Charlie", True])
-print("Out of range y eliminados = None:")
-for i in range(-2,5):
-    print(i, h.read(i))

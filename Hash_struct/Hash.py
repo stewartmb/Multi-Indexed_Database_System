@@ -122,11 +122,12 @@ class HeaderType:
 
 class Hash:
     def __init__(self, table_format, key: str,
-                 buckets_file_name: str = 'hash_buckets.bin',
-                 index_file_name: str = 'hash_index.bin',
-                 data_file_name: str = 'data_file.bin',
-                 global_depth: int = 8,
-                 max_records_per_bucket: int = 4):
+                 buckets_file_name: str,
+                 index_file_name: str,
+                 data_file_name: str,
+                 global_depth: int = 16,
+                 max_records_per_bucket: int = 4,
+                 force_create: bool = False):
         """
         Inicializa el hash extensible.
         :param table_format: formato de la tabla
@@ -144,9 +145,9 @@ class Hash:
         self.NT = TreeNodeType()
         self.RT = RegistroType(table_format, key)
         self.BT = BucketType(max_records_per_bucket)
-        self.HEAP = Heap(table_format, key, data_file_name)
+        self.HEAP = Heap(table_format, key, data_file_name, force_create=force_create)
         self.Header = HeaderType()
-        self._initialize_files(global_depth, force=True)
+        self._initialize_files(global_depth, force=force_create)
 
     # utility functions
     def _initialize_files(self, global_depth, force=False):
@@ -271,14 +272,15 @@ class Hash:
             if record != None:
                 self._aux_insert(buckets_file, index_file, record, data_position)
 
-    def _find_in_bucket(self, bucket, key):
+    def _find_in_bucket(self, bucket, key, matches):
         """
         Busca un registro en un bucket.
         """
         for i in range(bucket['fullness']):
             record = self.HEAP.read(bucket['records'][i])
             if self.RT.get_key(record) == key:
-                return record
+                matches.append(bucket['records'][i])
+        return matches
 
     # Funciones recursivas
     def _aux_insert(self, buckets_file, index_file, record, data_position):
@@ -300,21 +302,18 @@ class Hash:
             else:
                 return self._aux_search(buckets_file, index_file, node['right'], index_hash[:-1], key)
         else:
+            matches = []
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            self._find_in_bucket(bucket, key)
-            ans = self._find_in_bucket(bucket, key)
-            if ans is not None:
-                return ans
+            self._find_in_bucket(bucket, key, matches)
+
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                ans = self._find_in_bucket(bucket, key)
-                if ans is not None:
-                    return ans
+                self._find_in_bucket(bucket, key, matches)
                 overflow_position = bucket['overflow_position']
-        return None
+            return matches
 
     def _aux_delete(self, buckets_file, index_file, node_index, index_hash, key):
         """
@@ -368,7 +367,7 @@ class Hash:
             for i in range(bucket['fullness']):
                 record = self.HEAP.read(bucket['records'][i])
                 if lower <= self.RT.get_key(record) <= upper:
-                    lista.append(record)
+                    lista.append(bucket['records'][i])
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
@@ -376,7 +375,7 @@ class Hash:
                 for i in range(bucket['fullness']):
                     record = self.HEAP.read(bucket['records'][i])
                     if lower <= self.RT.get_key(record) <= upper:
-                        lista.append(record)
+                        lista.append(bucket['records'][i])
                 overflow_position = bucket['overflow_position']
 
         return lista
