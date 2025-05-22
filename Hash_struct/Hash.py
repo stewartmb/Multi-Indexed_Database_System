@@ -146,6 +146,7 @@ class Hash:
         self.NT = TreeNodeType()
         self.RT = RegistroType(table_format, key)
         self.BT = BucketType(max_records_per_bucket)
+        self.HEAP = Heap(table_format, key, data_file_name)
         self.Header = HeaderType()
         self._initialize_files(global_depth, force=True)
 
@@ -182,11 +183,7 @@ class Hash:
         """
         Agrega un registro al archivo de datos
         """
-        pos = self.Header.read(index_file,1) # pos = size (primer elemento libre)
-        self.Header.write(index_file,pos + 1, 1)
-        offset = pos * self.RT.size
-        data_file.seek(offset)
-        data_file.write(self.RT.to_bytes(record))
+        pos = self.HEAP.insert(record)
         return pos
 
     def _insert_value_in_bucket(self, buckets_file, index_file, bucket_position, data_position):
@@ -277,22 +274,21 @@ class Hash:
 
             # reinsertar elementos
             for i in range(old_bucket['fullness']):
-                data_file.seek(old_bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
-                self._aux_insert(buckets_file, index_file, data_file, record, old_bucket['records'][i])
+                record = self.HEAP.read(old_bucket['records'][i])
+                if record != None:
+                    self._aux_insert(buckets_file, index_file, data_file, record, old_bucket['records'][i])
 
             # reinserta el nuevo registro
-            data_file.seek(data_position * self.RT.size)
-            record = self.RT.from_bytes(data_file.read(self.RT.size))
-            self._aux_insert(buckets_file, index_file, data_file, record, data_position)
+            record = self.HEAP.read(data_position)
+            if record != None:
+                self._aux_insert(buckets_file, index_file, data_file, record, data_position)
 
     def _find_in_bucket(self, data_file, bucket, key):
         """
         Busca un registro en un bucket.
         """
         for i in range(bucket['fullness']):
-            data_file.seek(bucket['records'][i] * self.RT.size)
-            record = self.RT.from_bytes(data_file.read(self.RT.size))
+            record = self.HEAP.read(bucket['records'][i])
             if self.RT.get_key(record) == key:
                 return record
 
@@ -318,8 +314,7 @@ class Hash:
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             print(f"Bucket {suffix}:")
             for i in range(bucket['fullness']):
-                data_file.seek(bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
+                record = self.HEAP.read(bucket['records'][i])
                 print(f"  {record}")
 
             overflow_position = bucket['overflow_position']
@@ -328,8 +323,7 @@ class Hash:
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 print(f"  Overflow Bucket {suffix}:")
                 for i in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][i] * self.RT.size)
-                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    record = self.HEAP.read(bucket['records'][i])
                     print(f"    {record}")
                 overflow_position = bucket['overflow_position']
 
@@ -376,8 +370,7 @@ class Hash:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
-                data_file.seek(bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
+                record = self.HEAP.read(bucket['records'][i])
                 if self.RT.get_key(record) == key:
                     # Eliminar el registro
                     bucket['records'][i] = bucket['records'][bucket['fullness'] - 1]
@@ -391,8 +384,7 @@ class Hash:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][i] * self.RT.size)
-                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    record = self.HEAP.read(bucket['records'][i])
                     if self.RT.get_key(record) == key:
                         # Eliminar el registro
                         bucket['records'][i] = -1
@@ -413,8 +405,7 @@ class Hash:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
-                data_file.seek(bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
+                record = self.HEAP.read(bucket['records'][i])
                 if lower <= self.RT.get_key(record) <= upper:
                     lista.append(record)
             overflow_position = bucket['overflow_position']
@@ -422,8 +413,7 @@ class Hash:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][i] * self.RT.size)
-                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    record = self.HEAP.read(bucket['records'][i])
                     if lower <= self.RT.get_key(record) <= upper:
                         lista.append(record)
                 overflow_position = bucket['overflow_position']

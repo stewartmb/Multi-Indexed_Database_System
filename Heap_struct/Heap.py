@@ -47,7 +47,7 @@ class Heap:
         self._write_header(count + 1)
         return count
 
-    def read(self, pos):
+    def read(self, pos: int) -> list | None:
         if pos < 0 or pos >= self._read_header():
             return None
         with open(self.filename, 'rb') as f:
