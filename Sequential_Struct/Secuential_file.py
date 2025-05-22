@@ -19,7 +19,6 @@ class Sequential:
         self.RT = RegistroType(table_format, name_key)               # Formato de los datos
         self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
         self.tam_registro = self.RT.size+5                           # Tamaño del registro
-        print("tamaño",self.RT.size)
 
         self.K = num_aux
         self.nombre_datos = nombre_datos
@@ -160,8 +159,7 @@ class Sequential:
             return
 
         # Verificar si el ID ya existe
-        print ("ID a buscar", self.RT.get_key(record))
-        print ("record", record)
+
         record_key = self.RT.get_key(record)
         _,_,_,_, reg = self.search_aux(record_key)
         if reg is not None:
@@ -298,8 +296,6 @@ class Sequential:
                 archivo_actual = self.nombre_datos if current_lugar == 1 else self.nombre_aux
                 # Se lee el registro original.
                 reg = self._leer_registro(archivo_actual, current_ptr)
-                print(current_ptr , current_lugar )
-                print(reg)
                 # Se guarda el puntero original para avanzar en la cadena.
                 next_ptr = reg[-2]
                 next_lugar = reg[-1] if next_ptr != -1 else 0
@@ -352,7 +348,6 @@ class Sequential:
             mid = (low + high) // 2
             reg_mid = self._leer_registro(self.nombre_datos, mid)
             reg_mid_key = self.RT.get_key(reg_mid)
-            # print( type(reg_mid_key), type(id_busqueda))
             if reg_mid_key < id_busqueda:
                 low = mid + 1
             else:
@@ -379,14 +374,9 @@ class Sequential:
         # Ahora búsqueda secuencial desde el punto correcto
         prev_ptr = None
         prev_lugar = None
-        print ("puntero", current_ptr)
-        print ("registro: ", self._leer_registro(self.nombre_datos, current_ptr))
-
         while current_ptr != -1:
             archivo_actual = self.nombre_datos if current_lugar == 1 else self.nombre_aux
-            print(current_ptr , current_lugar )
             reg = self._leer_registro(archivo_actual, current_ptr)
-            print(reg)
             reg_id = self.RT.get_key(reg)
             if reg_id == id_busqueda:
                 return (prev_ptr, prev_lugar, current_ptr, current_lugar, reg)
@@ -396,8 +386,6 @@ class Sequential:
             prev_lugar = current_lugar
             current_ptr = reg[-2]
             current_lugar = reg[-1]
-        print ("prev_ptr", prev_ptr)
-        print ("prev_lugar", prev_lugar)
         return (prev_ptr, prev_lugar, -1, -1, None)  # No encontrado
     
     def search(self, id_busqueda):
@@ -468,7 +456,6 @@ class Sequential:
             self._escribir_encabezado(num_reg - (1 if current_lugar == 1 else 0),
                                        next_ptr,
                                        next_lugar)
-            print(self._leer_encabezado())
         else:
             archivo_prev = self.nombre_datos if prev_lugar == 1 else self.nombre_aux
             reg_prev = self._leer_registro(archivo_prev, prev_ptr)

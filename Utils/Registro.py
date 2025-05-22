@@ -121,7 +121,7 @@ class RegistroType:
         elif type == '?':
             value = bool(value)
         else:
-            value = value.decode('utf-8').strip('\x00')  # no se puede decodificar un string
+            value = value.decode('utf-8',errors='ignore').strip('\x00')  # no se puede decodificar un string
         return value
     
     def _print(self , register: list):
