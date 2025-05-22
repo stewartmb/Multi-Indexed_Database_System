@@ -11,7 +11,7 @@ class RegistroType:
         key (str): El nombre de la clave que se utilizará como índice.
     """
 
-    def __init__(self, dict_format: dict, key_name: str = None, key_index: int = None):
+    def __init__(self, dict_format: dict, key_name = None, key_index: int = None, keys_list: list = []):
         """
         Inicializa la clase RegistroType. Necesita un diccionario donde las claves
         son los nombres de los atributos del registro y los valores son los tipos de datos
@@ -27,10 +27,15 @@ class RegistroType:
         self.size = struct.calcsize(self.FORMAT)
 
         if key_name is not None:
-            if key_name not in dict_format:
-                raise ValueError(f"Key name '{key_name}' not found in dict_format.")
-            self.key = key_name
-            self.key_index = list(dict_format.keys()).index(key_name)
+            if isinstance(key_name, str):
+                self.key = key_name
+                self.key_index = list(dict_format.keys()).index(key_name)
+            else: 
+                for key in key_name:
+                    if key not in dict_format:
+                        raise ValueError(f"Key name '{key}' not found in dict_format.")
+                self.key = key_name
+                self.key_index = [list(dict_format.keys()).index(k) for k in key_name]
         elif key_index is not None:
             keys = list(dict_format.keys())
             if not (0 <= key_index < len(keys)):
@@ -81,9 +86,12 @@ class RegistroType:
         return register
 
     def get_key(self, lista: list) -> any:
-        key = lista[self.key_index]
-        return key
-    
+        types = list(self.dict_format.values())
+        if isinstance(self.key_index, list):
+            return [self._decode(lista[i], types[i]) for i in self.key_index]
+        else:
+            return self._decode(lista[self.key_index], types[self.key_index])
+        
     def _decode(self, value, type):
         """
         Convierte el valor desempaquetado a su equivalente de python
@@ -117,18 +125,4 @@ class RegistroType:
         elif type == 'f':
             value = float(value)
         elif type == 'd':
-            value = float(value)
-        elif type == '?':
-            value = bool(value)
-        else:
-            value = value.decode('utf-8').strip('\x00')  # no se puede decodificar un string
-        return value
-    
-    def _print(self , register: list):
-        """
-        Imprime el registro en un formato legible.
-        """
-        i = 0
-        for name , type in enumerate(self.dict_format):
-            print(f"{name}: {register[i]}")
-            i += 1
+      

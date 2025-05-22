@@ -1,6 +1,10 @@
 import math
 import heapq
 import struct
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+from Utils.Registro import *
 
 INT_MAX = 2**31 - 1
 INT_MIN = -(2**31)
@@ -329,17 +333,36 @@ class RTreeFile:
                 ):
                     return False
             return True
-    def __init__(self, filename="index.bin", bf=16, dimf=2, typef="i", mf=2):
-        self.filename = filename
-        global point_format, mbr_format, rect_format, b, m, dim, tipo
-        with open(self.filename, "ab+") as f:
+        
+    # MAIN CLASS 
+    def __init__(self, table_format, keys = [], 
+                 data_filename: str = "info/data.bin", 
+                 index_filename: str = "info/index.bin"
+                 ):
+        global point_format, mbr_format, rect_format, b, m, dim
+
+        self.data_filename = data_filename
+        self.index_filename = index_filename
+
+        self.RT = RegistroType(table_format, keys)
+
+        # Ensure directory exists before file creation
+        os.makedirs(os.path.dirname(self.index_filename), exist_ok=True)
+        if not os.path.exists(self.index_filename): # crear archivo si no existe
+            open(self.index_filename, 'w').close() 
+
+        os.makedirs(os.path.dirname(self.data_filename), exist_ok=True)
+        if not os.path.exists(self.data_filename): # crear archivo si no existe
+            open(self.data_filename, 'w').close() 
+
+        with open(self.index_filename, "ab+") as f:
             if f.tell() == 0:
                 root = -1  # int
-                b = bf
-                dim = dimf
-                tipo = typef
-                m = mf
+                b = 32
+                dim = len(keys)
+                m = int(b * 0.3)
                 size = 0
+                typef = table_format[keys[0]]  # can be changed to add support for different type indexes
                 point_format = dim * typef + "?i"
                 mbr_format = 2 * (dim * typef)
                 rect_format = "i?i?" + ((b + 1) * "i")
@@ -350,10 +373,6 @@ class RTreeFile:
                 root, size, b, m, dim, point_format, mbr_format, rect_format = (
                     self.get_header()
                 )
-                # Print formats for debugging
-        print(f"rect_format: {rect_format}")
-        print(f"point_format: {point_format}")
-        print(f"mbr_format: {mbr_format}")
 
     def get_root(self):
         return self.get_header()[0]
@@ -368,9 +387,15 @@ class RTreeFile:
     def write_size(self, size):
         global point_format, mbr_format, rect_format, b, m, dim, tipo
         self.write_header(self.get_root(), size, b, m, dim, point_format, mbr_format, rect_format)
+    
+    def __append_record(self, record):
+        with open(self.data_filename, "ab") as f:
+            pos = f.tell()
+            f.write(self.RT.to_bytes(record))
+            return int(pos/self.RT.size)
 
     def write_header(self, root, size, bf, mf, dimf, point_f, mbr_f, rect_f):
-        with open(self.filename, "r+b") as f:
+        with open(self.index_filename, "r+b") as f:
             f.seek(0)
             f.write(
                 struct.pack(
@@ -387,7 +412,7 @@ class RTreeFile:
             )
 
     def get_header(self):
-        with open(self.filename, "r+b") as f:
+        with open(self.index_filename, "r+b") as f:
             global header_format, header_size
             f.seek(0)
             root, size, bf, mf, df, point_f, mbr_f, rect_f = struct.unpack(
@@ -405,7 +430,7 @@ class RTreeFile:
             )
 
     def write_rec_at(self, pos, rec):
-        with open(self.filename, "r+b") as f:
+        with open(self.index_filename, "r+b") as f:
             global rect_format, point_format, mbr_format, b
             point_size = struct.calcsize(point_format)
             mbr_size = struct.calcsize(mbr_format)
@@ -414,7 +439,7 @@ class RTreeFile:
             f.write(rec.to_binary())
 
     def get_rec_at(self, pos):
-        with open(self.filename, "r+b") as f:
+        with open(self.index_filename, "r+b") as f:
             global rect_format, point_format, mbr_format, b
             rect_format_size = struct.calcsize(rect_format)
             point_size = struct.calcsize(point_format)
@@ -680,7 +705,7 @@ class RTreeFile:
             v_pos = self.choose_subtree(u, p)
             self.__insert__(v_pos, p)
 
-    def insert(self, point):
+    def aux_insert(self, point):
         root = self.get_root()
         if self.get_root() == -1:
             pos = self.get_size()
@@ -688,9 +713,17 @@ class RTreeFile:
             self.write_size(pos+1)
             new_root = self.Rectangle(file = self, pos=pos,is_leaf=True, mbr=self.MBR(point.coords, point.coords))
             self.write_rec_at(pos, new_root)
+            root = pos
 
         self.__insert__(root, point)
         # self.visualize_tree(self.root)
+
+    def insert(self, record, record_pos = None):
+        if record_pos is None:
+            record_pos = self.__append_record(record)
+        coords = self.RT.get_key(record)
+        point = RTreeFile.Point(coords=coords, index=record_pos)
+        self.aux_insert(point)
     
     def sort_by_mindist(self, rectangles, point):
         sorted_rec = []
@@ -868,68 +901,68 @@ class RTreeFile:
             self.write_root(raiz_pos)
             
 
-if __name__ == "__main__":
-    rtree = RTreeFile(bf = 4)
+# if __name__ == "__main__":
+    # rtree = RTreeFile(bf = 4)
 
-    points = [
-        # RTreeFile.Point(coords=[1, 1]),
-        # RTreeFile.Point(coords=[2, 2]),
-        # RTreeFile.Point(coords=[3, 3]),
-        # RTreeFile.Point(coords=[4, 4]),
-        # RTreeFile.Point(coords=[5, 5]),
-        # RTreeFile.Point(coords=[6, 6]),
-        # RTreeFile.Point(coords=[7, 7]),
-        # RTreeFile.Point(coords=[8, 8]),
-        # RTreeFile.Point(coords=[9, 9]),
-        # RTreeFile.Point(coords=[10, 10]),
-        # RTreeFile.Point(coords=[11, 11]),
-        # RTreeFile.Point(coords=[12, 12]),
-        # RTreeFile.Point(coords=[13, 13]),
-        # RTreeFile.Point(coords=[14, 14]),
-        # RTreeFile.Point(coords=[15, 15]),
-        # RTreeFile.Point(coords=[3, 2]),
-        # RTreeFile.Point(coords=[1, 12]),
-        # RTreeFile.Point(coords=[18, 12]),
-        # RTreeFile.Point(coords=[1, 3]),
-        # RTreeFile.Point(coords=[2, 3]),
-        # RTreeFile.Point(coords=[1, 2])
-        RTreeFile.Point(index=0, coords=[1, 2]),
-        RTreeFile.Point(index=3, coords=[1, 2]),
-        RTreeFile.Point(index=2, coords=[1, 2]),
+    # points = [
+    #     # RTreeFile.Point(coords=[1, 1]),
+    #     # RTreeFile.Point(coords=[2, 2]),
+    #     # RTreeFile.Point(coords=[3, 3]),
+    #     # RTreeFile.Point(coords=[4, 4]),
+    #     # RTreeFile.Point(coords=[5, 5]),
+    #     # RTreeFile.Point(coords=[6, 6]),
+    #     # RTreeFile.Point(coords=[7, 7]),
+    #     # RTreeFile.Point(coords=[8, 8]),
+    #     # RTreeFile.Point(coords=[9, 9]),
+    #     # RTreeFile.Point(coords=[10, 10]),
+    #     # RTreeFile.Point(coords=[11, 11]),
+    #     # RTreeFile.Point(coords=[12, 12]),
+    #     # RTreeFile.Point(coords=[13, 13]),
+    #     # RTreeFile.Point(coords=[14, 14]),
+    #     # RTreeFile.Point(coords=[15, 15]),
+    #     # RTreeFile.Point(coords=[3, 2]),
+    #     # RTreeFile.Point(coords=[1, 12]),
+    #     # RTreeFile.Point(coords=[18, 12]),
+    #     # RTreeFile.Point(coords=[1, 3]),
+    #     # RTreeFile.Point(coords=[2, 3]),
+    #     # RTreeFile.Point(coords=[1, 2])
+    #     RTreeFile.Point(index=0, coords=[1, 2]),
+    #     RTreeFile.Point(index=3, coords=[1, 2]),
+    #     RTreeFile.Point(index=2, coords=[1, 2]),
 
-    ]
+    # ]
 
-    # for pt in points:
-    #     rtree.insert(pt)
-    #     print(f"inserted point {pt}")
-        # print("----------------FILE----------------")
-        # rtree.print_file()
-        # print("----------------FILE-END----------------")
+    # # for pt in points:
+    # #     rtree.insert(pt)
+    # #     print(f"inserted point {pt}")
+    #     # print("----------------FILE----------------")
+    #     # rtree.print_file()
+    #     # print("----------------FILE-END----------------")
 
-    # print(50*"-")
+    # # print(50*"-")
 
-    # print(len(points))
+    # # print(len(points))
 
-    # points = rtree.ksearch(3, RTreeFile.Point(coords=[4,2]))
+    # # points = rtree.ksearch(3, RTreeFile.Point(coords=[4,2]))
 
-    # print("K SEARCH")
-    # for pt in points:
-    #     print(pt)
+    # # print("K SEARCH")
+    # # for pt in points:
+    # #     print(pt)
 
-    # print("RANGE SEARCH")
+    # # print("RANGE SEARCH")
 
-    # points = rtree.range_search(RTreeFile.Point(coords=[0,0]), RTreeFile.Point(coords=[5, 6]))
-    # for pt in points:
-    #     print(pt)
+    # # points = rtree.range_search(RTreeFile.Point(coords=[0,0]), RTreeFile.Point(coords=[5, 6]))
+    # # for pt in points:
+    # #     print(pt)
 
-    # rtree.delete(RTreeFile.Point(coords=[4, 4]))
+    # # rtree.delete(RTreeFile.Point(coords=[4, 4]))
 
-    rtree.print_tree()
+    # rtree.print_tree()
 
-    print("-------------------------------------------")
+    # print("-------------------------------------------")
 
-    # rtree.print_file()
+    # # rtree.print_file()
     
-    points = rtree.search(RTreeFile.Point(coords=[1, 2]))
-    for pt in points:
-        print(pt)
+    # points = rtree.search(RTreeFile.Point(coords=[1, 2]))
+    # for pt in points:
+    #     print(pt)
