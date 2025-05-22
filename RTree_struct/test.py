@@ -18,4 +18,7 @@ def test_import_csv(csv_path, index_file = "info/index.bin", data_file = "info/d
         next(reader)
         for row in reader:
             rtree.insert(row)     
-            pri
+            print(row)       
+
+PATH = "/Users/melaniecortezrojas/Documents/utec/25-1/BD2/Proyecto_BD2/Data_test"
+test_import_csv(PATH+"/zipcodes.csv")

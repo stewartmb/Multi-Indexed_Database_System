@@ -1,4 +1,4 @@
-import pandas as pd
+# import pandas as pd
 import os
 import Indice_BPTree_file as archivo
 import random
@@ -9,10 +9,10 @@ from pathlib import Path
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
 KEYS = []
-PATH = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
+PATH = "/Users/melaniecortezrojas/Documents/utec/25-1/BD2/Proyecto_BD2/Data_test"
 print("PATH", PATH)
-index_file = "BPtree_struct/index_file.bin"
-data_file = "BPtree_struct/data_file.bin"
+index_file = "index_file.bin"
+data_file = "data_file.bin"
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv"]
 
 format_tables = [{"codigo": "q", "nombre": "100s", "ciclo": "i"},
@@ -108,7 +108,7 @@ def test_search_range():
         superior = 'D'
     else:
         inferior = 101
-        superior = 140
+        superior = 1000
     print(f"\nBúsquedas por rango: {inferior} y {superior}:")
     print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {arbol.format_key}\n")
     
