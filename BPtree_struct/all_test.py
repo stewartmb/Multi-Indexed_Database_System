@@ -15,14 +15,14 @@ index_file = "BPtree_struct/index_file.bin"
 data_file = "BPtree_struct/data_file.bin"
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv"]
 
-format_tables = [{"codigo": "q", "nombre": "100s", "ciclo": "i"},
+format_tables = [{"codigo": "q", "nombre": "12s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
                  {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
 
-name_keys = ["codigo", "iata", "zip_code"]
+name_keys = ["nombre", "iata", "zip_code"]
 
 # numero aleatorio entre 1 y 3
-random_index = 2
+random_index = 0
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -68,16 +68,28 @@ def test_insert_CSV(csv_path, index_file, data_file):
                 m = m / N
             if i % m == 0:
                 print("|", end="")
-            row = arbol.RT.correct_format(row)
             key = arbol.RT.get_key(row)
             KEYS.append(key)
+            # manejar errores de formato:
             arbol.add(row)
         print()
+        arbol.print_tree_by_levels()
 
 
     return arbol
 
-def test_search():
+def test_onesearch(key):
+    # BUSQUEDA DE UN REGISTRO ESPECIFICO
+    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
+    print("\nBúsqueda de un registro específico:")
+    resultado = arbol.search(key)
+    for registro in resultado:
+        print(registro)
+    
+    print()
+    print("Búsqueda unica de prueba finalizada.")
+
+def test_allsearch():
     # BUSQUEDAS
     arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
     print("\nBúsquedas de prueba:")
@@ -87,11 +99,11 @@ def test_search():
         resultado = arbol.search(key)
         print(resultado)
         m = N
-        if random_index == 0:
-            m = m / N
+        # if random_index == 0:
+        #     m = m / N
         if i % m == 0:
             print("|", end="")
-        if resultado is None:
+        if resultado == []:
             print(f"{key} No encontrado")
             break
     
@@ -107,8 +119,8 @@ def test_search_range():
         inferior = 'A'
         superior = 'D'
     else:
-        inferior = 101
-        superior = 140
+        inferior = 1
+        superior = 3
     print(f"\nBúsquedas por rango: {inferior} y {superior}:")
     print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {arbol.format_key}\n")
     
@@ -126,10 +138,15 @@ if __name__ == "__main__":
 
     # Crear el árbol B+ e insertar registros desde el CSV
     test_insert_CSV(csv_path, index_file, data_file)
+
     # Prueba de búsqueda
-    test_search()
+    test_allsearch()
     # Prueba de búsqueda por rango
     test_search_range()
+
+    # Prueba de busqueda de un registro específico
+    print ( KEYS[0])
+    test_onesearch(KEYS[0])
  
 
 
