@@ -1,0 +1,5 @@
+insert into users (id, name, email) values (101, "Spaghetti", "abc@utec.edu.pe");
+insert into users (id, name, email) values (102, "Snake", "def@utec.edu.pe");
+insert into users (id, name, email) values (103, "PobreSQL", "ghi@utec.edu.pe");
+insert into users (id, name, email) values (104, "Shakespeare", "jkl@utec.edu.pe");
+insert into users (id, name, email) values (105, "Miraflores", "mno@utec.edu.pe");

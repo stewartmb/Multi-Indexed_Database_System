@@ -2,8 +2,8 @@ import json
 import os
 
 def create(data: dict, name: str) -> None:
-    """Agrega un nuevo diccionario con clave 'name' a una lista en data.meta"""
-    filename = "data.meta"
+    """Agrega un nuevo diccionario con clave 'name' a una lista en metadata.meta"""
+    filename = "metadata.meta"
     all_data = []
 
     # Si el archivo existe, cargar la lista existente
@@ -26,8 +26,8 @@ def create(data: dict, name: str) -> None:
     print(f"Dato guardado bajo la clave '{name}' en '{filename}'.")
 
 def select(name: str) -> dict:
-    """Busca y devuelve el diccionario correspondiente a 'name' desde data.meta"""
-    filename = "data.meta"
+    """Busca y devuelve el diccionario correspondiente a 'name' desde metadata.meta"""
+    filename = "metadata.meta"
 
     if not os.path.exists(filename):
         print(f"El archivo '{filename}' no existe.")
@@ -46,10 +46,3 @@ def select(name: str) -> dict:
 
     print(f"No se encontró una entrada con el nombre '{name}'.")
     return {}
-
-
-#
-# create({"edad": 25, "ciudad": "Madrid"}, "usuario1")
-# create({"edad": 40, "ciudad": "Lima"}, "usuario2")
-
-print(select("usuario1"))  # {'edad': 25, 'ciudad': 'Madrid'}

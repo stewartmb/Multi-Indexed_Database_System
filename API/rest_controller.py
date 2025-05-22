@@ -20,17 +20,27 @@ def parse_sql_query(input: QueryInput):
     try:
         result = parser.parse(sql_code)
     except Exception as e:
+        print("ERROR:", e)
         return JSONResponse(
             content={"error": "Error parsing input", "details": str(e)},
             status_code=400
         )
     for line in result:
-        services.convert(line)
+        if isinstance(line, list):
+            services.convert(line[0])
+        else:
+            services.convert(line)
 
-with open("test3.txt", "r") as f:
+print("comenzar")
+
+#consulta = "consultas/crear_tabla.txt"
+consulta = "consultas/insertar_datos.txt"
+with open(consulta, "r") as f:
     sql_code = f.read()
 
 test_query = QueryInput(
     query=sql_code
 )
 parse_sql_query(test_query)
+
+print("terminar")

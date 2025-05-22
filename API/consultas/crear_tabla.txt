@@ -1,0 +1,5 @@
+create table users (
+    id int primary key,
+    name varchar[20] index hash,
+    email varchar[50]
+);

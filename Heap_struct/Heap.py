@@ -3,8 +3,6 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 
-
-
 class Heap:
     HEADER_FORMAT = 'i'
     HEADER_SIZE = struct.calcsize(HEADER_FORMAT)

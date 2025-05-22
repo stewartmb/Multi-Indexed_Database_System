@@ -1,5 +1,0 @@
-create table users (
-    id int primary key,
-    name varchar[20] index btree,
-    features varchar[14]  index rtree
-);

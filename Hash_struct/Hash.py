@@ -121,7 +121,8 @@ class HeaderType:
         file.write(struct.pack('i', value))
 
 class Hash:
-    def __init__(self, table_format, key: str,
+    def __init__(self, table_format: dict,
+                 key: str,
                  buckets_file_name: str,
                  index_file_name: str,
                  data_file_name: str,
@@ -154,7 +155,7 @@ class Hash:
         """
         Inicializa los archivos de índice y datos.
         """
-        if force or not os.path.exists(self.index_file):
+        if force or (not os.path.exists(self.index_file)) or (os.path.getsize(self.index_file) < self.Header.size):
             with open(self.index_file, 'wb') as f:
                 # 0 = global_depth, 1 = data_last, 2 = bucket_last, 3 = node_last
                 f.write(struct.pack('i', global_depth))
@@ -168,7 +169,7 @@ class Hash:
                 # right (1)
                 f.write(self.NT.to_bytes({'bucket_position': 1, 'left': -1, 'right': -1, 'depth': 0}))
 
-        if force or not os.path.exists(self.buckets_file):
+        if force or (not os.path.exists(self.buckets_file)) or (os.path.getsize(self.buckets_file) < self.Header.size):
             with open(self.buckets_file, 'wb') as f:
                 # [0,0,0...0,0,0] + [localdepth, fullness, overflowPosition]
                 f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
