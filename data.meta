@@ -1,0 +1,25 @@
+[
+    {
+        "images": {
+            "key": "id",
+            "columns": {
+                "id": {
+                    "type": "int",
+                    "index": "seq"
+                },
+                "name": {
+                    "type": "text",
+                    "index": "btree"
+                },
+                "creationDate": {
+                    "type": "date",
+                    "index": null
+                },
+                "features": {
+                    "type": "varchar[14]",
+                    "index": "rtree"
+                }
+            }
+        }
+    }
+]
