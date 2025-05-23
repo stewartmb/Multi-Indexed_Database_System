@@ -1,7 +1,0 @@
-create table images (
-    id int primary key index seq,
-    name text index btree,
-    name text index hash,
-    creationDate date,
-    features varchar[14]  index rtree
-);

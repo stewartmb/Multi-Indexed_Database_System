@@ -1,0 +1,6 @@
+create table users (
+    id int primary key,
+    name varchar[20] index hash,
+    nacimiento varchar[10] index seq,
+    email varchar[50]
+);

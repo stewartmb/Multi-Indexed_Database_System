@@ -225,16 +225,15 @@ class BPTree:
                         temp = self._read_index_page(pos_node)
                         break
             return pos_node # Retorna un posicion de la hoja en donde deberia estar el registro
-        
-
-    def search_aux(self, pos_node ,key):
+    
+    def search_aux(self, pos_node ,key_min):
         if pos_node == -2:
             return -1
         else:
             temp = self._read_index_page(pos_node)
             while (temp.leaf == False):
                 for i in range(temp.key_count):
-                    if key < temp.keys[i]:
+                    if key_min <= temp.keys[i]:
                         pos_children = temp.childrens[i]
                         temp = self._read_index_page(pos_children)
                         break
@@ -242,48 +241,56 @@ class BPTree:
                         pos_children = temp.childrens[i + 1]
                         temp = self._read_index_page(pos_children)
                         break
-            for i in range(temp.key_count):
-                if temp.keys[i] == key:
-                    return temp.childrens[i]  # Retorna un posicion de registro en data_file.bin
-            return -1 # Retorna la posicion de la hoja 
-    
+            return temp # Retorna un posicion de la hoja en donde deberia estar el registro
+
+
     def search(self, key):
         """
         Busca un registro en el árbol B+.
         """
         root = self._read_header_index()[1]  # posición de la raíz
-        pos_record = self.search_aux(root, key)
-
-        if pos_record == -1:
-            return None
+        temp = self.search_aux(root, key)
+        results = []
+        if temp == -1:
+            return results
         else:
-            record = self._read_record(pos_record)
-            return record  # Regresa la tupla del registro encontrado
-        
+            while True:
+                for i in range(temp.key_count):
+                    if key < temp.keys[i]:
+                        break
+                    if temp.keys[i] == key:
+                        record = self._read_record(temp.childrens[i])
+                        results.append(record)
+                if temp.childrens[-1] != -1:
+                    pos_children = temp.childrens[-1]
+                    temp = self._read_index_page(pos_children)
+                else:
+                    break
+            return results
+
     def search_range(self, key1, key2):
         """
         Busca un rango de registros en el árbol B+.
         """
         root = self._read_header_index()[1]  # posición de la raíz
-        pos_leaf = self.search_leaf(key1)  # Busca la posición de la hoja donde se debe insertar el registro
-        if pos_leaf == -1:
-            return None
-        leaf_page = self._read_index_page(pos_leaf)  # Lee la página
-        records = []
-        # Recorre la página y sus siguientes hojas
-        while leaf_page:
-            for i in range(leaf_page.key_count):
-                if key1 <= leaf_page.keys[i] <= key2:
-                    pos_record = leaf_page.childrens[i]
-                    record = self._read_record(pos_record)
-                    records.append(record)
-            # Mueve a la siguiente hoja
-            pos_leaf = leaf_page.childrens[self.M-1]
-            if pos_leaf != -1:
-                leaf_page = self._read_index_page(pos_leaf)
-            else:
-                break
-        return records  # Regresa la lista de registros encontrados
+        temp = self.search_aux(root, key1)
+        results = []
+        if temp == -1:
+            return results
+        else:
+            while True:
+                for i in range(temp.key_count):
+                    if key2 < temp.keys[i]:
+                        break
+                    if temp.keys[i] >= key1 and temp.keys[i] <= key2:
+                        record = self._read_record(temp.childrens[i])
+                        results.append(record)
+                if temp.childrens[-1] != -1:
+                    pos_children = temp.childrens[-1]
+                    temp = self._read_index_page(pos_children)
+                else:
+                    break
+            return results # Regresa la lista de registros encontrados
     
     
     ## INSERCION ##
@@ -340,7 +347,7 @@ class BPTree:
         # Divide la página en dos
         header = self._read_header_index()
         pos_new_page = header[0]  # posición de la nueva página
-        new_page = IndexPage(leaf=page.leaf, M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)  # Crea una nueva página de índic
+        new_page = IndexPage(leaf=page.leaf, M = self.M)  # Crea una nueva página de índic
         # Asigna las claves y punteros a la nueva página
         mid_index = (self.M - 1) // 2
         is_even = False
@@ -382,7 +389,7 @@ class BPTree:
         # Divide la página en dos
         header = self._read_header_index()
         pos_new_page = header[0]  # posición de la nueva página
-        new_page = IndexPage(leaf=page.leaf,  M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)  # Crea una nueva página de índic
+        new_page = IndexPage(leaf=page.leaf,  M = self.M)  # Crea una nueva página de índic
         # Asigna las claves y punteros a la nueva página
         mid_index = (self.M - 1) // 2
         is_even = False
@@ -431,7 +438,7 @@ class BPTree:
             return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
         if record is not None:
             pos_new_record = self._read_header_data() 
-            record = self.RT.correct_format(record)  # Formatea el registro
+            # record = self.RT.correct_format(record)  # Formatea el registro
             self._add_record(record)
             key = self.RT.get_key(record)  # Obtiene la clave del registro
 
@@ -446,7 +453,7 @@ class BPTree:
         ## CASO 1: El árbol está vacío ##
         if root == -2 or root == -1:
             # Crea una nueva página de índice
-            new_page = IndexPage(leaf=True, M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)
+            new_page = IndexPage(leaf=True, M = self.M)
             new_page.keys[0] = key
             new_page.childrens[0] = pos_new_record
             new_page.key_count = 1
@@ -478,7 +485,7 @@ class BPTree:
                 ### CASO 2.2.1: Si el padre no existe, se crea uno nuevo ###
                 if parent_pos == -1:
                     pos_new_root = self._read_header_index()[0]
-                    new_root = IndexPage(leaf=False,  M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)
+                    new_root = IndexPage(leaf=False,  M = self.M)
                     new_root.keys[0] = key_up
                     new_root.childrens[0] = current_pos
                     new_root.childrens[1] = pos_new_index
@@ -510,7 +517,7 @@ class BPTree:
                         parent_pos = current_page.father
 
 class IndexPage():
-    def __init__(self, leaf=True, M=None, format_key=None, indexp_format=None):
+    def __init__(self, leaf=True, M=None):
         self.leaf = leaf
         self.keys = [None] * (M-1)
         self.childrens = [-1] * M
@@ -568,7 +575,7 @@ class IndexPage():
         unpacked = list(struct.unpack(indexp_format, data))
 
         # Create instance
-        instance = cls(leaf=bool(unpacked[0]), M=M, format_key=format_key, indexp_format=indexp_format)
+        instance = cls(leaf=bool(unpacked[0]), M=M)
 
         # Handle keys
         for i in range(M - 1):

@@ -3,6 +3,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
+from Heap_struct.Heap import *
 
 def get_bits(dato: any, nbits: int) -> str:
     """
@@ -120,40 +121,41 @@ class HeaderType:
         file.write(struct.pack('i', value))
 
 class Hash:
-    def __init__(self, table_format, key: str,
-                 buckets_file_name: str = 'hash_buckets.bin',
-                 index_file_name: str = 'hash_index.bin',
-                 data_file_name: str = 'data_file.bin',
-                 global_depth: int = 8,
-                 max_records_per_bucket: int = 4):
+    def __init__(self, table_format: dict,
+                 key: str,
+                 buckets_file_name: str,
+                 index_file_name: str,
+                 data_file_name: str,
+                 global_depth: int = 16,
+                 max_records_per_bucket: int = 4,
+                 force_create: bool = False):
         """
         Inicializa el hash extensible.
         :param table_format: formato de la tabla
         :param key: indice de ordenamiento
         :param buckets_file_name: nombre del archivo de buckets
         :param index_file_name: nombre del archivo de índice
-        :param data_file_name: nombre del archivo de datos
         :param global_depth: profundidad global
         :param max_records_per_bucket: cantidad maxima de registros por bucket
         """
         self.index_file = index_file_name
         self.buckets_file = buckets_file_name
-        self.data_file = data_file_name
         self.global_depth = global_depth
         self.max_records = max_records_per_bucket
 
         self.NT = TreeNodeType()
         self.RT = RegistroType(table_format, key)
         self.BT = BucketType(max_records_per_bucket)
+        self.HEAP = Heap(table_format, key, data_file_name, force_create=force_create)
         self.Header = HeaderType()
-        self._initialize_files(global_depth, force=True)
+        self._initialize_files(global_depth, force=force_create)
 
     # utility functions
     def _initialize_files(self, global_depth, force=False):
         """
         Inicializa los archivos de índice y datos.
         """
-        if force or not os.path.exists(self.index_file):
+        if force or (not os.path.exists(self.index_file)) or (os.path.getsize(self.index_file) < self.Header.size):
             with open(self.index_file, 'wb') as f:
                 # 0 = global_depth, 1 = data_last, 2 = bucket_last, 3 = node_last
                 f.write(struct.pack('i', global_depth))
@@ -167,26 +169,12 @@ class Hash:
                 # right (1)
                 f.write(self.NT.to_bytes({'bucket_position': 1, 'left': -1, 'right': -1, 'depth': 0}))
 
-        if force or not os.path.exists(self.buckets_file):
+        if force or (not os.path.exists(self.buckets_file)) or (os.path.getsize(self.buckets_file) < self.Header.size):
             with open(self.buckets_file, 'wb') as f:
                 # [0,0,0...0,0,0] + [localdepth, fullness, overflowPosition]
                 f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
                 f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
 
-        if force or not os.path.exists(self.data_file):
-            with open(self.data_file, 'wb') as f:
-                f.write(struct.pack('i', 0))
-
-    def _append_record(self, index_file, data_file, record):
-        """
-        Agrega un registro al archivo de datos
-        """
-        pos = self.Header.read(index_file,1) # pos = size (primer elemento libre)
-        self.Header.write(index_file,pos + 1, 1)
-        offset = pos * self.RT.size
-        data_file.seek(offset)
-        data_file.write(self.RT.to_bytes(record))
-        return pos
 
     def _insert_value_in_bucket(self, buckets_file, index_file, bucket_position, data_position):
         """
@@ -220,7 +208,7 @@ class Hash:
             self._insert_value_in_bucket(buckets_file, index_file, bucket['overflow_position'], data_position)
         return True
 
-    def _add_to_hash(self, buckets_file, index_file, data_file, data_position, index_hash):
+    def _add_to_hash(self, buckets_file, index_file, data_position, index_hash):
         node_index = 0
         k = 1
         while True:
@@ -276,63 +264,34 @@ class Hash:
 
             # reinsertar elementos
             for i in range(old_bucket['fullness']):
-                data_file.seek(old_bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
-                self._aux_insert(buckets_file, index_file, data_file, record, old_bucket['records'][i])
+                record = self.HEAP.read(old_bucket['records'][i])
+                if record != None:
+                    self._aux_insert(buckets_file, index_file, record, old_bucket['records'][i])
 
             # reinserta el nuevo registro
-            data_file.seek(data_position * self.RT.size)
-            record = self.RT.from_bytes(data_file.read(self.RT.size))
-            self._aux_insert(buckets_file, index_file, data_file, record, data_position)
+            record = self.HEAP.read(data_position)
+            if record != None:
+                self._aux_insert(buckets_file, index_file, record, data_position)
 
-    def _find_in_bucket(self, data_file, bucket, key):
+    def _find_in_bucket(self, bucket, key, matches):
         """
         Busca un registro en un bucket.
         """
         for i in range(bucket['fullness']):
-            data_file.seek(bucket['records'][i] * self.RT.size)
-            record = self.RT.from_bytes(data_file.read(self.RT.size))
+            record = self.HEAP.read(bucket['records'][i])
             if self.RT.get_key(record) == key:
-                return record
+                matches.append(bucket['records'][i])
+        return matches
 
     # Funciones recursivas
-    def _aux_insert(self, buckets_file, index_file, data_file, record, data_position):
+    def _aux_insert(self, buckets_file, index_file, record, data_position):
         """
         Funcion para reinsertar recursivamente los registros que se dividieron
         """
         index_hash = get_bits(self.RT.get_key(record), self.global_depth)
-        self._add_to_hash(buckets_file, index_file, data_file, data_position, index_hash)
+        self._add_to_hash(buckets_file, index_file, data_position, index_hash)
 
-    def _aux_imprimir(self, buckets_file, index_file, data_file, node_index, suffix):
-        """
-        Imprime los buckets y sus registros.
-        """
-        index_file.seek(self.Header.size + node_index * self.NT.size)
-        node = self.NT.from_bytes(index_file.read(self.NT.size))
-        if node['bucket_position'] == -1:
-            self._aux_imprimir(buckets_file, index_file, data_file, node['left'], "0" + suffix)
-            self._aux_imprimir(buckets_file, index_file, data_file, node['right'], "1" + suffix)
-        else:
-            buckets_file.seek(node['bucket_position'] * self.BT.size)
-            bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            print(f"Bucket {suffix}:")
-            for i in range(bucket['fullness']):
-                data_file.seek(bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
-                print(f"  {record}")
-
-            overflow_position = bucket['overflow_position']
-            while overflow_position != -1:
-                buckets_file.seek(overflow_position * self.BT.size)
-                bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                print(f"  Overflow Bucket {suffix}:")
-                for i in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][i] * self.RT.size)
-                    record = self.RT.from_bytes(data_file.read(self.RT.size))
-                    print(f"    {record}")
-                overflow_position = bucket['overflow_position']
-
-    def _aux_search(self, buckets_file, index_file, data_file, node_index, index_hash, key):
+    def _aux_search(self, buckets_file, index_file, node_index, index_hash, key):
         """
         Funcion recursiva de busqueda
         """
@@ -340,27 +299,24 @@ class Hash:
         node = self.NT.from_bytes(index_file.read(self.NT.size))
         if node['bucket_position'] == -1:
             if index_hash[-1] == '0':
-                return self._aux_search(buckets_file, index_file, data_file, node['left'], index_hash[:-1], key)
+                return self._aux_search(buckets_file, index_file, node['left'], index_hash[:-1], key)
             else:
-                return self._aux_search(buckets_file, index_file, data_file, node['right'], index_hash[:-1], key)
+                return self._aux_search(buckets_file, index_file, node['right'], index_hash[:-1], key)
         else:
+            matches = []
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            self._find_in_bucket(data_file, bucket, key)
-            ans = self._find_in_bucket(data_file, bucket, key)
-            if ans is not None:
-                return ans
+            self._find_in_bucket(bucket, key, matches)
+
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                ans = self._find_in_bucket(data_file, bucket, key)
-                if ans is not None:
-                    return ans
+                self._find_in_bucket(bucket, key, matches)
                 overflow_position = bucket['overflow_position']
-        return None
+            return matches
 
-    def _aux_delete(self, buckets_file, index_file, data_file, node_index, index_hash, key):
+    def _aux_delete(self, buckets_file, index_file, node_index, index_hash, key):
         """
         Funcion recursiva de busqueda
         """
@@ -368,15 +324,14 @@ class Hash:
         node = self.NT.from_bytes(index_file.read(self.NT.size))
         if node['bucket_position'] == -1:
             if index_hash[-1] == '0':
-                return self._aux_delete(buckets_file, index_file, data_file, node['left'], index_hash[:-1], key)
+                return self._aux_delete(buckets_file, index_file, node['left'], index_hash[:-1], key)
             else:
-                return self._aux_delete(buckets_file, index_file, data_file, node['right'], index_hash[:-1], key)
+                return self._aux_delete(buckets_file, index_file, node['right'], index_hash[:-1], key)
         else:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
-                data_file.seek(bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
+                record = self.HEAP.read(bucket['records'][i])
                 if self.RT.get_key(record) == key:
                     # Eliminar el registro
                     bucket['records'][i] = bucket['records'][bucket['fullness'] - 1]
@@ -390,8 +345,7 @@ class Hash:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][i] * self.RT.size)
-                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    record = self.HEAP.read(bucket['records'][i])
                     if self.RT.get_key(record) == key:
                         # Eliminar el registro
                         bucket['records'][i] = -1
@@ -401,48 +355,32 @@ class Hash:
                         return True
         return False
 
-    def _aux_range_search(self, buckets_file, index_file, data_file, node_index, lower, upper):
+    def _aux_range_search(self, buckets_file, index_file, node_index, lower, upper):
         lista = []
         index_file.seek(self.Header.size + node_index * self.NT.size)
         node = self.NT.from_bytes(index_file.read(self.NT.size))
         if node['bucket_position'] == -1:
-            lista.extend(self._aux_range_search(buckets_file, index_file, data_file, node['left'], lower, upper))
-            lista.extend(self._aux_range_search(buckets_file, index_file, data_file, node['right'], lower, upper))
+            lista.extend(self._aux_range_search(buckets_file, index_file, node['left'], lower, upper))
+            lista.extend(self._aux_range_search(buckets_file, index_file, node['right'], lower, upper))
         else:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
-                data_file.seek(bucket['records'][i] * self.RT.size)
-                record = self.RT.from_bytes(data_file.read(self.RT.size))
+                record = self.HEAP.read(bucket['records'][i])
                 if lower <= self.RT.get_key(record) <= upper:
-                    lista.append(record)
+                    lista.append(bucket['records'][i])
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
-                    data_file.seek(bucket['records'][i] * self.RT.size)
-                    record = self.RT.from_bytes(data_file.read(self.RT.size))
+                    record = self.HEAP.read(bucket['records'][i])
                     if lower <= self.RT.get_key(record) <= upper:
-                        lista.append(record)
+                        lista.append(bucket['records'][i])
                 overflow_position = bucket['overflow_position']
 
         return lista
 
-    # Funciones llamables
-    def imprimir(self):
-        """
-        Imprime todos los buckets y sus registros.
-        """
-        with open(self.index_file, 'r+b') as index_file, \
-                open(self.data_file, 'r+b') as data_file, \
-                open(self.buckets_file, 'r+b') as buckets_file:
-            index_file.seek(self.Header.size)
-            root = self.NT.from_bytes(index_file.read(self.NT.size))
-            suffix = ""
-            if root['bucket_position'] == -1:
-                self._aux_imprimir(buckets_file, index_file, data_file, root['left'], "0" + suffix)
-                self._aux_imprimir(buckets_file, index_file, data_file, root['right'], "1" + suffix)
 
     def insert(self, record, data_position=None):
         """
@@ -452,13 +390,12 @@ class Hash:
         Si no se especifica, se agrega al final del archivo (funcionalidad como indice principal).
         """
         with open(self.index_file, 'r+b') as index_file, \
-              open(self.data_file, 'r+b') as data_file, \
                open(self.buckets_file, 'r+b') as buckets_file:
             if data_position is None:
-                data_position = self._append_record(index_file, data_file, record)
+                data_position = self.HEAP.insert(record)
 
             index_hash = get_bits(self.RT.get_key(record), self.global_depth)
-            self._add_to_hash(buckets_file, index_file, data_file, data_position, index_hash)
+            self._add_to_hash(buckets_file, index_file, data_position, index_hash)
 
     def search(self, key):
         """
@@ -474,15 +411,14 @@ class Hash:
             key = float(key)
 
         with open(self.index_file, 'r+b') as index_file, \
-                open(self.data_file, 'r+b') as data_file, \
                 open(self.buckets_file, 'r+b') as buckets_file:
             index_hash = get_bits(key, self.global_depth)
             index_file.seek(self.Header.size)
             root = self.NT.from_bytes(index_file.read(self.NT.size))
             if index_hash[-1] == '0':
-                return self._aux_search(buckets_file, index_file, data_file, root['left'], index_hash[:-1], key)
+                return self._aux_search(buckets_file, index_file, root['left'], index_hash[:-1], key)
             else:
-                return self._aux_search(buckets_file, index_file, data_file, root['right'], index_hash[:-1], key)
+                return self._aux_search(buckets_file, index_file, root['right'], index_hash[:-1], key)
 
     def range_search(self, lower, upper):
         """
@@ -492,13 +428,12 @@ class Hash:
         :return: lista de registros encontrados
         """
         with open(self.index_file, 'r+b') as index_file, \
-                open(self.data_file, 'r+b') as data_file, \
                 open(self.buckets_file, 'r+b') as buckets_file:
             index_file.seek(self.Header.size)
             root = self.NT.from_bytes(index_file.read(self.NT.size))
             if root['bucket_position'] == -1:
-                lista = self._aux_range_search(buckets_file, index_file, data_file, root['left'], lower, upper)
-                lista.extend(self._aux_range_search(buckets_file, index_file, data_file, root['right'], lower, upper))
+                lista = self._aux_range_search(buckets_file, index_file, root['left'], lower, upper)
+                lista.extend(self._aux_range_search(buckets_file, index_file, root['right'], lower, upper))
 
         return lista
 
@@ -515,12 +450,11 @@ class Hash:
             key = float(key)
 
         with open(self.index_file, 'r+b') as index_file, \
-                open(self.data_file, 'r+b') as data_file, \
                 open(self.buckets_file, 'r+b') as buckets_file:
             index_hash = get_bits(key, self.global_depth)
             index_file.seek(self.Header.size)
             root = self.NT.from_bytes(index_file.read(self.NT.size))
             if index_hash[-1] == '0':
-                return self._aux_delete(buckets_file, index_file, data_file, root['left'], index_hash[:-1], key)
+                return self._aux_delete(buckets_file, index_file, root['left'], index_hash[:-1], key)
             else:
-                return self._aux_delete(buckets_file, index_file, data_file, root['right'], index_hash[:-1], key)
+                return self._aux_delete(buckets_file, index_file, root['right'], index_hash[:-1], key)

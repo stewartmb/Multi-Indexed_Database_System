@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-import Secuential_file as archivo
+import Indice_Sequential_file as archivo
 import random
 import sys
 import csv
@@ -15,11 +15,11 @@ index_file = 'Sequential_Struct/datos.bin'
 data_file = 'Sequential_Struct/sequencial_aux.bin'
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv"]
 
-format_tables = [{"codigo": "i", "nombre": "100s", "ciclo": "i"},
+format_tables = [{"codigo": "i", "nombre": "50s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
                  {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
 
-name_keys = ["codigo", "iata", "zip_code"]
+name_keys = ["ciclo", "iata", "zip_code"]
 
 # numero aleatorio entre 1 y 3
 random_index = 2
@@ -36,7 +36,7 @@ print("csv_path", csv_path)
 name_key = name_keys[random_index]
 print("name_key", name_key)
 
-ma = 500 # tamaño del aux
+ma = 200 # tamaño del aux
 
 N = 100 # cada cuántos registros se imprime una barra de progreso
 
@@ -54,14 +54,16 @@ def test_insert_CSV(csv_path, index_file, data_file):
         pass
 
     # Leer todos los registros del CSV y guardarlos en un diccionario por código
-    Sequential = archivo.Sequential(table_format, name_key, num_aux=ma)
+    Sequential = archivo.Sequential(table_format, name_key, name_index_file = index_file, name_data_file=data_file, num_aux=ma)
     registros_dict = {}
+    print("\nLeyendo registros del CSV...")
     with open(csv_path, mode='r', encoding='utf-8') as file:
         reader = csv.reader(file)
         next(reader)
         registros = list(reader)
         i = 0         
         for row in registros:
+            # Sequential.inorder()
             i += 1
             m = N
             if random_index == 0:
@@ -73,36 +75,36 @@ def test_insert_CSV(csv_path, index_file, data_file):
             type_key = type(key)
             KEYS.append(key)
             Sequential.add(row)
-        print()
+    print()
+    print("Proceso de lectura de CSV finalizado.")
 
 
     return Sequential
 
 def test_search():
     # BUSQUEDAS
-    Sequential = archivo.Sequential(table_format, name_key, num_aux=ma)
+    Sequential = archivo.Sequential(table_format, name_key, name_index_file = index_file, name_data_file=data_file, num_aux=ma)
     print("\nBúsquedas de prueba:")
     i=0
     for key in KEYS:
         i+=1
         resultado = Sequential.search(key)
-        print(resultado)
+        # print(resultado)
         m = N
         if random_index == 0:
             m = m / N
         if i % m == 0:
             print("|", end="")
-        if resultado is None:
+        if resultado == []:
             print(f"{key} No encontrado")
             break
-    
     print()
     print("Búsqueda de prueba finalizada.")
 
 
 def test_search_range():
     # BUSQUEDAS POR RANGO
-    Sequential = archivo.Sequential(table_format, name_key, num_aux=ma)
+    Sequential = archivo.Sequential(table_format, name_key, name_index_file = index_file, name_data_file=data_file, num_aux=ma)
 
     if 's' in Sequential.format_key:
         inferior = 'A'
@@ -114,10 +116,30 @@ def test_search_range():
     print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {Sequential.format_key}\n")
     
     resultado_rango = Sequential.search_range(inferior, superior)
-    # for registro in resultado_rango:
-    #     print(registro)
-    
+    for registro in resultado_rango:
+        print(registro)
 
+def test_onesearch(key):
+    # BUSQUEDA DE UN REGISTRO ESPECIFICO
+    Sequential = archivo.Sequential(table_format, name_key, name_index_file = index_file, name_data_file=data_file, num_aux=ma)
+    print("\nBúsqueda de un registro específico:", key)
+    resultado = Sequential.search(key)
+    if resultado == []:
+        print(f"{key} No encontrado")
+        return
+    for registro in resultado:
+        print(registro)
+    print("Búsqueda unica de prueba finalizada.")
+    print()
+
+
+def test_delete():
+    # ELIMINAR UN REGISTRO
+    Sequential = archivo.Sequential(table_format, name_key, name_index_file = index_file, name_data_file=data_file, num_aux=ma)
+    print("\nEliminando un registro específico:")
+    Sequential.delete(KEYS[0])
+    print("Eliminación de prueba finalizada.")
+    print()
 
 
 
@@ -130,12 +152,19 @@ if __name__ == "__main__":
     test_search()
     # Prueba de búsqueda por rango
     test_search_range()
+    # Prueba de búsqueda de un registro específico
+    test_onesearch(KEYS[0])
+    # Prueba de eliminación de un registro específico
+    test_delete()
+    test_onesearch(KEYS[0])
+
+
  
 
 
     # eliminar archivos existentes
     try:
-        os.remove(index_file)
         os.remove(data_file)
+        os.remove(index_file)
     except FileNotFoundError:
         pass
