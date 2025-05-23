@@ -10,12 +10,15 @@ from Heap_struct.Heap import *
 from Hash_struct.Hash import Hash
 from BPtree_struct.Indice_BPTree_file import BPTree as Btree
 from Sequential_Struct.Indice_Sequential_file import Sequential
+from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 
 def to_struct(type):
     varchar_match = re.match(r"varchar\[(\d+)\]", type)
 
     if type == "int":
         return "i"
+    if type == "double":
+        return "d"
     elif varchar_match:
         size = varchar_match.group(1)  # Extraemos el tamaño entre los corchetes
         return f"{size}s"
@@ -99,12 +102,71 @@ def convert(query):
 
                 seq.add(query["values"][1], position)
 
+        rtree_keys = data.get("indexes", {}).get("rtree")
+        if rtree_keys is not None:
+            rtree = Rtree(format, 
+                        data["key"],
+                        rtree_keys, 
+                        table_filename(nombre_tabla),  
+                        index_filename(nombre_tabla, *rtree_keys, "index"))
+            rtree.insert(query["values"][1], position)
+
+
     elif query["action"] == "select":
         print("Y")
     elif query["action"] == "delete":
         print("Z")
     elif query["action"] == "index":
-        print("A")
+
+        nombre_tabla = query["table"]
+        data = select(nombre_tabla)
+        format = {}
+
+        for key in data["columns"].keys():
+            format[key] = to_struct(data["columns"][key]["type"])
+
+        for key in query["attr"]:
+            data["columns"][key]["index"] = query["index"]
+        
+        create(data, nombre_tabla)
+        
+        keys = query["attr"]
+
+        index = query["index"]
+        if index == None:
+            pass
+        elif index == "hash":
+            hash = Hash(format,
+                        keys[0],
+                        index_filename(nombre_tabla, keys[0], "buckets"),
+                        index_filename(nombre_tabla, keys[0], "index"),
+                        table_filename(nombre_tabla))
+
+        elif index == "seq":
+            seq = Sequential(format,
+                        key,
+                        index_filename(nombre_tabla, keys[0], "index"),
+                        table_filename(nombre_tabla))
+        
+        elif index == "rtree":
+            rtree = Rtree(format, 
+                            data["key"],
+                            keys, 
+                            table_filename(nombre_tabla),  
+                            index_filename(nombre_tabla, *keys, "index"))
+            if "indexes" not in data:
+                data["indexes"] = {}
+
+            data["indexes"]["rtree"] = keys
+        
+        else:
+            print("INDICE NO IMPLEMENTADO AUN")
+        
+        create(data, nombre_tabla)
+
+        
+        
+
     elif query["action"] == "copy":
         print("B")
     else:

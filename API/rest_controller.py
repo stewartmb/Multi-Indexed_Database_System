@@ -33,14 +33,20 @@ def parse_sql_query(input: QueryInput):
 
 print("comenzar")
 
-#consulta = "API/consultas/crear_tabla.txt"
-consulta = "API/consultas/insertar_datos.txt"
-with open(consulta, "r") as f:
-    sql_code = f.read()
+consultas = ["", "", ""]
+consultas[0]= "API/consultas/crear_tabla.txt"
+consultas[1]= "API/consultas/crear_indice.txt"
+consultas[2]= "API/consultas/insertar_datos.txt"
 
-test_query = QueryInput(
-    query=sql_code
-)
-parse_sql_query(test_query)
+
+for c in consultas:
+    if c != "":
+        with open(c, "r") as f:
+            sql_code = f.read()
+
+        test_query = QueryInput(
+            query=sql_code
+        )
+        parse_sql_query(test_query)
 
 print("terminar")

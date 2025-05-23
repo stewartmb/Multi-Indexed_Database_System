@@ -4,3 +4,11 @@ create table users (
     nacimiento varchar[10] index seq,
     email varchar[50]
 );
+
+create table locations (
+    id int primary key,
+    latitude double,
+    longitude double,
+    city varchar[15],
+    country varchar[15]
+);

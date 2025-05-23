@@ -1,3 +1,5 @@
 lark
 matplotlib
 black
+fastapi
+pydantic

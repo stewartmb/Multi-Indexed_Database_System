@@ -5,6 +5,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
+from Heap_struct.Heap import *
 
 point_format = ""
 mbr_format = ""
@@ -452,9 +453,10 @@ class RTreeFile:
             return True
         
     # MAIN CLASS 
-    def __init__(self, table_format, keys = [], 
+    def __init__(self, table_format, p_key: str, keys: list = [], 
                  data_filename: str = "info/data.bin", 
-                 index_filename: str = "info/index.bin"
+                 index_filename: str = "info/index.bin",
+                 force_create: bool = False
                  ):
         global point_format, mbr_format, rect_format, b, m, dim
 
@@ -462,8 +464,8 @@ class RTreeFile:
         self.index_filename = index_filename
 
         self.RT = RegistroType(table_format, keys)
+        self.HEAP = Heap(table_format, p_key, data_filename, force_create=force_create)
 
-        # Ensure directory exists before file creation
         os.makedirs(os.path.dirname(self.index_filename), exist_ok=True)
         if not os.path.exists(self.index_filename): # crear archivo si no existe
             open(self.index_filename, 'w').close() 
@@ -486,7 +488,6 @@ class RTreeFile:
                 self.write_header(
                     root, size, b, m, dim, point_format, mbr_format, rect_format
                 )
-                self.write_data_header(-1);
             else:
                 root, size, b, m, dim, point_format, mbr_format, rect_format = (
                     self.get_header()
@@ -546,14 +547,6 @@ class RTreeFile:
                     rect_f.encode(),
                 )
             )
-    
-    def write_data_header(self, initial):
-        """
-        Escribe el header de la data
-        """
-        with open(self.data_filename, "r+b") as f:
-            f.seek(0)
-            f.write(struct.pack("i", initial))
 
     def get_header(self):
         """
@@ -914,7 +907,7 @@ class RTreeFile:
                 posición de registro en el data file
         """
         if record_pos is None:
-            record_pos = self.__append_record(record)
+            record_pos = self.HEAP.insert(record)
         coords = self.RT.get_key(record)
         point = RTreeFile.Point(coords=coords, index=record_pos)
         self.aux_insert(point)
@@ -1001,7 +994,7 @@ class RTreeFile:
         positions = self.aux_ksearch(k, RTreeFile.Point(query))
         records = []
         for pos in positions:
-            record = self.get_record_at(pos)
+            record = self.HEAP.read(pos)
             records.append(record)
         return records
 
@@ -1046,7 +1039,7 @@ class RTreeFile:
         positions = self.aux_range_search(RTreeFile.Point(coords_start), RTreeFile.Point(coords_end))
         records = []
         for pos in positions:
-            record = self.get_record_at(pos)
+            record = self.HEAP.read(pos)
             records.append(record)
         return records
 
@@ -1089,7 +1082,7 @@ class RTreeFile:
         positions = self.aux_search(RTreeFile.Point(coords=query))
         records = []
         for pos in positions:
-            record = self.get_record_at(pos)
+            record = self.HEAP.read(pos)
             records.append(record)
         return records
 

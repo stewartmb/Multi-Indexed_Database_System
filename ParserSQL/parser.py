@@ -40,7 +40,7 @@ BETWEEN: "between"
 CLOSEST: "closest"
 ALL: "*"
 
-TYPE: "int" | "string" | "float" | "text" | "bool" | "date" 
+TYPE: "int" | "string" | "float" | "double" | "text" | "bool" | "date" 
 varchar: "varchar" "[" VALUE "]"
 
 %import common.ESCAPED_STRING

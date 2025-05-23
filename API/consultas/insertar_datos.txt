@@ -9,3 +9,4 @@ insert into users (id, name, nacimiento, email) values (108, "Elon Musk", "1997-
 insert into users (id, name, nacimiento, email) values (109, "Papa Francisco", "2000-10-05", "yza@utec.edu.pe");
 insert into users (id, name, nacimiento, email) values (110, "Kilobyte", "1999-02-19", "bcd@utec.edu.pe");
 
+insert into locations (id, latitude, longitude, city, country) values (101, 12.3422, 10.1236, "lima", "peru");

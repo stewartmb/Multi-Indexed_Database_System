@@ -2,9 +2,10 @@ import unittest
 import os
 import sys
 import struct
+from Heap_struct.Heap import Heap
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
-from Heap import Heap
 import unittest
 
 

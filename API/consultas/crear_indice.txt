@@ -1,0 +1,3 @@
+create index on locations using rtree(latitude, longitude);
+
+create index on locations using hash(city);
