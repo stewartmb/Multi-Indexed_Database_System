@@ -9,13 +9,14 @@ from pathlib import Path
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
 KEYS = []
-PATH = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
+#PATH = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
+PATH = "C:/Users/Equipo/Documents/2025-1/BD2/proyecto/Proyecto_BD2/Data_test"
 print("PATH", PATH)
 index_file = "BPtree_struct/index_file.bin"
 data_file = "BPtree_struct/data_file.bin"
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv"]
 
-format_tables = [{"codigo": "q", "nombre": "12s", "ciclo": "i"},
+format_tables = [{"codigo": "q", "nombre": "30s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
                  {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
 
@@ -42,7 +43,7 @@ N = 100 # cada cuántos registros se imprime una barra de progreso
 
 
 
-def test_insert_CSV(csv_path, index_file, data_file):
+def notest_insert_CSV(csv_path, index_file, data_file):
     """
     Inserta registros en el ORDEN EXACTO de CODIGOS_A_USAR.
     """
@@ -78,7 +79,7 @@ def test_insert_CSV(csv_path, index_file, data_file):
 
     return arbol
 
-def test_onesearch(key):
+def notest_onesearch(key):
     # BUSQUEDA DE UN REGISTRO ESPECIFICO
     arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
     print("\nBúsqueda de un registro específico:")
@@ -89,7 +90,7 @@ def test_onesearch(key):
     print()
     print("Búsqueda unica de prueba finalizada.")
 
-def test_allsearch():
+def notest_allsearch():
     # BUSQUEDAS
     arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
     print("\nBúsquedas de prueba:")
@@ -111,7 +112,7 @@ def test_allsearch():
     print("Búsqueda de prueba finalizada.")
 
 
-def test_search_range():
+def notest_search_range():
     # BUSQUEDAS POR RANGO
     arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
 
@@ -137,16 +138,16 @@ def test_search_range():
 if __name__ == "__main__":
 
     # Crear el árbol B+ e insertar registros desde el CSV
-    test_insert_CSV(csv_path, index_file, data_file)
+    notest_insert_CSV(csv_path, index_file, data_file)
 
     # Prueba de búsqueda
-    test_allsearch()
+    notest_allsearch()
     # Prueba de búsqueda por rango
-    test_search_range()
+    notest_search_range()
 
     # Prueba de busqueda de un registro específico
     print ( KEYS[0])
-    test_onesearch(KEYS[0])
+    notest_onesearch(KEYS[0])
  
 
 

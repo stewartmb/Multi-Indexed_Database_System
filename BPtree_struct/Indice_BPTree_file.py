@@ -5,6 +5,7 @@ import math
 from collections import deque
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
+from Heap_struct.Heap import Heap
 
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de registros y puntero al root)
@@ -25,7 +26,8 @@ class BPTree:
     def __init__(self, table_format , name_key: str ,
                  name_index_file = 'BPTree_struct/index_file.bin', 
                  name_data_file = 'BPTree_struct/data_file.bin',
-                 max_num_child = None,):
+                 max_num_child = None,
+                 force_create = False):
         
         self.index_file = name_index_file
         self.data_file = name_data_file
@@ -38,8 +40,8 @@ class BPTree:
         self._initialize_files()                                     # Inicializa los archivos de índice y datos
         self.M = max_num_child  # Orden del árbol B+
         self.tam_registro = self.RT.size                             # Tamaño del registro
+        self.HEAP = Heap(table_format, name_key, name_data_file, force_create=force_create)
 
-    
     def _initialize_files (self):
         """
         Inicializa los archivos de índice y datos.
@@ -180,7 +182,7 @@ class BPTree:
             data = f.read(self.tam_registro)
             if len(data) != self.tam_registro:
                 raise ValueError("Tamaño incorrecto al leer registro")
-            return self.RT.from_bytes(data)  
+            return self.RT.from_bytes(data)
         
     def _write_record(self, position, record):
         """
@@ -196,7 +198,7 @@ class BPTree:
         Agrega un nuevo registro al final del archivo de datos.
         """
         size = self._read_header_data()
-        self._write_record(size, record) 
+        self.HEAP.insert(record)
         size += 1
         self._write_header_data(size)
     
@@ -259,7 +261,8 @@ class BPTree:
                     if key < temp.keys[i]:
                         break
                     if temp.keys[i] == key:
-                        record = self._read_record(temp.childrens[i])
+                        record = self.HEAP.read(temp.childrens[i])
+                         #record = self._read_record(temp.childrens[i])
                         results.append(record)
                 if temp.childrens[-1] != -1:
                     pos_children = temp.childrens[-1]
@@ -283,7 +286,7 @@ class BPTree:
                     if key2 < temp.keys[i]:
                         break
                     if temp.keys[i] >= key1 and temp.keys[i] <= key2:
-                        record = self._read_record(temp.childrens[i])
+                        record = self.HEAP.read(temp.childrens[i])
                         results.append(record)
                 if temp.childrens[-1] != -1:
                     pos_children = temp.childrens[-1]
@@ -443,7 +446,7 @@ class BPTree:
             key = self.RT.get_key(record)  # Obtiene la clave del registro
 
         if pos_new_record is not None:
-            record = self._read_record(pos_new_record)
+            record = self.HEAP.read(pos_new_record)
             key = self.RT.get_key(record)  # Obtiene la clave del registro 
 
         header = self._read_header_index()
