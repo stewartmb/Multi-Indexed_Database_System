@@ -27,13 +27,17 @@ delete_stmt: "delete" "from" NAME "where" condition ("and" condition)*
 
 condition: NAME OP VALUE
          | NAME BETWEEN VALUE "and" VALUE
+         | attr_list OP  "[" value_list "]"
+         | attr_list BETWEEN  "[" value_list "]" "and" "[" value_list "]"
+         | attr_list CLOSEST VALUE
 
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
-VALUE: /[0-9]+/ | ESCAPED_STRING
+VALUE: /[0-9]+(\.[0-9]+)?/ | ESCAPED_STRING
 INDEX: "rtree" | "btree" | "seq" | "isam" | "hash"
 KEY: "primary key"
 BETWEEN: "between"
+CLOSEST: "closest"
 ALL: "*"
 
 TYPE: "int" | "string" | "float" | "text" | "bool" | "date" 
@@ -59,7 +63,7 @@ class SQLTransformer(Transformer):
     def select_stmt(self, items):
         table = str(items[1])
         if len(items) > 1:
-            return {"action": "select", "table": table, "attr": items[0], "condition": items[2]}
+            return {"action": "select", "table": table, "attr": items[0], "condition": items[2:]}
         return {"action": "select", "table": table}
 
     def insert_stmt(self, items):
@@ -75,8 +79,13 @@ class SQLTransformer(Transformer):
         return {"action": "copy", "table": str(items[0]), "from": str(items[1])}
 
     def condition(self, items):
+        if (str(items[1]) == "closest"):
+            return {"field": items[0], "range_search": False, "knn": items[2]}
         if str(items[1]) == "between":
-            return {"field": str(items[0]), "range_search": True, "range_start": items[2], "range_end": items[3]}
+            if (isinstance(items[0], list)):
+                return {"field": str(items[0]), "range_search": True, "range_start": items[2], "range_end": items[3]}
+            else:
+                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3]}
         elif str(items[1]) == "==":
             return {"field": str(items[0]), "range_search": False, "op": str(items[1]), "value": items[2]}
         else:
@@ -154,7 +163,7 @@ if __name__ == "__main__":
     parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
 
     # Example: read SQL statements from a file
-    with open("test.txt", "r") as f:
+    with open("ParserSQL/test.txt", "r") as f:
         sql_code = f.read()
     try:
         result = parser.parse(sql_code)

@@ -1,11 +1,13 @@
 create table images (
-id int primary key index seq,
-name text index btree,
-creationDate date,
-features varchar[14] index rtree
+    id int primary key index seq,
+    lat float,
+    long float
 );
-create table Customer from "C:\empelados.csv" using index hash("DNI");
-select * from Customer where DNI = 1234;
-select * from Customer where DNI between 123 and 154;
-insert into Customer (id, name) values (1234, "hola");
-delete from Customer where DNI == 1234;
+
+create index on images using rtree (lat, long);
+
+insert into images (id, lat, long) values (3, 4.32, 5.423);
+
+select * from images where lat, long between [3, 5] and [3, 8];
+
+select * from images where lat, long closest 4;
