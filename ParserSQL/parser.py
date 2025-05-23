@@ -29,7 +29,7 @@ condition: NAME OP VALUE
          | NAME BETWEEN VALUE "and" VALUE
          | attr_list OP  "[" value_list "]"
          | attr_list BETWEEN  "[" value_list "]" "and" "[" value_list "]"
-         | attr_list CLOSEST VALUE
+         | attr_list "in" "(" value_list ")" CLOSEST VALUE
 
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
@@ -79,8 +79,8 @@ class SQLTransformer(Transformer):
         return {"action": "copy", "table": str(items[0]), "from": str(items[1])}
 
     def condition(self, items):
-        if (str(items[1]) == "closest"):
-            return {"field": items[0], "range_search": False, "knn": items[2]}
+        if (str(items[2]) == "closest"):
+            return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}
         if str(items[1]) == "between":
             if (isinstance(items[0], list)):
                 return {"field": str(items[0]), "range_search": True, "range_start": items[2], "range_end": items[3]}
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
 
     # Example: read SQL statements from a file
-    with open("ParserSQL/test.txt", "r") as f:
+    with open("ParserSQL/test2.txt", "r") as f:
         sql_code = f.read()
     try:
         result = parser.parse(sql_code)

@@ -1,0 +1,7 @@
+select * from users;
+
+select * from locations;
+
+select * from users where id == "101";
+
+select * from locations where city == "lima" and latitude, longitude in (12, 14) closest 5;
