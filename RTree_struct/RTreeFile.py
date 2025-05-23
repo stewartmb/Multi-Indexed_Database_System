@@ -18,7 +18,6 @@ tipo="i"
 def logg(s):
     print(f"LOG: {s}")
 
-
 class RTreeFile:
     class Point:
         def __init__(self, coords=None, placeholder=False, index=-1):
@@ -63,6 +62,9 @@ class RTreeFile:
 
         def __lt__(self, other):
             return self.coords < other.coords
+        
+        def __eq__(self, other):
+            return self.coords == other.coords
 
         @staticmethod
         def distance(p1, p2):
@@ -275,7 +277,7 @@ class RTreeFile:
             else:
                 self.mbr.update_coords_rec(rec)
             rec.parent = self.pos
-            file.write_rec_at(rec.pos, rec)
+            # file.write_rec_at(rec.pos, rec)
             self.rectangles.append(rec.pos)
 
         def size(self):
@@ -340,7 +342,7 @@ class RTreeFile:
                 size = 0
                 point_format = dim * typef + "?i"
                 mbr_format = 2 * (dim * typef)
-                rect_format = "i?i?" + ((b + 1) * typef)
+                rect_format = "i?i?" + ((b + 1) * "i")
                 self.write_header(
                     root, size, b, m, dim, point_format, mbr_format, rect_format
                 )
@@ -444,72 +446,132 @@ class RTreeFile:
         return subtree
 
     @staticmethod
-    def split_leaf(file, u):
-        m = len(u.points)
-        min_per = INT_MAX
-        best_split = None, None
-
-        all_sorted = RTreeFile.Point.sort_points_by_dimension(u.points)
-        for dim in all_sorted:
-            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b) + 1):
-                s1 = dim[0:i]
-                s2 = dim[i:]
-                mbr1 = RTreeFile.MBR.calc_mbr(s1)
-                mbr2 = RTreeFile.MBR.calc_mbr(s2)
-
-                if mbr1.perimeter() + mbr2.perimeter() < min_per:
-                    min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = (
-                        RTreeFile.Rectangle(file=file, points=s1, mbr=mbr1, is_leaf=True),
-                        RTreeFile.Rectangle(file=file, points=s2, mbr=mbr2, is_leaf=True),
-                    )
-
-        return best_split
-
-    def split_internal(self, u):
-        m = len(u.rectangles)
-        min_per = INT_MAX
-        best_split = None, None
-
-        all_sorted_min = RTreeFile.Rectangle.sort_rectangles_by_dimension_min(self, u.rectangles)
-
-        for dim in all_sorted_min:
-            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b) + 1):
-                s1 = [x.pos for x in dim[0:i]]
-                s2 = [x.pos for x in dim[i:]]
-                mbr1 = RTreeFile.MBR.calc_mbr_rec(self, s1)
-                mbr2 = RTreeFile.MBR.calc_mbr_rec(self, s2)
-
-                if mbr1.perimeter() + mbr2.perimeter() < min_per:
-                    min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = (
-                        RTreeFile.Rectangle(file=self, rectangles=s1, mbr=mbr1, is_leaf=False),
-                        RTreeFile.Rectangle(file=self, rectangles=s2, mbr=mbr2, is_leaf=False),
-                    )
-
-        all_sorted_max = RTreeFile.Rectangle.sort_rectangles_by_dimension_max(self, u.rectangles)
-        for dim in all_sorted_max:
-            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b) + 1):
-                s1 = [x.pos for x in dim[0:i]]
-                s2 = [x.pos for x in dim[i:]]
-                mbr1 = RTreeFile.MBR.calc_mbr_rec(self, s1)
-                mbr2 = RTreeFile.MBR.calc_mbr_rec(self, s2)
-
-                if mbr1.perimeter() + mbr2.perimeter() < min_per:
-                    min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = (
-                        RTreeFile.Rectangle(file=self, rectangles=s1, mbr=mbr1, is_leaf=False),
-                        RTreeFile.Rectangle(file=self, rectangles=s2, mbr=mbr2, is_leaf=False),
-                    )
-
-        return best_split
-
-    @staticmethod
-    def split(file, u):
+    def split(file, u): # cuadratico
+        global m
         if u.is_leaf:
-            return RTreeFile.split_leaf(file, u)
-        return file.split_internal(u)
+            entries = u.points[:]
+        else:
+            entries = u.rectangles[:]
 
+        # step 1: pick seeds
+        max_waste = -math.inf
+        seed1 = seed2 = None
+        for i in range(len(entries)):
+            for j in range(i+1, len(entries)):
+                if u.is_leaf:
+                    mbr_i = RTreeFile.MBR(entries[i].coords[:], entries[i].coords[:])
+                    mbr_j = RTreeFile.MBR(entries[j].coords[:], entries[j].coords[:])
+                else:
+                    i_rec = file.get_rec_at(entries[i])
+                    j_rec = file.get_rec_at(entries[j])
+                    mbr_i = i_rec.mbr
+                    mbr_j = j_rec.mbr
+
+                combined = RTreeFile.MBR(mbr_i.min_coords[:], mbr_i.max_coords[:])
+
+                if not u.is_leaf:
+                    combined.update_coords_rec(RTreeFile.Rectangle(file=file, mbr=mbr_j))
+                else:
+                    mbr_j = RTreeFile.MBR(entries[j].coords[:], entries[j].coords[:])
+                    combined.update_coords_rec(RTreeFile.Rectangle(file=file, points=[entries[j]], mbr=mbr_j))
+                
+                waste = combined.perimeter() - mbr_i.perimeter() - mbr_j.perimeter()
+
+                if waste > max_waste:
+                    max_waste = waste
+                    seed1, seed2 = entries[i], entries[j]
+        
+        entries.remove(seed1)
+        entries.remove(seed2)
+
+        group1 = RTreeFile.Rectangle(file=file, is_leaf = u.is_leaf)
+        group2 = RTreeFile.Rectangle(file=file, is_leaf = u.is_leaf)
+
+        if u.is_leaf:
+            group1.add_point(seed1)
+            group2.add_point(seed2)
+        else:
+            seed1_rec = file.get_rec_at(seed1)
+            seed2_rec = file.get_rec_at(seed2)
+            
+            group1.add_rectangle(file=file, rec=seed1_rec)
+            group2.add_rectangle(file=file, rec=seed2_rec)
+        
+        # step 2: distribuir el resto de puntos/rectángulos
+
+        while entries:
+            # si grupo 1 necesita el resto de structs para tener el minimo
+            if (len(group1.points if u.is_leaf else group1.rectangles) + len(entries)) == m:
+                for e in entries:
+                    if u.is_leaf:
+                        group1.add_point(e)
+                    else:
+                        rec = file.get_rec_at(e)
+                        group1.add_rectangle(file=file, rec=rec)
+                break
+
+            # si grupo 2 necesita el resto de structs para tener el minimo
+            if (len(group2.points if u.is_leaf else group2.rectangles) + len(entries)) == m:
+                for e in entries:
+                    if u.is_leaf:
+                        group2.add_point(e)
+                    else:
+                        rec = file.get_rec_at(e)
+                        group2.add_rectangle(file=file, rec=rec)
+                break
+
+            # por cada punto/rec en entries
+            # simular añadirlo a ambos grupos
+            # elegimos el punto que maximice la diferencia de perimetros (cause el mayor desbalance de crecimiento)
+            # se añade al grupo correspondiente
+            
+            max_diff = -math.inf
+            chosen = None
+            ch_d1 = ch_d2 = None
+
+            for e in entries:
+                if u.is_leaf:
+                    mbr = RTreeFile.MBR(e.coords[:], e.coords[:])
+                else:
+                    rec = file.get_rec_at(e)
+                    mbr = rec.mbr # can cause problems
+                
+                d1 = RTreeFile.MBR(group1.mbr.min_coords[:], group1.mbr.max_coords[:]) if group1.mbr else RTreeFile.MBR(mbr.min_coords[:], mbr.max_coords[:])
+                d2 = RTreeFile.MBR(group2.mbr.min_coords[:], group2.mbr.max_coords[:]) if group2.mbr else RTreeFile.MBR(mbr.min_coords[:], mbr.max_coords[:])
+
+                if u.is_leaf:
+                    d1_inc = d1.update_coords_point(e)
+                    d2_inc = d2.update_coords_point(e)
+                else:
+                    rec = file.get_rec_at(e)
+                    d1_inc = d1.update_coords_rec(rec)
+                    d2_inc = d2.update_coords_rec(rec)
+                
+                diff = abs(d1_inc - d2_inc)
+                if diff > max_diff:
+                    max_diff = diff
+                    chosen = e
+                    ch_d1 = d1_inc
+                    ch_d2 = d2_inc
+            
+            entries.remove(chosen)
+
+            
+            if not u.is_leaf:
+                rec = file.get_rec_at(chosen)
+
+            if ch_d1 < ch_d2:
+                group1.add_point(chosen) if u.is_leaf else group1.add_rectangle(file=file, rec=rec)
+            elif ch_d2 < ch_d1:
+                group2.add_point(chosen) if u.is_leaf else group2.add_rectangle(file=file, rec=rec)
+            else:
+                if group1.mbr.perimeter() < group2.mbr.perimeter():
+                    group1.add_point(chosen) if u.is_leaf else group1.add_rectangle(file=file, rec=rec)
+                else:
+                    group2.add_point(chosen) if u.is_leaf else group2.add_rectangle(file=file, rec=rec)
+            
+        return group1, group2
+    
     def handle_overflow(self, u_pos):
         global b
         u = self.get_rec_at(u_pos)
@@ -670,7 +732,7 @@ class RTreeFile:
                     ans.append(p)
         else:
             for rec_pos in node.rectangles:
-                rec = self.get_rec_at(node_pos)
+                rec = self.get_rec_at(rec_pos)
                 if rec.intersects(min_coords, max_coords):
                     self.__range_search__(rec_pos, min_coords, max_coords, ans)
 
@@ -679,6 +741,23 @@ class RTreeFile:
         self.__range_search__(self.get_root(), point_start.coords, point_end.coords, ans)
         return ans
 
+    def __search__(self, node_pos, point, ans):
+        node = self.get_rec_at(node_pos)
+        if node.is_leaf:
+            for p in node.points:
+                if p == point:
+                    ans.append(p)
+        else:
+            for rec_pos in node.rectangles:
+                rec = self.get_rec_at(rec_pos)
+                if point.inside(rec.mbr.min_coords, rec.mbr.max_coords):
+                    self.__search__(rec_pos, point, ans)
+
+    def search(self, point):
+        ans = []
+        self.__search__(self.get_root(), point, ans)
+        return ans
+    
     def print_tree(self, node_pos=None, level=0):
         if node_pos is None:
             node_pos = self.get_root()
@@ -695,49 +774,6 @@ class RTreeFile:
             )
             for child in node.rectangles:
                 self.print_tree(child, level + 1)
-
-    def visualize_tree(self, node, ax=None, level=0, color="black"):
-        if ax is None:
-            fig, ax = plt.subplots()
-            ax.set_xlim(0, 15)
-            ax.set_ylim(0, 15)
-            ax.set_title("R-tree Split Visualization")
-            ax.set_aspect("equal")
-
-        if node.mbr:
-            width = node.mbr.max_coords[0] - node.mbr.min_coords[0]
-            height = node.mbr.max_coords[1] - node.mbr.min_coords[1]
-            rect = patches.Rectangle( 
-                (node.mbr.min_coords[0], node.mbr.min_coords[1]),
-                width,
-                height,
-                linewidth=1.5,
-                edgecolor=color,
-                facecolor="none",
-            )
-            ax.add_patch(rect)
-            # Add label for level
-            ax.text(
-                node.mbr.min_coords[0] + width / 2,
-                node.mbr.min_coords[1] + height / 2,
-                f"L{level}",
-                color=color,
-                fontsize=8,
-                ha="center",
-                va="center",
-            )
-
-        if node.is_leaf:
-            for p in node.points:
-                ax.plot(p.coords[0], p.coords[1], "ko")
-        else:
-            colors = ["red", "blue", "green", "orange", "purple", "brown"]
-            for child in node.rectangles:
-                next_color = colors[(level + 1) % len(colors)]
-                self.visualize_tree(child, ax=ax, level=level + 1, color=next_color)
-
-        if level == 0:
-            plt.show()
 
     def print_file(self):
         print(self.get_root())
@@ -833,7 +869,7 @@ class RTreeFile:
             
 
 if __name__ == "__main__":
-    rtree = RTreeFile(bf = 5)
+    rtree = RTreeFile(bf = 4)
 
     points = [
         # RTreeFile.Point(coords=[1, 1]),
@@ -854,19 +890,25 @@ if __name__ == "__main__":
         # RTreeFile.Point(coords=[3, 2]),
         # RTreeFile.Point(coords=[1, 12]),
         # RTreeFile.Point(coords=[18, 12]),
-        RTreeFile.Point(coords=[1, 3]),
-        RTreeFile.Point(coords=[2, 3]),
-        RTreeFile.Point(coords=[1, 2])
+        # RTreeFile.Point(coords=[1, 3]),
+        # RTreeFile.Point(coords=[2, 3]),
+        # RTreeFile.Point(coords=[1, 2])
+        RTreeFile.Point(index=0, coords=[1, 2]),
+        RTreeFile.Point(index=3, coords=[1, 2]),
+        RTreeFile.Point(index=2, coords=[1, 2]),
+
     ]
 
-    for pt in points:
-        rtree.insert(pt)
-        print(f"inserted point {pt}")
+    # for pt in points:
+    #     rtree.insert(pt)
+    #     print(f"inserted point {pt}")
         # print("----------------FILE----------------")
         # rtree.print_file()
         # print("----------------FILE-END----------------")
 
-    print(50*"-")
+    # print(50*"-")
+
+    # print(len(points))
 
     # points = rtree.ksearch(3, RTreeFile.Point(coords=[4,2]))
 
@@ -883,4 +925,11 @@ if __name__ == "__main__":
     # rtree.delete(RTreeFile.Point(coords=[4, 4]))
 
     rtree.print_tree()
+
+    print("-------------------------------------------")
+
+    # rtree.print_file()
     
+    points = rtree.search(RTreeFile.Point(coords=[1, 2]))
+    for pt in points:
+        print(pt)

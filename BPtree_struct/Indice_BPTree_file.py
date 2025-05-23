@@ -44,9 +44,11 @@ class BPTree:
         """
         Inicializa los archivos de índice y datos.
         """
+        os.makedirs(os.path.dirname(self.index_file), exist_ok=True)
         if not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
                 f.write(struct.pack('ii', 0, -2)) # Inicializa el encabezado del archivo de índice (0 datos, -2 indica que recien inicia)
+        os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
         if not os.path.exists(self.data_file):
             with open(self.data_file, 'wb') as f:
                 f.write(struct.pack('i', 0)) # Inicializa el encabezado del archivo de datos

@@ -1,6 +1,6 @@
 import math
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+# import matplotlib.pyplot as plt
+# import matplotlib.patches as patches
 import heapq
 
 b = 4
@@ -255,71 +255,105 @@ class RTree:
         return subtree
 
     @staticmethod
-    def split_leaf(u):
-        m = len(u.points)
-        min_per = INT_MAX
-        best_split = None, None
+    def split(node):
+        if node.is_leaf:
+            entries = node.points[:]
+        else:
+            entries = node.rectangles[:]
 
-        all_sorted = Point.sort_points_by_dimension(u.points)
-        for dim in all_sorted:
-            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b) + 1):
-                s1 = dim[0:i]
-                s2 = dim[i:]
-                mbr1 = MBR.calc_mbr(s1)
-                mbr2 = MBR.calc_mbr(s2)
+        # Step 1: Pick Seeds
+        max_waste = -math.inf
+        seed1 = seed2 = None
+        for i in range(len(entries)):
+            for j in range(i + 1, len(entries)): 
+                if node.is_leaf:
+                    mbr_i = MBR(entries[i].coords[:], entries[i].coords[:])
+                    mbr_j = MBR(entries[j].coords[:], entries[j].coords[:])
+                else:
+                    mbr_i = entries[i].mbr
+                    mbr_j = entries[j].mbr
+                combined = MBR(mbr_i.min_coords[:], mbr_i.max_coords[:])
+                # To update combined with the other entry
+                if not node.is_leaf:
+                    combined.update_coords_rec(Rectangle(mbr=mbr_j))
+                else:
+                    mbr_j = MBR(entries[j].coords[:], entries[j].coords[:])
+                    combined.update_coords_rec(Rectangle(points=[entries[j]], mbr=mbr_j))
+                waste = combined.perimeter() - mbr_i.perimeter() - mbr_j.perimeter()
+                if waste > max_waste:
+                    max_waste = waste
+                    seed1, seed2 = entries[i], entries[j]
 
-                if mbr1.perimeter() + mbr2.perimeter() < min_per:
-                    min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = (
-                        Rectangle(points=s1, mbr=mbr1, is_leaf=True),
-                        Rectangle(points=s2, mbr=mbr2, is_leaf=True),
-                    )
+        entries.remove(seed1)
+        entries.remove(seed2)
 
-        return best_split
+        group1 = Rectangle(is_leaf=node.is_leaf)
+        group2 = Rectangle(is_leaf=node.is_leaf)
 
-    @staticmethod
-    def split_internal(u):
-        m = len(u.rectangles)
-        min_per = INT_MAX
-        best_split = None, None
+        if node.is_leaf:
+            group1.add_point(seed1)
+            group2.add_point(seed2)
+        else:
+            group1.add_rectangle(seed1)
+            group2.add_rectangle(seed2)
 
-        all_sorted_min = Rectangle.sort_rectangles_by_dimension_min(u.rectangles)
-        for dim in all_sorted_min:
-            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b) + 1):
-                s1 = dim[0:i]
-                s2 = dim[i:]
-                mbr1 = MBR.calc_mbr_rec(s1)
-                mbr2 = MBR.calc_mbr_rec(s2)
+        # Step 2: Distribute remaining entries
+        while entries:
+            # If group1 needs all remaining entries to meet min fill
+            if (len(group1.points if node.is_leaf else group1.rectangles) + len(entries)) == m:
+                for e in entries:
+                    if node.is_leaf:
+                        group1.add_point(e)
+                    else:
+                        group1.add_rectangle(e)
+                break
+            # If group2 needs all remaining entries to meet min fill
+            if (len(group2.points if node.is_leaf else group2.rectangles) + len(entries)) == m:
+                for e in entries:
+                    if node.is_leaf:
+                        group2.add_point(e)
+                    else:
+                        group2.add_rectangle(e)
+                break
 
-                if mbr1.perimeter() + mbr2.perimeter() < min_per:
-                    min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = (
-                        Rectangle(rectangles=s1, mbr=mbr1, is_leaf=False),
-                        Rectangle(rectangles=s2, mbr=mbr2, is_leaf=False),
-                    )
+            max_diff = -math.inf
+            chosen = None
+            ch_d1 = ch_d2 = None
+            for e in entries:
+                if node.is_leaf:
+                    mbr = MBR(e.coords[:], e.coords[:])
+                else:
+                    mbr = e.mbr
+                d1 = MBR(group1.mbr.min_coords[:], group1.mbr.max_coords[:]) if group1.mbr else MBR(mbr.min_coords[:], mbr.max_coords[:])
+                d2 = MBR(group2.mbr.min_coords[:], group2.mbr.max_coords[:]) if group2.mbr else MBR(mbr.min_coords[:], mbr.max_coords[:])
 
-        all_sorted_max = Rectangle.sort_rectangles_by_dimension_max(u.rectangles)
-        for dim in all_sorted_max:
-            for i in range(math.ceil(0.4 * b), m - math.ceil(0.4 * b) + 1):
-                s1 = dim[0:i]
-                s2 = dim[i:]
-                mbr1 = MBR.calc_mbr_rec(s1)
-                mbr2 = MBR.calc_mbr_rec(s2)
+                if node.is_leaf:
+                    d1_inc = d1.update_coords_point(e)
+                    d2_inc = d2.update_coords_point(e)
+                else:
+                    d1_inc = d1.update_coords_rec(e)
+                    d2_inc = d2.update_coords_rec(e)
 
-                if mbr1.perimeter() + mbr2.perimeter() < min_per:
-                    min_per = mbr1.perimeter() + mbr2.perimeter()
-                    best_split = (
-                        Rectangle(rectangles=s1, mbr=mbr1, is_leaf=False),
-                        Rectangle(rectangles=s2, mbr=mbr2, is_leaf=False),
-                    )
+                diff = abs(d1_inc - d2_inc)
+                if diff > max_diff:
+                    max_diff = diff
+                    chosen = e
+                    ch_d1 = d1_inc
+                    ch_d2 = d2_inc
 
-        return best_split
+            entries.remove(chosen)
+            if ch_d1 < ch_d2:
+                group1.add_point(chosen) if node.is_leaf else group1.add_rectangle(chosen)
+            elif ch_d2 < ch_d1:
+                group2.add_point(chosen) if node.is_leaf else group2.add_rectangle(chosen)
+            else:
+                if group1.mbr.perimeter() < group2.mbr.perimeter():
+                    group1.add_point(chosen) if node.is_leaf else group1.add_rectangle(chosen)
+                else:
+                    group2.add_point(chosen) if node.is_leaf else group2.add_rectangle(chosen)
 
-    @staticmethod
-    def split(u):
-        if u.is_leaf:
-            return RTree.split_leaf(u)
-        return RTree.split_internal(u)
+        return group1, group2
+
 
     def handle_overflow(self, u):
         x, y = RTree.split(u)
@@ -498,11 +532,11 @@ class RTree:
             parent = temp.parent
 
             if (temp.is_leaf and len(temp.points) < self.m) or (not temp.is_leaf and len(temp.rectangles) < self.m):
-                print("before remove:")
-                self.print_tree(parent)
-                print("after remove")
+                # print("before remove:")
+                # self.print_tree(parent)
+                # print("after remove")
                 parent.remove(temp)
-                self.print_tree(parent)
+                # self.print_tree(parent)
                 leaf_rec = self.get_leaves(temp)
                 for r in leaf_rec:
                     eliminated.append(r)
@@ -513,19 +547,18 @@ class RTree:
         for rec in eliminated:
             unique_points.update(rec.points)
 
-        print("before reinserting: ")
-        self.print_tree()
+        # print("before reinserting: ")
+        # self.print_tree()
         for p in unique_points:
             print(p)
             self.insert(p)
         
-        self.print_tree()
+        # self.print_tree()
         return
     
     def delete(self, point):
         rec = self.find_rec(self.root, point)
         rec.remove(point)
-        print("condense")
         self.condense_tree(rec)
         if len(self.root.rectangles) == 1:
             self.root = self.root.rec[0]
@@ -552,6 +585,12 @@ if __name__ == "__main__":
         Point([13, 13]),
         Point([14, 14]),
         Point([15, 15]),
+        Point(coords=[3, 2]),
+        Point(coords=[1, 12]),
+        Point(coords=[18, 12]),
+        Point(coords=[1, 3]),
+        Point(coords=[2, 3]),
+        Point(coords=[1, 2])
     ]
 
     for pt in points:
@@ -565,7 +604,9 @@ if __name__ == "__main__":
 
     rtree.print_tree()
 
-    rtree.delete(Point([1, 1]))
-    # rtree.remove(Point([2, 2]))
+    # rtree.delete(Point([1, 1]))
+    # # rtree.remove(Point([2, 2]))
 
-    rtree.print_tree()
+    # print("after remove")
+
+    # rtree.print_tree()
