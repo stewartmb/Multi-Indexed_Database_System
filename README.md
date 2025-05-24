@@ -33,7 +33,7 @@ El proyecto tiene la siguiente estructura:
 - Backend: Base de datos, API, Índices, ParserSQL
 - Frontend: Interfaz
 
-Para almacenar todos los registros de una tabla, se decidió usar la estructura del [Heap file]. Sobre esta estructura es donde se aplicarán las técnicas de indexación.
+Para almacenar todos los registros de una tabla, se decidió usar la estructura del [Heap file](https://github.com/stewartmb/Proyecto_BD2/blob/main/Heap_struct/Hepa.md). Sobre esta estructura es donde se aplicarán las técnicas de indexación.
 Aparte, se implementó una clase [Registro](https://github.com/stewartmb/Proyecto_BD2/blob/main/Utils/RegistroREADME.md) personalizada.
 
 En cuanto a los **índices**, se han implementado los siguientes:
