@@ -146,11 +146,11 @@ class SQLTransformer(Transformer):
         if str(items[1]) == "between":
             include = True
             if (isinstance(items[0], list)):
-                return {"field": str(items[0]), "range_search": True, "range_start": items[2], "range_end": items[3], "include": include}
+                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3], "include": include}
             else:
                 return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3], "include": include}
         elif str(items[1]) == "==":
-            return {"field": str(items[0]), "range_search": False, "op": str(items[1]), "value": items[2]}
+            return {"field": items[0], "range_search": False, "op": str(items[1]), "value": items[2]}
         else:
             range_start = -1
             range_end = 1
@@ -166,7 +166,7 @@ class SQLTransformer(Transformer):
                 range_start = items[2]
                 include = True
 
-            return {"field": str(items[0]), "range_search": True, "range_start": range_start, "range_end": range_end, "include": include}
+            return {"field": items[0], "range_search": True, "range_start": range_start, "range_end": range_end, "include": include}
 
 
     def and_expr(self, items):

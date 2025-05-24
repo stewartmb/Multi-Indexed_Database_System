@@ -271,31 +271,30 @@ def aux_select(query):
         cond = query["conditions"][condition]
         key = cond["field"]
 
-        if key[0] == "[":
-            start = cond["range_start"]
-            end = cond["range_end"]
+        if isinstance(key, list):
 
-            rtree_keys = key[1:-1].split(",")
-            for i in range(len(rtree_keys)):
-                rtree_keys[i] = rtree_keys[i].strip("' ")
-
-
-
-            for i in range(len(start)):
-                start[i] = cast(start[i], format[rtree_keys[i]])
-                end[i] = cast(end[i], format[rtree_keys[i]])
-
-
-            print("start", start)
-
-            print("Rtree keys", rtree_keys)
             rtree = Rtree(format,
                           data["key"],
-                          rtree_keys,
+                          key,
                           table_filename(nombre_tabla),
-                          index_filename(nombre_tabla, *rtree_keys, "index"))
+                          index_filename(nombre_tabla, *key, "index"))
 
-            sets.append(set(rtree.range_search(start, end)))
+            if cond["range_search"] == True:
+                start = cond["range_start"]
+                end = cond["range_end"]
+
+                for i in range(len(start)):
+                    start[i] = cast(start[i], format[key[i]])
+                    end[i] = cast(end[i], format[key[i]])
+
+                sets.append(set(rtree.range_search(start, end)))
+            else:
+                point = cond["point"]
+                for i in range(len(point)):
+                    point[i] = cast(point[i], format[key[i]])
+
+                sets.append(set(rtree.ksearch(int(cond["knn"]), point)))
+
 
         else:
             index = data["columns"][key]["index"]
@@ -314,7 +313,6 @@ def aux_select(query):
                             cond["field"],
                             table_filename(nombre_tabla))
 
-                print(left, right, val)
                 if cond["range_search"]:
                     sets.append(set(heap.search(left, right)))
                 else:
@@ -351,6 +349,17 @@ def aux_select(query):
     return evaluate_select(tree, sets, universe)
 
 def select(query):
-    print(query)
     ans_set = aux_select(query)
+
     print(ans_set)
+
+    data = select_meta(query["table"])
+    format = {}
+    for key in data["columns"].keys():
+        format[key] = to_struct(data["columns"][key]["type"])
+
+    for i in ans_set:
+        heap = Heap(format,
+                    data["key"],
+                    table_filename(query["table"]))
+        print(heap.read(i))

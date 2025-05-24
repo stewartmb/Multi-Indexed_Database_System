@@ -193,7 +193,7 @@ class Hash:
             if bucket['local_depth'] != self.global_depth:
                 return False # Trigger split
             if bucket['overflow_position'] == -1:
-                print("creando overflow")
+                # print("creando overflow")
                 overflow_pos = self.Header.read(index_file, 2)
                 self.Header.write(index_file, overflow_pos + 1, 2)
                 bucket['overflow_position'] = overflow_pos
@@ -226,7 +226,7 @@ class Hash:
 
         inserted = self._insert_value_in_bucket(buckets_file, index_file, bucket_position, data_position)
         if not inserted:
-            print("Splitting")
+            #print("Splitting")
             buckets_file.seek(bucket_position * self.BT.size)
             old_bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             # separar bucket buckets
