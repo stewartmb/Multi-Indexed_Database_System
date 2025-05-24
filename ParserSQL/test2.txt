@@ -1,2 +1,1 @@
-drop table users;
-drop index rtree on values lat, long on users;
+select * from destinos where latitud, longitud == [-17.9243, 25.8567];

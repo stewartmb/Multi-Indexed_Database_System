@@ -1,0 +1,6 @@
+lark
+matplotlib
+black
+fastapi
+pydantic
+uvicorn
