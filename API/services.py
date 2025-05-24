@@ -113,15 +113,15 @@ def cast(value, type):
 def convert(query):
     # print(json.dumps(query, indent=2))
     if query["action"] == "create_table":
-        create_table(query)
+        return create_table(query)
     elif query["action"] == "insert":
-        insert(query)
+        return insert(query)
     elif query["action"] == "select":
-        select(query)
+        return select(query)
     elif query["action"] == "delete":
         print("Z")
     elif query["action"] == "index":
-        create_index(query)
+        return create_index(query)
     elif query["action"] == "copy":
         copy(query)
     else:
@@ -166,6 +166,9 @@ def create_table(query):
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
+    return {
+        "message": f"CREATED TABLE {query["name"]}"
+    }
 
 
 def insert(query):
@@ -220,6 +223,10 @@ def insert(query):
                       table_filename(nombre_tabla),
                       index_filename(nombre_tabla, *rtree_keys, "index"))
         rtree.insert(query["values"][1], position)
+    
+    return {
+        "message": f"INSERTED VALUE ON TABLE {nombre_tabla}"
+    }
 
 
 def create_index(query):
@@ -290,15 +297,19 @@ def create_index(query):
     # añadir los registros ya en la tabla al indice creado
     for record in records:
         if hash is not None:
-            hash.insert(record)
+            hash.insert(record, )
         elif seq is not None:
             seq.add(record)
         elif rtree is not None:
             rtree.insert(record)
     
+    return {
+        "message": f"CREATED INDEX f{index} ON TABLE {nombre_tabla}"
+    }
+    
 
 def aux_select(query):
-    print(json.dumps(query, indent=2))
+    # print(json.dumps(query, indent=2))
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
@@ -466,7 +477,9 @@ def aux_select(query):
 def select(query):
     ans_set = aux_select(query)
 
-    print(ans_set)
+    # print(ans_set)
+
+    result = []
 
     data = select_meta(query["table"])
     format = {}
@@ -477,10 +490,17 @@ def select(query):
         heap = Heap(format,
                     data["key"],
                     table_filename(query["table"]))
-        print(heap.read(i))
+        result.append(heap.read(i))
+
+    columns_names = list(data["columns"].keys())
+
+    return {
+        "columns": columns_names,
+        "data": result
+    }
 
 def copy(query):
-    print(json.dumps(query, indent=4))
+    # print(json.dumps(query, indent=4))
 
     format = {}
     

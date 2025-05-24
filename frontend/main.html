@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pgAdmin Query Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 13px;
+            background-color: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+        }
+
+        .toolbar {
+            background: linear-gradient(to bottom, #fafafa, #e8e8e8);
+            border-bottom: 1px solid #ccc;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 40px;
+        }
+
+        .btn {
+            background: linear-gradient(to bottom, #ffffff, #e8e8e8);
+            border: 1px solid #aaa;
+            border-radius: 3px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: linear-gradient(to bottom, #f8f8f8, #ddd);
+            border-color: #999;
+        }
+
+        .btn:active {
+            background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(to bottom, #4a90e2, #357abd);
+            border-color: #2d6aa0;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(to bottom, #4080d0, #2d6aa0);
+        }
+
+        .btn-icon {
+            font-size: 14px;
+        }
+
+        .query-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            border-top: 1px solid #ddd;
+            position: relative;
+        }
+
+        .editor-container {
+            height: 50%;
+            min-height: 150px;
+            max-height: calc(100vh - 350px);
+            border-bottom: 1px solid #ddd;
+            position: relative;
+        }
+
+        .splitter {
+            height: 6px;
+            background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
+            border-top: 1px solid #ccc;
+            border-bottom: 1px solid #ccc;
+            cursor: row-resize;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .splitter:hover {
+            background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
+        }
+
+        .splitter::after {
+            content: '';
+            width: 40px;
+            height: 2px;
+            background: #999;
+            border-radius: 1px;
+        }
+
+        .splitter.dragging {
+            background: linear-gradient(to bottom, #d0d0d0, #b8b8b8);
+        }
+
+        .sql-editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 13px;
+            padding: 12px;
+            resize: none;
+            background-color: #fefefe;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .sql-editor::placeholder {
+            color: #999;
+            font-style: italic;
+        }
+
+        .output-panel {
+            height: 50%;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            background-color: #f8f8f8;
+        }
+
+        .tabs {
+            display: flex;
+            background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
+            border-bottom: 1px solid #ccc;
+            padding: 0 8px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            border: 1px solid transparent;
+            border-bottom: none;
+            cursor: pointer;
+            font-size: 12px;
+            background: transparent;
+            color: #666;
+            border-radius: 4px 4px 0 0;
+            margin-right: 2px;
+        }
+
+        .tab.active {
+            background: white;
+            border-color: #ccc;
+            color: #333;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(255,255,255,0.7);
+            color: #333;
+        }
+
+        .tab-content {
+            flex: 1;
+            background: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tab-pane {
+            display: none;
+            flex: 1;
+            overflow: auto;
+        }
+
+        .tab-pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .data-grid {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid #ddd;
+            margin: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .data-table-container {
+            flex: 1;
+            overflow: auto;
+        }
+
+        .pagination {
+            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            border-top: 1px solid #ccc;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .pagination-info {
+            color: #666;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-btn {
+            background: linear-gradient(to bottom, #ffffff, #e8e8e8);
+            border: 1px solid #aaa;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            color: #333;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #f8f8f8, #ddd);
+            border-color: #999;
+        }
+
+        .pagination-btn:disabled {
+            background: #f0f0f0;
+            border-color: #ccc;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.active {
+            background: linear-gradient(to bottom, #4a90e2, #357abd);
+            border-color: #2d6aa0;
+            color: white;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            background: white;
+        }
+
+        .data-table th {
+            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            color: #333;
+        }
+
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .data-table tr:hover {
+            background-color: #e6f3ff;
+        }
+
+        .messages {
+            padding: 12px;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 12px;
+            color: #333;
+            background: white;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .message-success {
+            color: #006600;
+        }
+
+        .message-error {
+            color: #cc0000;
+            background-color: #fff5f5;
+            padding: 8px;
+            border-left: 4px solid #cc0000;
+            margin: 4px 0;
+        }
+
+        .loading {
+            display: none;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .empty-state {
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+
+        .status-bar {
+            background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
+            border-top: 1px solid #ccc;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 24px;
+        }
+
+        .query-time {
+            color: #4a90e2;
+        }
+
+        .row-count {
+            font-weight: bold;
+        }
+
+        .separator {
+            width: 1px;
+            height: 20px;
+            background: #ccc;
+            margin: 0 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button class="btn btn-primary" id="runBtn">
+                <span class="btn-icon">▶</span>
+                Run
+            </button>
+            <div class="separator"></div>
+            <button class="btn" id="clearBtn">
+                <span class="btn-icon">🗑</span>
+                Clear
+            </button>
+            <button class="btn" id="saveBtn">
+                <span class="btn-icon">💾</span>
+                Save
+            </button>
+            <button class="btn" id="historyBtn">
+                <span class="btn-icon">📋</span>
+                History
+            </button>
+        </div>
+
+        <!-- Query Panel -->
+        <div class="query-panel">
+            <div class="editor-container">
+                <textarea class="sql-editor" id="sqlEditor" placeholder="SELECT * FROM users;"></textarea>
+            </div>
+
+            <!-- Resizable Splitter -->
+            <div class="splitter" id="splitter"></div>
+
+            <!-- Output Panel -->
+            <div class="output-panel">
+                <div class="tabs">
+                    <button class="tab active" data-tab="data">Data Output</button>
+                    <button class="tab" data-tab="messages">Messages</button>
+                    <button class="tab" data-tab="explain">Query Plan</button>
+                    <button class="tab" data-tab="history">History</button>
+                </div>
+
+                <div class="tab-content">
+                    <!-- Data Output Tab -->
+                    <div class="tab-pane active" id="data-pane">
+                        <div class="loading" id="loading">
+                            Executing query...
+                        </div>
+                        <div class="data-grid" id="dataGrid">
+                            <div class="empty-state">
+                                Run a query to see results here
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages Tab -->
+                    <div class="tab-pane" id="messages-pane">
+                        <div class="messages" id="messages">
+                            Ready to execute queries.
+                        </div>
+                    </div>
+
+                    <!-- Query Plan Tab -->
+                    <div class="tab-pane" id="explain-pane">
+                        <div class="empty-state">
+                            Query plan will appear here after running EXPLAIN
+                        </div>
+                    </div>
+
+                    <!-- History Tab -->
+                    <div class="tab-pane" id="history-pane">
+                        <div class="empty-state">
+                            Query history will appear here
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div>
+                <span id="statusText">Ready</span>
+                <span class="query-time" id="queryTime"></span>
+            </div>
+            <div>
+                <span class="row-count" id="rowCount"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Query history storage
+        let queryHistory = [];
+        let currentQuery = '';
+        let queryStartTime = 0;
+        let currentData = [];
+        let currentColumns = [];
+        let currentPage = 1;
+        let rowsPerPage = 10;
+
+        // DOM elements
+        const sqlEditor = document.getElementById('sqlEditor');
+        const runBtn = document.getElementById('runBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const historyBtn = document.getElementById('historyBtn');
+        const dataGrid = document.getElementById('dataGrid');
+        const messages = document.getElementById('messages');
+        const loading = document.getElementById('loading');
+        const statusText = document.getElementById('statusText');
+        const queryTime = document.getElementById('queryTime');
+        const rowCount = document.getElementById('rowCount');
+        const splitter = document.getElementById('splitter');
+        const editorContainer = document.querySelector('.editor-container');
+        const outputPanel = document.querySelector('.output-panel');
+        const queryPanel = document.querySelector('.query-panel');
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                // Update active tab
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${tabName}-pane`).classList.add('active');
+            });
+        });
+
+        // Run query
+        runBtn.addEventListener('click', async () => {
+            const query = sqlEditor.value.trim();
+            if (!query) {
+                showMessage('Please enter a SQL query', 'error');
+                return;
+            }
+
+            currentQuery = query;
+            queryStartTime = Date.now();
+            
+            // Add to history
+            if (!queryHistory.includes(query)) {
+                queryHistory.unshift(query);
+                if (queryHistory.length > 50) queryHistory.pop();
+            }
+
+            // Update UI
+            runBtn.disabled = true;
+            loading.style.display = 'block';
+            dataGrid.innerHTML = '<div class="loading">Executing query...</div>';
+            statusText.textContent = 'Executing...';
+            queryTime.textContent = '';
+            rowCount.textContent = '';
+
+            // Switch to data tab
+            document.querySelector('.tab[data-tab="data"]').click();
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const executionTime = Date.now() - queryStartTime;
+
+                console.log('API Response:', result);
+
+                // Handle different response formats
+                if (result.data && result.columns) {
+                    // SELECT queries with data and columns
+                    currentData = result.data;
+                    currentColumns = result.columns;
+                    currentPage = 1;
+                    displayResults();
+                    showMessage(`Query executed successfully in ${executionTime}ms`, 'success');
+                    statusText.textContent = 'Query completed';
+                    queryTime.textContent = `(${executionTime}ms)`;
+                    rowCount.textContent = `${result.data.length} rows`;
+                } else if (result.message) {
+                    // Non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
+                    currentData = [];
+                    currentColumns = [];
+                    dataGrid.innerHTML = `<div class="empty-state">${result.message}</div>`;
+                    showMessage(`${result.message} (${executionTime}ms)`, 'success');
+                    statusText.textContent = 'Query completed';
+                    queryTime.textContent = `(${executionTime}ms)`;
+                    rowCount.textContent = 'No data returned';
+                } else if (Array.isArray(result)) {
+                    // Legacy format - array of objects
+                    if (result.length > 0) {
+                        currentColumns = Object.keys(result[0]);
+                        currentData = result.map(row => currentColumns.map(col => row[col]));
+                        currentPage = 1;
+                        displayResults();
+                    } else {
+                        currentData = [];
+                        currentColumns = [];
+                        dataGrid.innerHTML = '<div class="empty-state">No results returned</div>';
+                    }
+                    showMessage(`Query executed successfully in ${executionTime}ms`, 'success');
+                    statusText.textContent = 'Query completed';
+                    queryTime.textContent = `(${executionTime}ms)`;
+                    rowCount.textContent = `${result.length} rows`;
+                } else if (result.error) {
+                    throw new Error(result.error);
+                } else {
+                    // Fallback for unexpected formats
+                    currentData = [];
+                    currentColumns = [];
+                    dataGrid.innerHTML = '<div class="empty-state">Query executed successfully (no data returned)</div>';
+                    showMessage(`Query executed successfully in ${executionTime}ms`, 'success');
+                    statusText.textContent = 'Query completed';
+                    queryTime.textContent = `(${executionTime}ms)`;
+                    rowCount.textContent = 'No data returned';
+                }
+            } catch (error) {
+                const executionTime = Date.now() - queryStartTime;
+                console.error('Query execution error:', error);
+                
+                // Show detailed error information
+                let errorMessage = error.message;
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage = 'Cannot connect to database server. Please check if the backend is running.';
+                }
+                
+                showMessage(`Error: ${errorMessage}`, 'error');
+                dataGrid.innerHTML = `<div class="empty-state">Query execution failed<br><small style="color: #cc0000;">${errorMessage}</small></div>`;
+                statusText.textContent = 'Query failed';
+                queryTime.textContent = `(${executionTime}ms)`;
+                rowCount.textContent = '';
+                
+                // Switch to messages tab to show error
+                document.querySelector('.tab[data-tab="messages"]').click();
+            } finally {
+                runBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        // Clear editor
+        clearBtn.addEventListener('click', () => {
+            sqlEditor.value = '';
+            sqlEditor.focus();
+        });
+
+        // Save query (mock implementation)
+        saveBtn.addEventListener('click', () => {
+            const query = sqlEditor.value.trim();
+            if (query) {
+                const blob = new Blob([query], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'query.sql';
+                a.click();
+                URL.revokeObjectURL(url);
+                showMessage('Query saved to file', 'success');
+            }
+        });
+
+        // Show history
+        historyBtn.addEventListener('click', () => {
+            updateHistoryTab();
+            document.querySelector('.tab[data-tab="history"]').click();
+        });
+
+        // Display query results with pagination
+        function displayResults() {
+            if (!Array.isArray(currentData) || currentData.length === 0) {
+                dataGrid.innerHTML = '<div class="empty-state">No results returned</div>';
+                return;
+            }
+
+            if (!Array.isArray(currentColumns)) {
+                dataGrid.innerHTML = '<div class="empty-state">Invalid or missing columns in response</div>';
+                return;
+            }
+
+            // Calculate pagination
+            const totalRows = currentData.length;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+            const pageData = currentData.slice(startIndex, endIndex);
+
+            // Create table container
+            const tableContainer = document.createElement('div');
+            tableContainer.className = 'data-table-container';
+
+            const table = document.createElement('table');
+            table.className = 'data-table';
+
+            // Create header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            currentColumns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create body with current page data
+            const tbody = document.createElement('tbody');
+            pageData.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(value => {
+                    const td = document.createElement('td');
+                    td.textContent = value === null ? 'NULL' : String(value);
+                    if (value === null) {
+                        td.style.fontStyle = 'italic';
+                        td.style.color = '#999';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            tableContainer.appendChild(table);
+
+            // Create pagination controls
+            const pagination = document.createElement('div');
+            pagination.className = 'pagination';
+
+            // Pagination info
+            const paginationInfo = document.createElement('div');
+            paginationInfo.className = 'pagination-info';
+            paginationInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${totalRows} rows`;
+
+            // Pagination controls
+            const paginationControls = document.createElement('div');
+            paginationControls.className = 'pagination-controls';
+
+            // First page button
+            const firstBtn = document.createElement('button');
+            firstBtn.className = 'pagination-btn';
+            firstBtn.textContent = '❮❮';
+            firstBtn.title = 'First page';
+            firstBtn.disabled = currentPage === 1;
+            firstBtn.addEventListener('click', () => {
+                if (currentPage !== 1) {
+                    currentPage = 1;
+                    displayResults();
+                }
+            });
+
+            // Previous page button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'pagination-btn';
+            prevBtn.textContent = '❮';
+            prevBtn.title = 'Previous page';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayResults();
+                }
+            });
+
+            // Page numbers (show current page and nearby pages)
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+
+            if (startPage > 1) {
+                const pageBtn = createPageButton(1);
+                paginationControls.appendChild(pageBtn);
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.style.padding = '4px 8px';
+                    ellipsis.style.color = '#666';
+                    paginationControls.appendChild(ellipsis);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = createPageButton(i);
+                paginationControls.appendChild(pageBtn);
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.style.padding = '4px 8px';
+                    ellipsis.style.color = '#666';
+                    paginationControls.appendChild(ellipsis);
+                }
+                const pageBtn = createPageButton(totalPages);
+                paginationControls.appendChild(pageBtn);
+            }
+
+            // Next page button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'pagination-btn';
+            nextBtn.textContent = '❯';
+            nextBtn.title = 'Next page';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayResults();
+                }
+            });
+
+            // Last page button
+            const lastBtn = document.createElement('button');
+            lastBtn.className = 'pagination-btn';
+            lastBtn.textContent = '❯❯';
+            lastBtn.title = 'Last page';
+            lastBtn.disabled = currentPage === totalPages;
+            lastBtn.addEventListener('click', () => {
+                if (currentPage !== totalPages) {
+                    currentPage = totalPages;
+                    displayResults();
+                }
+            });
+
+            // Add all controls
+            paginationControls.appendChild(firstBtn);
+            paginationControls.appendChild(prevBtn);
+            paginationControls.appendChild(nextBtn);
+            paginationControls.appendChild(lastBtn);
+
+            pagination.appendChild(paginationInfo);
+            pagination.appendChild(paginationControls);
+
+            // Update data grid
+            dataGrid.innerHTML = '';
+            dataGrid.appendChild(tableContainer);
+            if (totalPages > 1) {
+                dataGrid.appendChild(pagination);
+            }
+        }
+
+        // Create page button
+        function createPageButton(pageNum) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = 'pagination-btn';
+            pageBtn.textContent = pageNum;
+            if (pageNum === currentPage) {
+                pageBtn.classList.add('active');
+            }
+            pageBtn.addEventListener('click', () => {
+                if (currentPage !== pageNum) {
+                    currentPage = pageNum;
+                    displayResults();
+                }
+            });
+            return pageBtn;
+        }        
+        
+        // Show message in messages tab
+        function showMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const messageClass = type === 'error' ? 'message-error' : 
+                               type === 'success' ? 'message-success' : '';
+            
+            const messageHtml = `<div class="${messageClass}">[${timestamp}] ${message}</div>`;
+            messages.innerHTML += messageHtml + '\n';
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Update history tab
+        function updateHistoryTab() {
+            const historyPane = document.getElementById('history-pane');
+            if (queryHistory.length === 0) {
+                historyPane.innerHTML = '<div class="empty-state">No query history available</div>';
+                return;
+            }
+
+            const historyList = document.createElement('div');
+            historyList.style.padding = '12px';
+            
+            queryHistory.forEach((query, index) => {
+                const queryItem = document.createElement('div');
+                queryItem.style.cssText = `
+                    margin-bottom: 12px;
+                    padding: 8px;
+                    background: #f9f9f9;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                `;
+                
+                queryItem.textContent = query;
+                queryItem.addEventListener('click', () => {
+                    sqlEditor.value = query;
+                    document.querySelector('.tab[data-tab="data"]').click();
+                });
+                
+                queryItem.addEventListener('mouseenter', () => {
+                    queryItem.style.backgroundColor = '#e6f3ff';
+                });
+                
+                queryItem.addEventListener('mouseleave', () => {
+                    queryItem.style.backgroundColor = '#f9f9f9';
+                });
+                
+                historyList.appendChild(queryItem);
+            });
+            
+            historyPane.innerHTML = '';
+            historyPane.appendChild(historyList);
+        }
+
+        // Keyboard shortcuts
+        sqlEditor.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runBtn.click();
+            }
+        });
+
+        // Focus editor on load
+        window.addEventListener('load', () => {
+            sqlEditor.focus();
+        });
+
+        // Resizable splitter functionality
+        let isResizing = false;
+        let startY = 0;
+        let startEditorHeight = 0;
+        let startOutputHeight = 0;
+
+        splitter.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startY = e.clientY;
+            startEditorHeight = editorContainer.offsetHeight;
+            startOutputHeight = outputPanel.offsetHeight;
+            
+            splitter.classList.add('dragging');
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+            
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const deltaY = e.clientY - startY;
+            const queryPanelHeight = queryPanel.offsetHeight - 6; // Subtract splitter height
+            const minEditorHeight = 150;
+            const minOutputHeight = 200;
+            
+            let newEditorHeight = startEditorHeight + deltaY;
+            let newOutputHeight = startOutputHeight - deltaY;
+            
+            // Enforce minimum heights
+            if (newEditorHeight < minEditorHeight) {
+                newEditorHeight = minEditorHeight;
+                newOutputHeight = queryPanelHeight - newEditorHeight;
+            }
+            
+            if (newOutputHeight < minOutputHeight) {
+                newOutputHeight = minOutputHeight;
+                newEditorHeight = queryPanelHeight - newOutputHeight;
+            }
+            
+            // Calculate percentages
+            const editorPercent = (newEditorHeight / queryPanelHeight) * 100;
+            const outputPercent = 100 - editorPercent;
+            
+            editorContainer.style.height = `${editorPercent}%`;
+            outputPanel.style.height = `${outputPercent}%`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                splitter.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+
+        // Prevent text selection during resize
+        splitter.addEventListener('selectstart', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>

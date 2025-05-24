@@ -1,0 +1,15 @@
+create table airports (
+    id varchar[3] primary key,
+    name varchar[15],
+    city varchar[15] index hash,
+    state varchar[15],
+    country varchar[15],
+    latitude double,
+    longitude double
+);
+
+create index on airports using rtree (latitude, longitude);
+
+copy airports from "Data_test/airports.csv";
+
+select * from airports where latitude, longitude in (45, -100) closest 10;
