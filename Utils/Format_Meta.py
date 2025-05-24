@@ -1,7 +1,7 @@
 import json
 import os
 
-def create(data: dict, name: str) -> None:
+def create_meta(data: dict, name: str) -> None:
     """Agrega un nuevo diccionario con clave 'name' a una lista en MetaData"""
     filename = "Schema/metadata"+".meta"
     all_data = []
@@ -25,7 +25,7 @@ def create(data: dict, name: str) -> None:
         json.dump(all_data, f, indent=4)
     print(f"Dato guardado bajo la clave '{name}' en '{filename}'.")
 
-def select(name: str) -> dict:
+def select_meta(name: str) -> dict:
     """Busca y devuelve el diccionario correspondiente a 'name' desde MetaData"""
     filename = "Schema/metadata"+".meta"
 

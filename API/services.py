@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Format_Meta import *
 from Utils.file_format import *
 from Heap_struct.Heap import *
+
 from Hash_struct.Hash import Hash
 from BPtree_struct.Indice_BPTree_file import BPTree as Btree
 from Sequential_Struct.Indice_Sequential_file import Sequential
@@ -34,7 +35,7 @@ def convert(query):
     elif query["action"] == "insert":
         insert(query)
     elif query["action"] == "select":
-        print("Y")
+        select(query)
     elif query["action"] == "delete":
         print("Z")
     elif query["action"] == "index":
@@ -48,7 +49,7 @@ def create_table(query):
     # crear tabla y añadir a metadata
     with open(table_filename(query["name"]), "w") as f:
         pass
-    create(query["data"], query["name"])
+    create_meta(query["data"], query["name"])
     format = {}
     cols = query["data"]["columns"]
     for key in cols.keys():
@@ -83,7 +84,7 @@ def create_table(query):
 
 def insert(query):
     nombre_tabla = query["table"]
-    data = select(nombre_tabla)
+    data =  select_meta(nombre_tabla)
     format = {}
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
@@ -128,7 +129,7 @@ def insert(query):
 
 def create_index(query):
     nombre_tabla = query["table"]
-    data = select(nombre_tabla)
+    data = select_meta(nombre_tabla)
     format = {}
 
     for key in data["columns"].keys():
@@ -137,7 +138,7 @@ def create_index(query):
     for key in query["attr"]:
         data["columns"][key]["index"] = query["index"]
     
-    create(data, nombre_tabla)
+    create_meta(data, nombre_tabla)
     
     keys = query["attr"]
 
@@ -175,5 +176,15 @@ def create_index(query):
     else:
         print("INDICE NO IMPLEMENTADO AUN")
     
-    create(data, nombre_tabla)
-    
+    create_meta(data, nombre_tabla)
+
+
+def select(query):
+    nombre_tabla = query["table"]
+    data = select_meta(nombre_tabla)
+    format = {}
+    for key in data["columns"].keys():
+        format[key] = to_struct(data["columns"][key]["type"])
+
+    print(format)
+    print(query["condition"])
