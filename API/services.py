@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import re
+import csv
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Format_Meta import *
@@ -122,13 +123,15 @@ def convert(query):
     elif query["action"] == "index":
         create_index(query)
     elif query["action"] == "copy":
-        print("B")
+        copy(query)
     else:
         print("error: accion no soportada")
 
 
 def create_table(query):
     # crear tabla y añadir a metadata
+
+    os.makedirs(os.path.dirname(table_filename(query["name"])), exist_ok=True)
     with open(table_filename(query["name"]), "w") as f:
         pass
     create_meta(query["data"], query["name"])
@@ -233,10 +236,16 @@ def create_index(query):
     create_meta(data, nombre_tabla)
 
     keys = query["attr"]
+    
+    hash = []
+    seq = []
+    rtree = []
+    btree = []
+    isam = []
 
-    hash = None
-    seq = None
-    rtree = None
+    heap = Heap(format,
+                data["key"],
+                table_filename(nombre_tabla))
 
     index = query["index"]
     if index == None:
@@ -275,8 +284,18 @@ def create_index(query):
     else:
         print("INDICE NO IMPLEMENTADO AUN")
 
+    records = heap._select_all()
     create_meta(data, nombre_tabla)
 
+    # añadir los registros ya en la tabla al indice creado
+    for record in records:
+        if hash is not None:
+            hash.insert(record)
+        elif seq is not None:
+            seq.add(record)
+        elif rtree is not None:
+            rtree.insert(record)
+    
 
 def aux_select(query):
     print(json.dumps(query, indent=2))
@@ -316,15 +335,13 @@ def aux_select(query):
                 for i in range(len(start)):
                     start[i] = cast(start[i], format[key[i]])
                     end[i] = cast(end[i], format[key[i]])
-
                 sets.append(set(rtree.range_search(start, end)))
             else:
                 if "knn" in cond:
                     point = cond["point"]
                     for i in range(len(point)):
                         point[i] = cast(point[i], format[key[i]])
-
-                    sets.append(set(rtree.ksearch(int(cond["knn"]), point)))
+                    sets.append(set(rtree.ksearch(int(cond["knn"]), point))) # desordena el knn
                 else:
                     point = cond["value"]
                     for i in range(len(point)):
@@ -440,3 +457,72 @@ def select(query):
                     data["key"],
                     table_filename(query["table"]))
         print(heap.read(i))
+
+def copy(query):
+    print(json.dumps(query, indent=4))
+
+    format = {}
+    
+    nombre_tabla = query["table"]
+
+    data = select_meta(nombre_tabla)
+
+    hash = []
+    seq = []
+    rtree = None
+    btree = []
+    isam = []
+
+    for key in data["columns"].keys():
+        format[key] = to_struct(data["columns"][key]["type"])
+
+        index = data["columns"][key]["index"]
+        if index == None:
+            pass
+        elif index == "hash":
+            hash.append(Hash(format,
+                        key,
+                        index_filename(nombre_tabla, key, "buckets"),
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla)))
+        elif index == "seq":
+            seq.append(Sequential(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla)))
+        elif index == "btree":
+            btree.append(Btree(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla),
+                        M))
+    
+    rtree_keys = data.get("indexes", {}).get("rtree")
+    if rtree_keys is not None:
+        rtree = Rtree(format, 
+                    data["key"],
+                    rtree_keys, 
+                    table_filename(nombre_tabla),  
+                    index_filename(nombre_tabla, *rtree_keys, "index"))
+
+    heap = Heap(format,
+                data["key"],
+                table_filename(nombre_tabla))
+
+
+    with open(query["from"], mode='r', newline='') as f:
+        reader = csv.reader(f)
+        next(reader)
+
+        for row in reader:
+            # insertar en el principal y en todos los índices
+            pos = heap.insert(row)
+
+            for h in hash:
+                h.insert(row, pos)
+            for bp in btree:
+                bp.add(pos_new_record=pos)
+            for s in seq:
+                s.add(pos_new_record=pos)
+            if rtree is not None:
+                rtree.insert(row, pos)

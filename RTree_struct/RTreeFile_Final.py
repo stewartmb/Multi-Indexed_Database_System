@@ -974,7 +974,7 @@ class RTreeFile:
         """
         maxh = []
         self.__ksearch__(self.get_root(), k, point, maxh)
-        return [pt.index for (d, pt) in sorted(maxh, key=lambda x: x[0], reverse=True)]
+        return [pt.index for (d, pt) in sorted(maxh, key=lambda x: -x[0])]
     
     def ksearch(self, k, query):
         """
