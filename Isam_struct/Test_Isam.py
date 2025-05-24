@@ -54,7 +54,7 @@ def test_insert_CSV(csv_path, index_file, data_file):
         pass
 
     # Leer todos los registros del CSV y guardarlos en un diccionario por código
-    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file, max_num_child=ma)
+    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file)
     registros_dict = {}
     print("\nLeyendo registros del CSV...")
     with open(csv_path, mode='r', encoding='utf-8') as file:
@@ -77,9 +77,9 @@ def test_insert_CSV(csv_path, index_file, data_file):
             isam.add_record(row)
     print()
     print("Proceso de lectura de CSV finalizado.")
-
-    print("Generando indices...")
-    isam.build_index()
+    # isam1 = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file)
+    # print("Generando indices...")
+    # isam1.build_index()
     print("Indices generados.")
 
 
@@ -87,18 +87,18 @@ def test_insert_CSV(csv_path, index_file, data_file):
 
 def test_search():
     # BUSQUEDAS
-    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file, max_num_child=ma)
+    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file)
     print("\nBúsquedas de prueba:")
     i=0
     for key in KEYS:
         i+=1
-        resultado = Sequential.search(key)
+        resultado = isam.search(key)
         # print(resultado)
         m = N
         if random_index == 0:
             m = m / N
         if i % m == 0:
-            print("|", end="")
+            print("|", end="") 
         if resultado == []:
             print(f"{key} No encontrado")
             break
@@ -108,7 +108,7 @@ def test_search():
 
 def test_search_range():
     # BUSQUEDAS POR RANGO
-    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file, max_num_child=ma)
+    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file)
 
     if 's' in Sequential.format_key:
         inferior = 'A'
@@ -125,7 +125,7 @@ def test_search_range():
 
 def test_onesearch(key):
     # BUSQUEDA DE UN REGISTRO ESPECIFICO
-    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file, max_num_child=ma)
+    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file)
     print("\nBúsqueda de un registro específico:", key)
     resultado = Sequential.search(key)
     if resultado == []:
@@ -139,7 +139,7 @@ def test_onesearch(key):
 
 def test_delete():
     # ELIMINAR UN REGISTRO
-    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file, num_aux=ma)
+    isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file)
     print("\nEliminando un registro específico:")
     Sequential.delete(KEYS[0])
     print("Eliminación de prueba finalizada.")
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     # Crear el árbol B+ e insertar registros desde el CSV
     test_insert_CSV(csv_path, index_file, data_file)
     # Prueba de búsqueda
-    # test_search()
+    test_search()
     # # Prueba de búsqueda por rango
     # test_search_range()
     # # Prueba de búsqueda de un registro específico

@@ -10,7 +10,7 @@ from sympy import symbols, Eq, solve
 
 # Constantes generales
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
-TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de pages y puntero al root siempre sera 0)
+TAM_ENCABEZAD_IND = 16  # Tamaño del encabezado en bytes (cantidad de pages(data), cantidad de pages(overflow), M , y pososicion del root)
 
 def Calculate_M(num_records):
     """
@@ -94,6 +94,7 @@ class Index_Page():
     @classmethod
     def from_bytes(cls, data, M, format_key, indexp_format):
         # Verify data size
+        print (f"Data size: {len(data)}, Expected size: {struct.calcsize(indexp_format)} , Format: {indexp_format}")
         expected_size = struct.calcsize(indexp_format)
         if len(data) != expected_size:
             raise ValueError(f"Data size mismatch: expected {expected_size}, got {len(data)}")
@@ -139,19 +140,26 @@ class ISAM():
     def __init__(self, table_format: dict , name_key: str ,
                  name_index_file = 'Isam_Struct/index_file.bin', 
                  name_data_file = 'Isam_Struct/data_file.bin',
-                 max_num_child = None,):
+                 ):
         
         self.index_file = name_index_file
         self.data_file = name_data_file
 
         self.RT = RegistroType(table_format, name_key)               # Formato de los datos
-
         self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
-        self.indexp_format = get_index_format(max_num_child, self.format_key)    # Formato de la pagina (NODO)
-        self.tam_indexp = struct.calcsize(self.indexp_format)        # Tamaño de la página de índice
-        self._initialize_files()                                     # Inicializa los archivos de índice y datos
-        self.M = max_num_child  
         self.tam_registro = self.RT.size                             # Tamaño del registro
+        self.prueba = True
+        depends = self._initialize_files()
+        if depends:
+            self.build_index()
+        else:
+            self.M = self._read_header()[2]  
+            self.indexp_format = get_index_format(self.M,self.format_key)   # Formato de la pagina (NODO)
+            self.tam_indexp = struct.calcsize(self.indexp_format)        # Tamaño de la página de índice
+
+
+
+
 
 
     def _initialize_files (self):
@@ -160,23 +168,29 @@ class ISAM():
         """
         if not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
-                f.write(struct.pack('ii', 0, 0)) # Inicializa el encabezado del archivo de índice (0 datos, -2 indica que recien inicia)
+                f.write(struct.pack('iiii', 0, 0, 1,-1)) # Inicializa el encabezado del archivo de índice (0 datos, -2 indica que recien inicia)
+                depends =  True                                      # Construye el índice estático
+        else:
+            depends= False
+        
         if not os.path.exists(self.data_file):
             with open(self.data_file, 'wb') as f:
                 f.write(struct.pack('i', 0)) # Inicializa el encabezado del archivo de datos
+        
+        return depends
 
     ### MANEJO DE ENCABEZADOS ###
     def _read_header(self):
         with open(self.index_file, 'rb') as f:
             f.seek(0)
             header = f.read(TAM_ENCABEZAD_IND)
-            num_pages, num_over = struct.unpack('ii', header)
-        return num_pages, num_over
+            num_pages, num_over , max_num_child ,  pos_root = struct.unpack('iiii', header)
+        return num_pages, num_over, max_num_child, pos_root
     
-    def _write_header(self, num_pages, num_over):
+    def _write_header(self, num_pages, num_over, max_num_child, pos_root):
         with open(self.index_file, 'r+b') as f:
             f.seek(0)
-            f.write(struct.pack('ii',num_pages, num_over))   
+            f.write(struct.pack('iiii',num_pages, num_over,max_num_child ,pos_root))   
 
     ### MANEJO DE DATOS (CASE INDEPENT) ###
     def _read_data_header(self):
@@ -242,10 +256,10 @@ class ISAM():
         """
         Agrega una nueva página de índice al final del archivo.
         """
-        num_pages, num_over = self._read_header()
+        num_pages, num_over , max_num_child ,  pos_root= self._read_header()
         self._write_index_page(num_pages, page) 
         num_pages += 1
-        self._write_header(num_pages, num_over)  # Actualiza el encabezado del archivo de índice
+        self._write_header(num_pages, num_over,max_num_child ,pos_root)  # Actualiza el encabezado del archivo de índice
 
     ### FUNCIONES PARA GENERAR LOS INDICES DEL ISAM ###
 
@@ -369,6 +383,10 @@ class ISAM():
         self.indexp_format = get_index_format(self.M, self.format_key)
         self.tam_indexp = struct.calcsize(self.indexp_format)
 
+        # actualizar encabezado del índice
+        num_pages, num_over , _ ,  pos_root = self._read_header()
+        self._write_header(num_pages, num_over, self.M,pos_root)  # Inicializa el encabezado del índice
+
         print(f"Valor de M calculado: {self.M}")
         lista = posiciones.copy()
         print("Lista de posiciones:", lista)
@@ -398,7 +416,7 @@ class ISAM():
                 page.key_count += 1
 
         print("Leyendo index_file generado:")
-        num_pages_data, num_over = self._read_header()
+        num_pages_data, num_over , max_num_child ,  pos_root = self._read_header()
         for i in range(num_pages_data):
             page = self._read_index_page(i)
             print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
@@ -410,7 +428,7 @@ class ISAM():
             i = 1
             page = Index_Page(leaf=False, M=self.M)
             page.childrens[0] = 0  
-            pos_page, _ = self._read_header()
+            pos_page, num_over , max_num_child ,  pos_root= self._read_header()
             page_root = Index_Page(leaf=False, M=self.M)
             page_root.childrens[0] = pos_page
             for num in range(1,len(lista)):
@@ -426,7 +444,7 @@ class ISAM():
                 else:
                     # print (page.keys , page.childrens, page.next, "|" ,page.key_count)
                     self._add_index_page(page)
-                    pos_page,_ = self._read_header()
+                    pos_page,_ , _,_= self._read_header()
                     f.seek(lista[num] * record_size)
                     data = f.read(record_size)
                     key, pos = struct.unpack(format_temp, data)
@@ -440,22 +458,73 @@ class ISAM():
                 i += 1
             
             if page_root.key_count == self.M - 1:
-                print (page_root.keys , page_root.childrens, page_root.next, "|" ,page_root.key_count , "page root")
-                pos_root = self._read_header()[0]
+                num_pages, num_over,_ , _ = self._read_header()
                 self._add_index_page(page_root)
-        
-        print ("leyendo indice de primer nivel")
-        num_pages, num_over = self._read_header()
+                # Actualizar el encabezado del índice con la nueva raíz
+                self._write_header(num_pages+1, num_over, self.M, num_pages)
+                
+        num_pages, num_over ,_ , _= self._read_header()
         for i in range(num_pages_data, num_pages-1):
             page = self._read_index_page(i)
             print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
         
         print("=== Generando root ===")
         page = self._read_index_page(num_pages-1)
-        print(f"Root: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+        print(f"Página {num_pages-1}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
 
+        print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
+        print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")
+        print ("leyendo indice de primer nivel")
 
     ### FUNCIONES DEL ISAM ###
+
+    ## BUSQUEDA ##
+
+    def search_aux(self, pos_node ,key_min):
+        if pos_node == -2:
+            return -1
+        else:
+            temp = self._read_index_page(pos_node)
+            while (temp.leaf == False):
+                for i in range(temp.key_count):
+                    if key_min <= temp.keys[i]:
+                        pos_children = temp.childrens[i]
+                        temp = self._read_index_page(pos_children)
+                        break
+                    if i == temp.key_count - 1:
+                        pos_children = temp.childrens[i + 1]
+                        temp = self._read_index_page(pos_children)
+                        break
+            return temp
+        
+    def search(self, key):
+        """
+        Busca un registro en el árbol B+.
+        """
+
+        print (f"{self.M} nodos hijos por página")
+        print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
+        print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")
+        root = self._read_header()[2]  # posición de la raíz
+        temp = self.search_aux(root, key)
+        print (f"Buscando {key} en la raíz: {temp.keys} | Posición: {root}")
+        results = []
+        if temp == -1:
+            return results
+        else:
+            while True:
+                for i in range(temp.key_count):
+                    if key < temp.keys[i]:
+                        break
+                    if temp.keys[i] == key:
+                        results.append(temp.childrens[i])
+                if temp.childrens[-1] != -1:
+                    pos_children = temp.childrens[-1]
+                    temp = self._read_index_page(pos_children)
+                else:
+                    break
+            return results
+
     
 
     
