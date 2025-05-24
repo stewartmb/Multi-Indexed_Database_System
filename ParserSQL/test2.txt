@@ -1,1 +1,1 @@
-select * from destinos where latitud, longitud == [-17.9243, 25.8567];
+set btree params (4);
