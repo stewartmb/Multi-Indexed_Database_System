@@ -158,6 +158,9 @@ class SQLTransformer(Transformer):
                 range_end = items[2]
             elif str(items[1]) == ">=":
                 range_start = items[2]
+            elif str(items[1] == "!="):
+                val = items[2]
+                return {"field": items[0], "range_search": True, "op": items[1], "range_start": range_start, "range_end": range_end, "value": val}
 
             return {"field": items[0], "range_search": True, "op": items[1], "range_start": range_start, "range_end": range_end}
 
