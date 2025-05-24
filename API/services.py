@@ -13,6 +13,11 @@ from BPtree_struct.Indice_BPTree_file import BPTree as Btree
 from Sequential_Struct.Indice_Sequential_file import Sequential
 from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 
+
+M = 10
+
+
+
 def to_struct(type):
     varchar_match = re.match(r"varchar\[(\d+)\]", type)
 
@@ -27,6 +32,44 @@ def to_struct(type):
         print("ERROR: tipo no soportado")
         return None
 
+def parse_select(tokens: list):
+    def helper(pos):
+        if tokens[pos] == '(':
+            pos += 1
+            if tokens[pos] == 'NOT':
+                op = tokens[pos]
+                pos += 1
+                operand, pos = helper(pos)
+                assert tokens[pos] == ')'
+                return (op, operand), pos + 1
+            else:
+                left, pos = helper(pos)
+                op = tokens[pos]
+                pos += 1
+                right, pos = helper(pos)
+                assert tokens[pos] == ')'
+                return (op, left, right), pos + 1
+        elif tokens[pos].isdigit():
+            return int(tokens[pos]), pos + 1
+        else:
+            raise ValueError("Unexpected token: " + tokens[pos])
+    tree, _ = helper(0)
+    return tree
+
+def evaluate_select(node, sets, universe):
+    if isinstance(node, int):
+        return sets[node]
+    elif isinstance(node, tuple):
+        op = node[0]
+        if op == 'NOT':
+            child = evaluate_select(node[1], sets, universe)
+            return universe - child
+        elif op == 'AND':
+            return evaluate_select(node[1], sets, universe) & evaluate_select(node[2], sets, universe)
+        elif op == 'OR':
+            return evaluate_select(node[1], sets, universe) | evaluate_select(node[2], sets, universe)
+        else:
+            raise ValueError("Unknown operator: " + op)
 
 def convert(query):
     print(json.dumps(query, indent=2))
@@ -77,7 +120,7 @@ def create_table(query):
                             key,
                             index_filename(query["name"], key, "index"),
                             table_filename(query["name"]),
-                            4)
+                            M)
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
@@ -115,7 +158,17 @@ def insert(query):
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla))
 
-            seq.add(query["values"][1], position)
+            seq.add(position)
+
+        elif index == "btree":
+            print("OLA soy un btree")
+            print()
+            btree = Btree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            M)
+            btree.add(pos_new_record=position)
 
     # indice compuesto en rtree, añadir en el indice
     rtree_keys = data.get("indexes", {}).get("rtree")
@@ -180,11 +233,93 @@ def create_index(query):
 
 
 def select(query):
+    # TODO: TEMPORAL BEGIN
+    query = {
+        "action": "select",
+        "table": "users",
+        "attr": "*",
+        "operations": "(0 AND ((1 OR (NOT 3)) AND (NOT 2)))",
+        "conditions": [
+            {
+                "field": "id",
+                "range_search": True,
+                "range_start": 103,
+                "range_end": 10000
+            },
+            {
+                "field": "name",
+                "range_search": True,
+                "range_start": "L",
+                "range_end": '\U0010FFFF'*256
+            },
+            {
+                "field": "name",
+                "range_search": True,
+                "range_start": "",
+                "range_end": "M"
+            },
+            {
+                "field": "nacimiento",
+                "range_search": True,
+                "range_start": "",
+                "range_end": "2000-01-01"
+            },
+          ]
+    }
+    #TODO: TEMPORAL END
+    expr = query["operations"]
+    tokens = re.findall(r'\(|\)|\d+|AND|OR|NOT', expr)
+    tree = parse_select(tokens)
+    sets = []
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
 
-    print(format)
-    print(query["condition"])
+    print(query["conditions"])
+    for condition in query["conditions"]:
+        key = condition["field"]
+        index = data["columns"][key]["index"]
+
+        if index == None:
+            heap = Heap(format,
+                        data["key"],
+                        table_filename(nombre_tabla))
+
+            if condition["range_search"]:
+                sets.append(set(heap.find(condition["range_start"], condition["range_end"])))
+            else:
+                sets.append(set(heap.find(condition["value"], condition["value"])))
+        elif index == "hash":
+            hash = Hash(format,
+                        key,
+                        index_filename(nombre_tabla, key, "buckets"),
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla))
+
+            if condition["range_search"]:
+                sets.append(set(hash.range_search(condition["range_start"], condition["range_end"])))
+            else:
+                sets.append(set(hash.search(condition["value"])))
+
+        elif index == "btree":
+            btree = Btree(format,
+                          key,
+                          index_filename(nombre_tabla, key, "index"),
+                          table_filename(nombre_tabla),
+                          M)
+
+            if condition["range_search"]:
+                sets.append(set(btree.search_range(condition["range_start"], condition["range_end"])))
+            else:
+                sets.append(set(btree.search(condition["value"])))
+
+    for i in range(len(sets)):
+        print(i, ":", sets[i])
+
+    # Evaluar la expresión booleana
+    universe = set(range(len(sets)))
+    result_set = evaluate_select(tree, sets, universe)
+    print("RESULTADO FINAL DE ", query["operations"])
+    print(result_set)

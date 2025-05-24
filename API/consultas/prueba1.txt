@@ -17,7 +17,3 @@ insert into users (id, name, nacimiento, email) values (109, "Papa Francisco", "
 insert into users (id, name, nacimiento, email) values (110, "Kilobyte", "1999-02-19", "bcd@utec.edu.pe");
 
 select * from users where id == "101";
-
-select * from users where id == "101" and name == "Spaghetti";
-
-
