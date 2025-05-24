@@ -362,16 +362,17 @@ def aux_select(query):
                             table_filename(nombre_tabla))
 
                 if cond["range_search"]:
-                    if cond["op"] != ">" and cond["op"] != "<":
+                    if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
                         sets.append(set(hash.range_search(left, right)))
                     else:
                         valid = set(hash.range_search(left, right))
                         if cond["op"] == ">":
                             invalid = set(hash.search(left))
-                        elif cond["op"] == ">":
+                        elif cond["op"] == "<":
                             invalid = set(hash.search(right))
                         else:
-                            invalid = set(hash.search(left))
+                            curr = left #TODO: ARREGLAR AL CAMBIAR PARSER
+                            invalid = set(hash.search(curr))
 
                         sets.append(valid - invalid)
 
@@ -387,7 +388,19 @@ def aux_select(query):
                               M)
 
                 if cond["range_search"]:
-                    sets.append(set(btree.search_range(left, right)))
+                    if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
+                        sets.append(set(btree.search_range(left, right)))
+                    else:
+                        valid = set(btree.search_range(left, right))
+                        if cond["op"] == ">":
+                            invalid = set(btree.search(left))
+                        elif cond["op"] == "<":
+                            invalid = set(btree.search(right))
+                        else:
+                            curr = left #TODO: ARREGLAR AL CAMBIAR PARSER
+                            invalid = set(btree.search(curr))
+
+                        sets.append(valid - invalid)
                 else:
                     sets.append(set(btree.search(val)))
 
