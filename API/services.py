@@ -15,6 +15,7 @@ from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 
 M = 10
 
+
 def to_struct(type):
     varchar_match = re.match(r"varchar\[(\d+)\]", type)
 
@@ -39,6 +40,7 @@ def to_struct(type):
         print("ERROR: tipo no soportado")
         return None
 
+
 def parse_select(tokens: list):
     def helper(pos):
         if tokens[pos] == '(':
@@ -60,8 +62,10 @@ def parse_select(tokens: list):
             return int(tokens[pos]), pos + 1
         else:
             raise ValueError("Unexpected token: " + tokens[pos])
+
     tree, _ = helper(0)
     return tree
+
 
 def evaluate_select(node, sets, universe):
     if isinstance(node, int):
@@ -77,6 +81,7 @@ def evaluate_select(node, sets, universe):
             return evaluate_select(node[1], sets, universe) | evaluate_select(node[2], sets, universe)
         else:
             raise ValueError("Unknown operator: " + op)
+
 
 def cast(value, type):
     if type == "?":
@@ -95,7 +100,7 @@ def cast(value, type):
         return float(value)
     elif type[-1] == "s":
         if value == 1:
-            return "\U0010FFFF"*256
+            return "\U0010FFFF" * 256
         elif value == -1:
             return ""
         return str(value)
@@ -103,8 +108,9 @@ def cast(value, type):
         print("ERROR: tipo no soportado")
         return None
 
+
 def convert(query):
-    #print(json.dumps(query, indent=2))
+    # print(json.dumps(query, indent=2))
     if query["action"] == "create_table":
         create_table(query)
     elif query["action"] == "insert":
@@ -119,6 +125,7 @@ def convert(query):
         print("B")
     else:
         print("error: accion no soportada")
+
 
 def create_table(query):
     # crear tabla y añadir a metadata
@@ -143,23 +150,24 @@ def create_table(query):
                         table_filename(query["name"]))
         elif index == "seq":
             seq = Sequential(format,
-                        key,
-                        index_filename(query["name"], key, "index"),
-                        table_filename(query["name"]))
+                             key,
+                             index_filename(query["name"], key, "index"),
+                             table_filename(query["name"]))
 
         elif index == "btree":
             btree = Btree(format,
-                            key,
-                            index_filename(query["name"], key, "index"),
-                            table_filename(query["name"]),
-                            M)
+                          key,
+                          index_filename(query["name"], key, "index"),
+                          table_filename(query["name"]),
+                          M)
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
 
+
 def insert(query):
     nombre_tabla = query["table"]
-    data =  select_meta(nombre_tabla)
+    data = select_meta(nombre_tabla)
     format = {}
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
@@ -186,29 +194,30 @@ def insert(query):
             hash.insert(query["values"][1], position)
         elif index == "seq":
             seq = Sequential(format,
-                        key,
-                        index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla))
+                             key,
+                             index_filename(nombre_tabla, key, "index"),
+                             table_filename(nombre_tabla))
 
             seq.add(pos_new_record=position)
 
         elif index == "btree":
             btree = Btree(format,
-                            key,
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla),
-                            M)
+                          key,
+                          index_filename(nombre_tabla, key, "index"),
+                          table_filename(nombre_tabla),
+                          M)
             btree.add(pos_new_record=position)
 
     # indice compuesto en rtree, añadir en el indice
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
-        rtree = Rtree(format, 
-                    data["key"],
-                    rtree_keys, 
-                    table_filename(nombre_tabla),  
-                    index_filename(nombre_tabla, *rtree_keys, "index"))
+        rtree = Rtree(format,
+                      data["key"],
+                      rtree_keys,
+                      table_filename(nombre_tabla),
+                      index_filename(nombre_tabla, *rtree_keys, "index"))
         rtree.insert(query["values"][1], position)
+
 
 def create_index(query):
     nombre_tabla = query["table"]
@@ -220,9 +229,9 @@ def create_index(query):
 
     for key in query["attr"]:
         data["columns"][key]["index"] = query["index"]
-    
+
     create_meta(data, nombre_tabla)
-    
+
     keys = query["attr"]
 
     hash = None
@@ -241,16 +250,16 @@ def create_index(query):
 
     elif index == "seq":
         seq = Sequential(format,
-                    key,
-                    index_filename(nombre_tabla, keys[0], "index"),
-                    table_filename(nombre_tabla))
-    
+                         key,
+                         index_filename(nombre_tabla, keys[0], "index"),
+                         table_filename(nombre_tabla))
+
     elif index == "rtree":
-        rtree = Rtree(format, 
-                        data["key"],
-                        keys, 
-                        table_filename(nombre_tabla),  
-                        index_filename(nombre_tabla, *keys, "index"))
+        rtree = Rtree(format,
+                      data["key"],
+                      keys,
+                      table_filename(nombre_tabla),
+                      index_filename(nombre_tabla, *keys, "index"))
         if "indexes" not in data:
             data["indexes"] = {}
 
@@ -258,15 +267,16 @@ def create_index(query):
 
     elif index == "btree":
         btree = Btree(format,
-                    keys[0],
-                    index_filename(nombre_tabla, keys[0], "index"),
-                    table_filename(nombre_tabla),
-                    M)
+                      keys[0],
+                      index_filename(nombre_tabla, keys[0], "index"),
+                      table_filename(nombre_tabla),
+                      M)
 
     else:
         print("INDICE NO IMPLEMENTADO AUN")
-    
+
     create_meta(data, nombre_tabla)
+
 
 def aux_select(query):
     print(json.dumps(query, indent=2))
@@ -358,8 +368,10 @@ def aux_select(query):
                         valid = set(hash.range_search(left, right))
                         if cond["op"] == ">":
                             invalid = set(hash.search(left))
-                        else:
+                        elif cond["op"] == ">":
                             invalid = set(hash.search(right))
+                        else:
+                            invalid = set(hash.search(left))
 
                         sets.append(valid - invalid)
 
@@ -381,12 +393,12 @@ def aux_select(query):
 
             elif index == "seq":
                 seq = Sequential(format,
-                            key,
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla))
+                                 key,
+                                 index_filename(nombre_tabla, key, "index"),
+                                 table_filename(nombre_tabla))
 
                 if cond["range_search"]:
-                    print(left,right)
+                    print(left, right)
                     print(seq.search_range(left, right))
                     sets.append(set(seq.search_range(left, right)))
                 else:
@@ -398,6 +410,7 @@ def aux_select(query):
     # Evaluar la expresión booleana
     universe = None
     return evaluate_select(tree, sets, universe)
+
 
 def select(query):
     ans_set = aux_select(query)

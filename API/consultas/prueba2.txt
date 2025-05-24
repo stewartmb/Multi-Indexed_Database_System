@@ -63,14 +63,25 @@ select * from destinos where latitud, longitud in (-25, 130) closest 3;
 select * from destinos where latitud, longitud == [-17.9243, 25.8567];
 
 
+select * from destinos where ciudad < "London" and ciudad > "Liscannor";
+
+select * from destinos where ciudad <= "London" and ciudad >= "Liscannor";
+select * from destinos where ciudad between "Giza" and "Keystone";
+select * from destinos where ciudad == "Berlin";
+select * from destinos where ciudad != "Berlin";
+
+
 select * from destinos where id < 10 and id > 5;
 select * from destinos where id <= 10 and id >= 5;
 select * from destinos where id between 10 and 15;
-select * from destinos where id in (12, 13, 14, 15);
-select * from destinos where id == 5
-select * from destinos where id != 5
+select * from destinos where id == 5;
+select * from destinos where id != 5;
 
 
+
+
+
+select * from destinos where ciudad < "London" and ciudad > "Liscannor";
 
 
 
