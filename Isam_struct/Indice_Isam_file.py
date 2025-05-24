@@ -6,18 +6,53 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 import math
 import heapq
+from sympy import symbols, Eq, solve
 
 # Constantes generales
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de pages y puntero al root siempre sera 0)
 
+def Calculate_M(num_records):
+    """
+    Calcula el valor de M basado en el número de registros.
+    """
+    x = symbols('x')
+    ecuacion = Eq(x**2 * (x-1), num_records * 1.25)
+    soluciones = solve(ecuacion, x)
+    soluciones_reales = [s.evalf() for s in soluciones if s.is_real]
+    m = soluciones_reales[0] if soluciones_reales else None
+    m = round(m) if m is not None else None
+    n = m ** 2
+    if num_records < n:
+        print("El numero de registros es menor que m, se ajustara a m-1")
+        m = m-1
+        n = m ** 2
+    elif num_records >= (m**2*(m-1)):
+        print("El numero de registros es mayor que m, se ajustara a m+1")
+        m = m + 1
+        n = m ** 2
+    else:
+        print("El numero de registros es correcto con m")
+
+    # percentiles para posiciones 
+    lista = []
+    for i in range(n):
+        percentil = i / n
+        pos = round(num_records * percentil)
+        lista.append(pos)
+    print(float(num_records/(m**2*(m-1))))
+    j = m-1
+    o = j-1
+    print(float(num_records/(j**2*(j-1))))
+    print(float(num_records/(o**2*(o-1))))
+    return m, lista
 
 class Index_Page():
-    def __init__(self, leaf=True, M=None , overflow= 0):
+    def __init__(self, leaf=True, M=None):
         self.leaf = leaf
-        self.keys = [None] * (M)
+        self.keys = [None] * (M-1)
         self.childrens = [-1] * M
-        self.overflow = overflow
+        self.father = -1
         self.key_count = 0
         self.M = M
 
@@ -57,7 +92,7 @@ class Index_Page():
                     packed_keys.append(key)
 
         # Prepare all arguments for packing
-        pack_args = [leaf_int] + packed_keys + self.childrens + [self.overflow, self.key_count]
+        pack_args = [leaf_int] + packed_keys + self.childrens + [self.father, self.key_count]
         return struct.pack(indexp_format, *pack_args)
 
     @classmethod
@@ -74,7 +109,7 @@ class Index_Page():
         instance = cls(leaf=bool(unpacked[0]), M=M)
 
         # Handle keys
-        for i in range(M):
+        for i in range(M - 1):
             key_value = unpacked[i + 1]
             if format_key == 'i' or format_key == 'q' or format_key == 'Q':
                 instance.keys[i] = key_value if key_value != -2147483648 else None
@@ -90,10 +125,11 @@ class Index_Page():
         # Handle children and metadata
         children_start = M
         instance.childrens = list(unpacked[children_start:children_start + M])
-        instance.overflow = unpacked[-2]
+        instance.father = unpacked[-2]
         instance.key_count = unpacked[-1]
 
         return instance
+    
 
 def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M, el formato del índice cambie automáticamente
     """
@@ -118,7 +154,7 @@ class ISAM():
         self.indexp_format = get_index_format(max_num_child, self.format_key)    # Formato de la pagina (NODO)
         self.tam_indexp = struct.calcsize(self.indexp_format)        # Tamaño de la página de índice
         self._initialize_files()                                     # Inicializa los archivos de índice y datos
-        self.M = max_num_child  # Orden del árbol B+
+        self.M = max_num_child  
         self.tam_registro = self.RT.size                             # Tamaño del registro
 
 
@@ -330,19 +366,18 @@ class ISAM():
         #         key, offset = struct.unpack(format_temp, data)
         #         print(key, offset, self._read_record(offset))
 
-        # 3. Contruir el índices de primer nivel
+        # 3. Calcula M y lista de posiciones
         size = os.path.getsize(order_file)
         num_records = size / record_size
-        self.M = math.ceil((num_records*2)**(1/3))
+        self.M , lista= Calculate_M(num_records) 
+
+        # generar paginas de data ordenada
+        print(f"Generando paginas de indice con M={self.M} ")
+        
+        for i in 
 
 
 
 
-num_records = 13
-print(math.floor((num_records*2)**(1/3)))
+        
 
-
-
-print(26**(1/3))
-blksize = os.statvfs('/').f_bsize  # Linux/Mac
-print(f"Tamaño del bloque: {blksize} bytes")
