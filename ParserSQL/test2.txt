@@ -1,13 +1,2 @@
-create table images (
-    id int primary key index seq,
-    lat float,
-    long float
-);
-
-create index on images using rtree (lat, long);
-
-insert into images (id, lat, long) values (3, 4.32, 5.423);
-
-select * from images where lat, long between [3, 5] and [3, 8];
-
-select * from images where lat, long in (2, 5) closest 4;
+drop table users;
+drop index rtree on values lat, long on users;

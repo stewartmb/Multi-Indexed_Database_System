@@ -2,7 +2,7 @@ from lark import Lark
 from lark import Transformer
 import json
 
-sql_grammar = """
+sql_grammar = r"""
 ?start: stmt+
 
 stmt: create_stmt ";" 
@@ -11,19 +11,29 @@ stmt: create_stmt ";"
     | delete_stmt ";"
     | index_stmt ";"
     | copy_stmt ";"
+    | drop_index_stmt ";"
+    | drop_table_stmt ";"
 
-create_stmt: "create" "table" NAME "(" create_attr_list ")"
-copy_stmt: "copy" NAME "from" VALUE
-create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index" INDEX] ("," NAME (TYPE | varchar) [ KEY ] ["index" INDEX])*
-select_stmt: "select" (ALL | attr_list) "from" NAME ["where" condition ("and" condition)*]
+create_stmt: "create"i "table"i NAME "(" create_attr_list ")"
+copy_stmt: "copy"i NAME "from"i VALUE
+create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index"i INDEX] ("," NAME (TYPE | varchar) [ KEY ] ["index"i INDEX])*
+select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr]
 attr_list: NAME ("," NAME)*
+drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on" NAME
+drop_table_stmt: "drop"i "table" NAME
 
-index_stmt: "create" "index" "on" NAME "using" INDEX "(" attr_list ")"
+index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")"
 
-insert_stmt: "insert" "into" NAME "(" attr_list ")" "values" "(" value_list ")"
+insert_stmt: "insert"i "into"i NAME "(" attr_list ")" "values"i "(" value_list ")"
 value_list: VALUE ("," VALUE)*
 
-delete_stmt: "delete" "from" NAME "where" condition ("and" condition)*
+delete_stmt: "delete"i "from"i NAME "where"i condition ("and"i condition)*
+
+?expr: expr "or"i expr     -> or_expr
+     | expr "and"i expr    -> and_expr
+     | "not"i expr         -> not_expr
+     | "(" expr ")"
+     | condition
 
 condition: NAME OP VALUE
          | NAME BETWEEN VALUE "and" VALUE
@@ -34,22 +44,53 @@ condition: NAME OP VALUE
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
 VALUE: /[0-9]+(\.[0-9]+)?/ | ESCAPED_STRING
-INDEX: "rtree" | "btree" | "seq" | "isam" | "hash"
-KEY: "primary key"
-BETWEEN: "between"
-CLOSEST: "closest"
+INDEX: "rtree"i | "btree"i | "seq"i | "isam"i | "hash"i
+KEY: "primary key"i
+BETWEEN: "between"i
+CLOSEST: "closest"i
 ALL: "*"
 
-TYPE: "int" | "string" | "float" | "double" | "text" | "bool" | "date" 
-varchar: "varchar" "[" VALUE "]"
+TYPE: "int"i | "string"i | "float"i | "double"i | "text"i | "bool"i | "date"i
+varchar: "varchar"i "[" VALUE "]"
 
 %import common.ESCAPED_STRING
 %import common.WS
 %ignore WS
 """
 
+conditions_map = {}
+condition_expr = ""
+counter = 0
 
 class SQLTransformer(Transformer):
+    # def __init__(self):
+        # super().__init__()
+        # self.counter = [chr(i) for i in range(97, 123)]  # a, b, c, ...
+        # self.conditions_map = {}
+        # self.condition_expr = None
+
+    def label_conditions(self, expr):
+        global counter, conditions_map, condition_expr
+        if isinstance(expr, dict):
+            label = counter
+            counter += 1
+            conditions_map[label] = expr
+            return label
+        elif isinstance(expr, str):
+            return expr
+        elif isinstance(expr, list):
+            return [self.label_conditions(e) for e in expr]
+        elif isinstance(expr, tuple):
+            return tuple(self.label_conditions(e) for e in expr)
+        elif isinstance(expr, (int, float)):
+            return expr
+        else:
+            # Assume it's an expression like a boolean operation string
+            expr_str = str(expr)
+            for k, v in conditions_map.items():
+                expr_str = expr_str.replace(str(v), k)
+            return expr
+
     def start(self, items):
         return items
 
@@ -61,10 +102,25 @@ class SQLTransformer(Transformer):
         return {"action": "create_table", "name": table_name, "data": items[1]}
 
     def select_stmt(self, items):
+        global counter, conditions_map, condition_expr
+
+        attributes = items[0]
         table = str(items[1])
-        if len(items) > 1:
-            return {"action": "select", "table": table, "attr": items[0], "condition": items[2:]}
-        return {"action": "select", "table": table}
+        if len(items) > 2:
+            raw_expr = items[2]
+            labeled_expr = self.label_conditions(raw_expr)
+            condition_expr = labeled_expr
+        ans = {
+            "action": "select",
+            "table": table,
+            "attr": attributes,
+            "eval": condition_expr,
+            "conditions": conditions_map
+        }
+        counter = 0
+        conditions_map = {}
+        condition_expr = None
+        return ans;
 
     def insert_stmt(self, items):
         return {"action": "insert", "table": str(items[0]), "values": items[1:]}
@@ -77,30 +133,50 @@ class SQLTransformer(Transformer):
 
     def copy_stmt(self, items):
         return {"action": "copy", "table": str(items[0]), "from": str(items[1])}
+    
+    def drop_index_stmt(self, items):
+        return {"action": "drop index", "table": items[2], "index": items[0], "attr": items[1]}
+    
+    def drop_table_stmt(self, items):
+        return {"action": "drop table", "table": items[0]}
 
     def condition(self, items):
         if (str(items[2]) == "closest"):
             return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}
         if str(items[1]) == "between":
+            include = True
             if (isinstance(items[0], list)):
-                return {"field": str(items[0]), "range_search": True, "range_start": items[2], "range_end": items[3]}
+                return {"field": str(items[0]), "range_search": True, "range_start": items[2], "range_end": items[3], "include": include}
             else:
-                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3]}
+                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3], "include": include}
         elif str(items[1]) == "==":
             return {"field": str(items[0]), "range_search": False, "op": str(items[1]), "value": items[2]}
         else:
             range_start = "-infinity"
             range_end =  "infinity"
+            include = False
             if str(items[1]) == ">":
-                range_start = str(int(items[2])+1)
+                range_start = items[2]
             elif str(items[1]) == "<":
-                range_end = str(int(items[2])-1)
+                range_end = items[2]
             elif str(items[1]) == "<=":
                 range_end = items[2]
+                include = True
             elif str(items[1]) == ">=":
                 range_start = items[2]
+                include = True
 
-            return {"field": str(items[0]), "range_search": True, "range_start": range_start, "range_end": range_end}
+            return {"field": str(items[0]), "range_search": True, "range_start": range_start, "range_end": range_end, "include": include}
+
+
+    def and_expr(self, items):
+        return f"({self.label_conditions(items[0])} and {self.label_conditions(items[1])})"
+
+    def or_expr(self, items):
+        return f"({self.label_conditions(items[0])} or {self.label_conditions(items[1])})"
+
+    def not_expr(self, items):
+        return f"(not {self.label_conditions(items[0])})"
 
     def create_attr_list(self, items):
         result = {}
@@ -161,6 +237,7 @@ class SQLTransformer(Transformer):
 
 if __name__ == "__main__":
     parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
+    # parser = Lark(sql_grammar, start="start", parser="lalr")
 
     # Example: read SQL statements from a file
     with open("ParserSQL/test2.txt", "r") as f:
@@ -168,5 +245,6 @@ if __name__ == "__main__":
     try:
         result = parser.parse(sql_code)
         print(json.dumps(result, indent=4))
+        # print(result.pretty())
     except Exception as e:
         print("Error parsing input:", e)
