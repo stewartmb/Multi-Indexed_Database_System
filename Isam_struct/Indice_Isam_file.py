@@ -41,10 +41,6 @@ def Calculate_M(num_records):
         pos = round(num_records * percentil)
         lista.append(pos)
     print(float(num_records/(m**2*(m-1))))
-    j = m-1
-    o = j-1
-    print(float(num_records/(j**2*(j-1))))
-    print(float(num_records/(o**2*(o-1))))
     return m, lista
 
 class Index_Page():
@@ -52,7 +48,7 @@ class Index_Page():
         self.leaf = leaf
         self.keys = [None] * (M-1)
         self.childrens = [-1] * M
-        self.father = -1
+        self.next = -1 
         self.key_count = 0
         self.M = M
 
@@ -92,7 +88,7 @@ class Index_Page():
                     packed_keys.append(key)
 
         # Prepare all arguments for packing
-        pack_args = [leaf_int] + packed_keys + self.childrens + [self.father, self.key_count]
+        pack_args = [leaf_int] + packed_keys + self.childrens + [self.next, self.key_count]
         return struct.pack(indexp_format, *pack_args)
 
     @classmethod
@@ -125,7 +121,7 @@ class Index_Page():
         # Handle children and metadata
         children_start = M
         instance.childrens = list(unpacked[children_start:children_start + M])
-        instance.father = unpacked[-2]
+        instance.next = unpacked[-2]
         instance.key_count = unpacked[-1]
 
         return instance
@@ -135,7 +131,7 @@ def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M,
     """
     Genera el formato del índice dinámicamente basado en M.
     """
-    format = f'b{(M) * format_key}{M * "i"}ii'
+    format = f'b{(M-1) * format_key}{M * "i"}ii'
     return format
 
 
@@ -251,7 +247,7 @@ class ISAM():
         num_pages += 1
         self._write_header(num_pages, num_over)  # Actualiza el encabezado del archivo de índice
 
-    ### FUNCIONES DE MANEJO DEL ISAM ###
+    ### FUNCIONES PARA GENERAR LOS INDICES DEL ISAM ###
 
     ## MERGE SORT EXTERNO ###
     def external_merge_sort_multi_temp(self, file_path, record_size, format_temp, max_records_in_memory=10):
@@ -342,7 +338,6 @@ class ISAM():
         format_temp = f'{self.format_key}i'  # Formato (key, offset)
         record_size = struct.calcsize(format_temp)
         order_file = 'temp.bin'
-        num_records
         # 1. Escribir datos (key, offset) en temp.bin
         with open(order_file, 'wb') as f:
             for i in range(size):
@@ -357,24 +352,116 @@ class ISAM():
         self.external_merge_sort_multi_temp(order_file, record_size, format_temp)
 
         # 3. Verificación
-        # print("Leyendo temp.bin ordenado:")
-        # file_size = os.path.getsize(order_file)
-        # total_records = file_size // record_size
-        # with open(order_file, 'rb') as f:
-        #     for i in range(total_records):
-        #         data = f.read(record_size)
-        #         key, offset = struct.unpack(format_temp, data)
-        #         print(key, offset, self._read_record(offset))
+        print("Leyendo temp.bin ordenado:")
+        file_size = os.path.getsize(order_file)
+        total_records = file_size // record_size
+        with open(order_file, 'rb') as f:
+            for i in range(total_records):
+                data = f.read(record_size)
+                key, offset = struct.unpack(format_temp, data)
+                print(key, offset, self._read_record(offset))
 
         # 3. Calcula M y lista de posiciones
         size = os.path.getsize(order_file)
-        num_records = size / record_size
-        self.M , lista= Calculate_M(num_records) 
+        num_records = size // record_size
+        print(f"Total de registros: {num_records}")
+        self.M , posiciones= Calculate_M(num_records)
+        self.indexp_format = get_index_format(self.M, self.format_key)
+        self.tam_indexp = struct.calcsize(self.indexp_format)
 
-        # generar paginas de data ordenada
+        print(f"Valor de M calculado: {self.M}")
+        lista = posiciones.copy()
+        print("Lista de posiciones:", lista)
+        # 4. Generar paginas (HOJAS) de data ordenada
         print(f"Generando paginas de indice con M={self.M} ")
+        print()
+        print("=== Generando hojas ===")
+        with open(order_file, 'rb') as f:
+            limit = lista.pop(0)
+            limit = lista.pop(0) 
+            page = Index_Page(leaf=True, M=self.M)
+            for i in range(num_records):
+                data = f.read(record_size)
+                key, pos = struct.unpack(format_temp, data)
+                if i == num_records -1:
+                    page.keys[page.key_count] = key
+                    page.childrens[page.key_count] = pos
+                    self._add_index_page(page)
+                # Si la lista de posiciones está vacía, crear una nueva página
+                if i == limit and i != 0 :
+                    self._add_index_page(page)
+                    page = Index_Page(leaf=True, M=self.M)
+                    limit = lista.pop(0) if lista else None
+                # Agregar clave y offset a la página
+                page.keys[page.key_count] = key
+                page.childrens[page.key_count] = pos
+                page.key_count += 1
+
+        print("Leyendo index_file generado:")
+        num_pages_data, num_over = self._read_header()
+        for i in range(num_pages_data):
+            page = self._read_index_page(i)
+            print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
         
-        for i in 
+        # 5. Generar indices de primer nivel 
+        print("=== Generando indices de primer nivel ===")
+        lista = posiciones.copy()
+        with open(order_file, 'rb') as f:
+            i = 1
+            page = Index_Page(leaf=False, M=self.M)
+            page.childrens[0] = 0  
+            pos_page, _ = self._read_header()
+            page_root = Index_Page(leaf=False, M=self.M)
+            page_root.childrens[0] = pos_page
+            for num in range(1,len(lista)):
+                if i % self.M != 0 :
+                    # print(lista[num], "Nueva pagina")
+                    f.seek(lista[num] * record_size)
+                    data = f.read(record_size)
+                    key, pos = struct.unpack(format_temp, data)
+                    # print( f"Agregando clave {key} y posicion {pos}")
+                    page.keys[page.key_count] = key
+                    page.childrens[page.key_count+1] = i
+                    page.key_count += 1
+                else:
+                    # print (page.keys , page.childrens, page.next, "|" ,page.key_count)
+                    self._add_index_page(page)
+                    pos_page,_ = self._read_header()
+                    f.seek(lista[num] * record_size)
+                    data = f.read(record_size)
+                    key, pos = struct.unpack(format_temp, data)
+                    page = Index_Page(leaf=False, M=self.M)
+                    page.childrens[0] = i
+                    # print (page_root.keys , page_root.childrens, page_root.next, "|" ,page_root.key_count , "page root")
+                    page_root.keys[page_root.key_count] = key
+                    page_root.childrens[page_root.key_count+1] = pos_page
+                    page_root.key_count += 1
+
+                i += 1
+            
+            if page_root.key_count == self.M - 1:
+                print (page_root.keys , page_root.childrens, page_root.next, "|" ,page_root.key_count , "page root")
+                pos_root = self._read_header()[0]
+                self._add_index_page(page_root)
+        
+        print ("leyendo indice de primer nivel")
+        num_pages, num_over = self._read_header()
+        for i in range(num_pages_data, num_pages-1):
+            page = self._read_index_page(i)
+            print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+        
+        print("=== Generando root ===")
+        page = self._read_index_page(num_pages-1)
+        print(f"Root: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+
+
+    ### FUNCIONES DEL ISAM ###
+    
+
+    
+    
+
+
 
 
 
