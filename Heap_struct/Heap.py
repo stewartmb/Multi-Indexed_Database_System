@@ -12,6 +12,7 @@ class Heap:
         self.filename = data_file_name
         self.RT = RegistroType(table_format, key)
         self.record_total_size = self.RT.size + 1  # +1 byte para el flag de eliminado
+        self.key = key
 
         if not os.path.exists(self.filename):
             with open(self.filename, 'wb') as f:
@@ -78,4 +79,25 @@ class Heap:
                     continue
                 registro = self.RT.from_bytes(data)
                 registros.append(registro)
+        return registros
+
+    def find(self, left, right):
+        """
+        Busca registros en el rango [left, right] (incluyendo ambos extremos).
+        """
+        registros = []
+        count = self._read_header()
+
+        with open(self.filename, 'rb') as f:
+            f.seek(self.HEADER_SIZE)
+            for i in range(count):
+                data = f.read(self.RT.size)
+                flag = f.read(1)
+                if not data or not flag:
+                    break
+                if flag == b'\x01':
+                    continue
+                registro = self.RT.from_bytes(data)
+                if left <= self.RT.get_key(registro) <= right:
+                    registros.append(i)
         return registros
