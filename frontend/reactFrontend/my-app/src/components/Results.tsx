@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 interface Props {
     data: any[] | null;
     error: string | null;
+    history: string[];
 }
 
-const Results: React.FC<Props> = ({ data, error }) => {
+const Results: React.FC<Props> = ({ data, error, history }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'explain' | 'history'>('data');
 
     const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
@@ -79,8 +80,18 @@ const Results: React.FC<Props> = ({ data, error }) => {
                 )}
 
                 {activeTab === 'history' && (
-                    <div className="text-gray-500 italic">
-                        Query history will appear here
+                    <div className="text-sm text-gray-800">
+                        {history.length === 0 ? (
+                            <p className="italic text-gray-500">No queries run yet.</p>
+                        ) : (
+                            <ul className="list-decimal pl-5 space-y-1">
+                                {history.map((query, idx) => (
+                                    <li key={idx} className="bg-white p-2 rounded border border-gray-200">
+                                        <code className="text-blue-600">{query}</code>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 )}
             </div>
