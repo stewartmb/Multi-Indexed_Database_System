@@ -992,11 +992,7 @@ class RTreeFile:
             lista con las registros resultados de la busqueda
         """
         positions = self.aux_ksearch(k, RTreeFile.Point(query))
-        records = []
-        for pos in positions:
-            record = self.HEAP.read(pos)
-            records.append(record)
-        return records
+        return positions
 
     def __range_search__(self, node_pos, min_coords, max_coords, ans):
         """
@@ -1037,11 +1033,7 @@ class RTreeFile:
             lista con las registros resultados de la busqueda
         """
         positions = self.aux_range_search(RTreeFile.Point(coords_start), RTreeFile.Point(coords_end))
-        records = []
-        for pos in positions:
-            record = self.HEAP.read(pos)
-            records.append(record)
-        return records
+        return positions
 
     def __search__(self, node_pos, point, ans):
         """
@@ -1080,11 +1072,7 @@ class RTreeFile:
             lista con las registros resultados de la busqueda
         """
         positions = self.aux_search(RTreeFile.Point(coords=query))
-        records = []
-        for pos in positions:
-            record = self.HEAP.read(pos)
-            records.append(record)
-        return records
+        return positions
 
     def print_tree(self, node_pos=None, level=0):
         """

@@ -1,28 +1,5 @@
 [
     {
-        "users": {
-            "key": "id",
-            "columns": {
-                "id": {
-                    "type": "int",
-                    "index": null
-                },
-                "name": {
-                    "type": "varchar[20]",
-                    "index": "hash"
-                },
-                "nacimiento": {
-                    "type": "varchar[10]",
-                    "index": "seq"
-                },
-                "email": {
-                    "type": "varchar[50]",
-                    "index": null
-                }
-            }
-        }
-    },
-    {
         "locations": {
             "key": "id",
             "columns": {
@@ -52,6 +29,29 @@
                     "latitude",
                     "longitude"
                 ]
+            }
+        }
+    },
+    {
+        "users": {
+            "key": "id",
+            "columns": {
+                "id": {
+                    "type": "int",
+                    "index": null
+                },
+                "name": {
+                    "type": "varchar[20]",
+                    "index": "hash"
+                },
+                "nacimiento": {
+                    "type": "varchar[10]",
+                    "index": "btree"
+                },
+                "email": {
+                    "type": "varchar[50]",
+                    "index": null
+                }
             }
         }
     }
