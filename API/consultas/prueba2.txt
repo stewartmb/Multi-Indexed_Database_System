@@ -1,6 +1,6 @@
 create table destinos (
     id int primary key index hash,
-    name varchar[25],
+    name varchar[25] index seq,
     latitud double,
     longitud double,
     ciudad varchar[20] index btree,
@@ -58,13 +58,6 @@ INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("45", "
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("46", "Victoria Falls", "-17.9243", "25.8567", "Livingstone", "Zambia");
 
 
-
-
-
-SELECT * FROM destinos WHERE latitud, longitud between [30, "-100"] and [45, 4];
-
-select * from destinos where latitud, longitud in (12, 14) closest 3;
-
-select * from destinos where latitud, longitud in (40, 14) closest 3;
-
+select * from destinos where latitud, longitud between [30, "-100"] and [45, 4];
 select * from destinos where latitud, longitud in ("-25", 130) closest 3;
+select * from destinos where latitud, longitud == [1, 1];

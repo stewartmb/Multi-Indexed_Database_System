@@ -13,18 +13,25 @@ from BPtree_struct.Indice_BPTree_file import BPTree as Btree
 from Sequential_Struct.Indice_Sequential_file import Sequential
 from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 
-
 M = 10
-
-
 
 def to_struct(type):
     varchar_match = re.match(r"varchar\[(\d+)\]", type)
 
     if type == "int":
         return "i"
+    if type == "float":
+        return "f"
     if type == "double":
         return "d"
+    if type == "date":
+        return "10s"
+    if type == "long":
+        return "q"
+    if type == "ulong":
+        return "Q"
+    if type == "bool":
+        return "?"
     elif varchar_match:
         size = varchar_match.group(1)  # Extraemos el tamaño entre los corchetes
         return f"{size}s"
@@ -72,7 +79,13 @@ def evaluate_select(node, sets, universe):
             raise ValueError("Unknown operator: " + op)
 
 def cast(value, type):
-    if type == "i" or type == "q":
+    if type == "?":
+        if value == 1:
+            return 1
+        elif value == -1:
+            return 0
+        return int(value)
+    if type == "i" or type == "q" or type == "Q":
         if value == 1:
             return int(1e100)
         elif value == -1:
@@ -105,7 +118,7 @@ def convert(query):
     elif query["action"] == "copy":
         print("B")
     else:
-        print("error")
+        print("error: accion no soportada")
 
 def create_table(query):
     # crear tabla y añadir a metadata
@@ -177,7 +190,7 @@ def insert(query):
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla))
 
-            seq.add(position)
+            seq.add(pos_new_record=position)
 
         elif index == "btree":
             btree = Btree(format,
@@ -242,13 +255,21 @@ def create_index(query):
             data["indexes"] = {}
 
         data["indexes"]["rtree"] = keys
-    
+
+    elif index == "btree":
+        btree = Btree(format,
+                    keys[0],
+                    index_filename(nombre_tabla, keys[0], "index"),
+                    table_filename(nombre_tabla),
+                    M)
+
     else:
         print("INDICE NO IMPLEMENTADO AUN")
     
     create_meta(data, nombre_tabla)
 
 def aux_select(query):
+    print(json.dumps(query, indent=2))
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
@@ -272,7 +293,6 @@ def aux_select(query):
         key = cond["field"]
 
         if isinstance(key, list):
-
             rtree = Rtree(format,
                           data["key"],
                           key,
@@ -289,11 +309,18 @@ def aux_select(query):
 
                 sets.append(set(rtree.range_search(start, end)))
             else:
-                point = cond["point"]
-                for i in range(len(point)):
-                    point[i] = cast(point[i], format[key[i]])
+                if "knn" in cond:
+                    point = cond["point"]
+                    for i in range(len(point)):
+                        point[i] = cast(point[i], format[key[i]])
 
-                sets.append(set(rtree.ksearch(int(cond["knn"]), point)))
+                    sets.append(set(rtree.ksearch(int(cond["knn"]), point)))
+                else:
+                    point = cond["point"]
+                    for i in range(len(point)):
+                        point[i] = cast(point[i], format[key[i]])
+
+                    sets.append(set(rtree.search(point)))
 
 
         else:
@@ -340,6 +367,17 @@ def aux_select(query):
                     sets.append(set(btree.search_range(left, right)))
                 else:
                     sets.append(set(btree.search(val)))
+
+            elif index == "seq":
+                seq = Sequential(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla))
+
+                if cond["range_search"]:
+                    sets.append(set(seq.search_range(left, right)))
+                else:
+                    sets.append(set(seq.search(val)))
 
     for i in range(len(sets)):
         print(i, ":", sets[i])
