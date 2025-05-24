@@ -5,8 +5,8 @@ __pycache__/
 *.pyc
 
 # Tables
-Schema/*.bin
-Schema/*.meta
+/Schema/*.bin
+/Schema/*.meta
 
 # PyCharm files
 .idea/
@@ -80,5 +80,3 @@ venv.bak/
 
 # MacOS files
 .DS_Store
-
-
