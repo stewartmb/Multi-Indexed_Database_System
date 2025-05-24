@@ -144,10 +144,7 @@ class SQLTransformer(Transformer):
         if (str(items[2]) == "closest"):
             return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}
         if str(items[1]) == "between":
-            if (isinstance(items[0], list)):
-                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3]}
-            else:
-                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3]}
+                return {"field": items[0], "range_search": True, "op": "between", "range_start": items[2], "range_end": items[3]}
         elif str(items[1]) == "==":
             return {"field": items[0], "range_search": False, "op": str(items[1]), "value": items[2]}
         else:
