@@ -13,6 +13,7 @@ stmt: create_stmt ";"
     | copy_stmt ";"
     | drop_index_stmt ";"
     | drop_table_stmt ";"
+    | set_stmt ";"
 
 create_stmt: "create"i "table"i NAME "(" create_attr_list ")"
 copy_stmt: "copy"i NAME "from"i VALUE
@@ -21,6 +22,7 @@ select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr]
 attr_list: NAME ("," NAME)*
 drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on" NAME
 drop_table_stmt: "drop"i "table" NAME
+set_stmt: "set"i INDEX "params"i "(" value_list ")"
 
 index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")"
 
@@ -140,6 +142,9 @@ class SQLTransformer(Transformer):
     def drop_table_stmt(self, items):
         return {"action": "drop table", "table": items[0]}
 
+    def set_stmt(self, items):
+        return {"action": "set", "index": items[0], "params": items[1]}
+    
     def condition(self, items):
         if (str(items[2]) == "closest"):
             return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}

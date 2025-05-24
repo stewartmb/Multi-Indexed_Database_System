@@ -76,12 +76,13 @@ select * from destinos where id <= 10 and id >= 5;
 select * from destinos where id between 10 and 15;
 select * from destinos where id == 5;
 select * from destinos where id != 5;
+select * from destinos where (not (id > 30 or id < 10)) and id != 25;
 
 
-
-
-
-select * from destinos where ciudad < "London" and ciudad > "Liscannor";
-
+select * from destinos where name < "Great Wall" and name > "Eiffel Tower";
+select * from destinos where name <= "Great Wall" and name >= "Eiffel Tower";
+select * from destinos where name between "Eiffel Tower" and "Great Wall";
+select * from destinos where name == "Big Ben";
+select * from destinos where name != "Big Ben";
 
 
