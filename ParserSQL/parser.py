@@ -144,29 +144,25 @@ class SQLTransformer(Transformer):
         if (str(items[2]) == "closest"):
             return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}
         if str(items[1]) == "between":
-            include = True
-            if (isinstance(items[0], list)):
-                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3], "include": include}
-            else:
-                return {"field": items[0], "range_search": True, "range_start": items[2], "range_end": items[3], "include": include}
+                return {"field": items[0], "range_search": True, "op": "between", "range_start": items[2], "range_end": items[3]}
         elif str(items[1]) == "==":
             return {"field": items[0], "range_search": False, "op": str(items[1]), "value": items[2]}
         else:
             range_start = -1
             range_end = 1
-            include = False
             if str(items[1]) == ">":
                 range_start = items[2]
             elif str(items[1]) == "<":
                 range_end = items[2]
             elif str(items[1]) == "<=":
                 range_end = items[2]
-                include = True
             elif str(items[1]) == ">=":
                 range_start = items[2]
-                include = True
+            elif str(items[1] == "!="):
+                val = items[2]
+                return {"field": items[0], "range_search": True, "op": items[1], "range_start": range_start, "range_end": range_end, "value": val}
 
-            return {"field": items[0], "range_search": True, "range_start": range_start, "range_end": range_end, "include": include}
+            return {"field": items[0], "range_search": True, "op": items[1], "range_start": range_start, "range_end": range_end}
 
 
     def and_expr(self, items):

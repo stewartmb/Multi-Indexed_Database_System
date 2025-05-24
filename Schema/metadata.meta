@@ -1,0 +1,43 @@
+[
+    {
+        "airports": {
+            "key": "id",
+            "columns": {
+                "id": {
+                    "type": "varchar[3]",
+                    "index": null
+                },
+                "name": {
+                    "type": "varchar[15]",
+                    "index": null
+                },
+                "city": {
+                    "type": "varchar[15]",
+                    "index": "hash"
+                },
+                "state": {
+                    "type": "varchar[15]",
+                    "index": null
+                },
+                "country": {
+                    "type": "varchar[15]",
+                    "index": null
+                },
+                "latitude": {
+                    "type": "double",
+                    "index": "rtree"
+                },
+                "longitude": {
+                    "type": "double",
+                    "index": "rtree"
+                }
+            },
+            "indexes": {
+                "rtree": [
+                    "latitude",
+                    "longitude"
+                ]
+            }
+        }
+    }
+]
