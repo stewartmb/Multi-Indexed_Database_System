@@ -316,7 +316,7 @@ def aux_select(query):
 
                     sets.append(set(rtree.ksearch(int(cond["knn"]), point)))
                 else:
-                    point = cond["point"]
+                    point = cond["value"]
                     for i in range(len(point)):
                         point[i] = cast(point[i], format[key[i]])
 
@@ -352,7 +352,18 @@ def aux_select(query):
                             table_filename(nombre_tabla))
 
                 if cond["range_search"]:
-                    sets.append(set(hash.range_search(left, right)))
+                    if cond["op"] != ">" and cond["op"] != "<":
+                        sets.append(set(hash.range_search(left, right)))
+                    else:
+                        valid = set(hash.range_search(left, right))
+                        if cond["op"] == ">":
+                            invalid = set(hash.search(left))
+                        else:
+                            invalid = set(hash.search(right))
+
+                        sets.append(valid - invalid)
+
+
                 else:
                     sets.append(set(hash.search(val)))
 
@@ -375,6 +386,8 @@ def aux_select(query):
                             table_filename(nombre_tabla))
 
                 if cond["range_search"]:
+                    print(left,right)
+                    print(seq.search_range(left, right))
                     sets.append(set(seq.search_range(left, right)))
                 else:
                     sets.append(set(seq.search(val)))
@@ -383,7 +396,7 @@ def aux_select(query):
         print(i, ":", sets[i])
 
     # Evaluar la expresión booleana
-    universe = set(range(len(sets)))
+    universe = None
     return evaluate_select(tree, sets, universe)
 
 def select(query):
