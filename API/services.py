@@ -314,6 +314,11 @@ def aux_select(query):
 
     expr = str(query["eval"])
     tokens = re.findall(r'\(|\)|\d+|and|or|not', expr)
+
+    calc_universe = False
+    if "not" in tokens:
+        calc_universe = True
+
     tree = parse_select(tokens)
     sets = []
 
@@ -388,7 +393,7 @@ def aux_select(query):
                         elif cond["op"] == "<":
                             invalid = set(hash.search(right))
                         else:
-                            curr = left #TODO: ARREGLAR AL CAMBIAR PARSER
+                            curr = cond["value"]
                             invalid = set(hash.search(curr))
 
                         sets.append(valid - invalid)
@@ -414,7 +419,7 @@ def aux_select(query):
                         elif cond["op"] == "<":
                             invalid = set(btree.search(right))
                         else:
-                            curr = left #TODO: ARREGLAR AL CAMBIAR PARSER
+                            curr = cond["value"]
                             invalid = set(btree.search(curr))
 
                         sets.append(valid - invalid)
@@ -428,17 +433,33 @@ def aux_select(query):
                                  table_filename(nombre_tabla))
 
                 if cond["range_search"]:
-                    print(left, right)
-                    print(seq.search_range(left, right))
-                    sets.append(set(seq.search_range(left, right)))
+                    if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
+                        sets.append(set(seq.search_range(left, right)))
+                    else:
+                        valid = set(seq.search_range(left, right))
+                        if cond["op"] == ">":
+                            invalid = set(seq.search(left))
+                        elif cond["op"] == "<":
+                            invalid = set(seq.search(right))
+                        else:
+                            curr = cond["value"]
+                            invalid = set(seq.search(curr))
+
+                        sets.append(valid - invalid)
                 else:
                     sets.append(set(seq.search(val)))
+
 
     for i in range(len(sets)):
         print(i, ":", sets[i])
 
     # Evaluar la expresión booleana
     universe = None
+    if calc_universe:
+        heap = Heap(format,
+                    data["key"],
+                    table_filename(query["table"]))
+        universe = set(heap.get_all())
     return evaluate_select(tree, sets, universe)
 
 
