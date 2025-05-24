@@ -5,8 +5,9 @@ create table users (
     email varchar[50]
 );
 
+insert into users (id, name, nacimiento, email) values (100, "ZUMBA", "2001-05-14", "abc@utec.edu.pe");
 insert into users (id, name, nacimiento, email) values (101, "Spaghetti", "2001-05-14", "abc@utec.edu.pe");
-insert into users (id, name, nacimiento, email) values (102, "Snake", "1999-11-02", "def@utec.edu.pe");
+insert into users (id, name, nacimiento, email) values (102, "Albert", "1999-11-02", "def@utec.edu.pe");
 insert into users (id, name, nacimiento, email) values (103, "PobreSQL", "2000-07-21", "ghi@utec.edu.pe");
 insert into users (id, name, nacimiento, email) values (104, "Shakespeare", "1998-04-26", "jkl@utec.edu.pe");
 insert into users (id, name, nacimiento, email) values (105, "Miraflores", "2002-03-10", "mno@utec.edu.pe");
@@ -15,5 +16,12 @@ insert into users (id, name, nacimiento, email) values (107, "Minecraft", "2001-
 insert into users (id, name, nacimiento, email) values (108, "Elon Musk", "1997-08-08", "vwx@utec.edu.pe");
 insert into users (id, name, nacimiento, email) values (109, "Papa Francisco", "2000-10-05", "yza@utec.edu.pe");
 insert into users (id, name, nacimiento, email) values (110, "Kilobyte", "1999-02-19", "bcd@utec.edu.pe");
+insert into users (id, name, nacimiento, email) values (111, "Zettabyte", "1999-02-19", "efg@utec.edu.pe");
 
-select * from users where id == "101";
+
+
+SELECT * FROM users WHERE nacimiento < "2000-01-01";
+SELECT * FROM users WHERE (id > 102 and id < 109) and name > "P";
+
+SELECT * FROM users WHERE email > "v";
+

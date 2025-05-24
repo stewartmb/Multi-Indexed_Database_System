@@ -152,8 +152,8 @@ class SQLTransformer(Transformer):
         elif str(items[1]) == "==":
             return {"field": str(items[0]), "range_search": False, "op": str(items[1]), "value": items[2]}
         else:
-            range_start = "-infinity"
-            range_end =  "infinity"
+            range_start = -1
+            range_end = 1
             include = False
             if str(items[1]) == ">":
                 range_start = items[2]
@@ -230,6 +230,9 @@ class SQLTransformer(Transformer):
 
     def VALUE(self, tok):
         return tok.value.strip('"')  # remove quotes if present
+
+    def ALL(self, tok):
+        return str(tok)
 
     def varchar(self, items):
         return f"varchar[{items[0]}]"

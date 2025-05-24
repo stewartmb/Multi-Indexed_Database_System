@@ -1,0 +1,18 @@
+create table destinos (
+    id int primary key index hash,
+    name varchar[25],
+    latitud double,
+    longitud double,
+    ciudad varchar[20] index btree,
+    pais varchar[20] index btree
+);
+
+create index on destinos using rtree(latitud, longitud);
+
+INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES (1, "Eiffel Tower", "48.8584", "2.2945", "Paris", "France");
+INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES (2, "Statue of Liberty", "40.6892", "-74.0445", "New York", "USA");
+
+
+SELECT * FROM destinos WHERE latitud, longitud between [30, "-100"] and [45, 4];
+
+

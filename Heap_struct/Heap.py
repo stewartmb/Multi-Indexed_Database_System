@@ -81,7 +81,7 @@ class Heap:
                 registros.append(registro)
         return registros
 
-    def find(self, left, right):
+    def search(self, left, right):
         """
         Busca registros en el rango [left, right] (incluyendo ambos extremos).
         """
@@ -100,4 +100,23 @@ class Heap:
                 registro = self.RT.from_bytes(data)
                 if left <= self.RT.get_key(registro) <= right:
                     registros.append(i)
+        return registros
+
+    def get_all(self):
+        """
+        Busca registros en el rango [left, right] (incluyendo ambos extremos).
+        """
+        registros = []
+        count = self._read_header()
+
+        with open(self.filename, 'rb') as f:
+            f.seek(self.HEADER_SIZE)
+            for i in range(count):
+                data = f.read(self.RT.size)
+                flag = f.read(1)
+                if not data or not flag:
+                    break
+                if flag == b'\x01':
+                    continue
+                registros.append(i)
         return registros

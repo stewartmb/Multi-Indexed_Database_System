@@ -36,7 +36,7 @@ def parse_select(tokens: list):
     def helper(pos):
         if tokens[pos] == '(':
             pos += 1
-            if tokens[pos] == 'NOT':
+            if tokens[pos] == 'not':
                 op = tokens[pos]
                 pos += 1
                 operand, pos = helper(pos)
@@ -61,18 +61,37 @@ def evaluate_select(node, sets, universe):
         return sets[node]
     elif isinstance(node, tuple):
         op = node[0]
-        if op == 'NOT':
+        if op == 'not':
             child = evaluate_select(node[1], sets, universe)
             return universe - child
-        elif op == 'AND':
+        elif op == 'and':
             return evaluate_select(node[1], sets, universe) & evaluate_select(node[2], sets, universe)
-        elif op == 'OR':
+        elif op == 'or':
             return evaluate_select(node[1], sets, universe) | evaluate_select(node[2], sets, universe)
         else:
             raise ValueError("Unknown operator: " + op)
 
+def cast(value, type):
+    if type == "i" or type == "q":
+        if value == 1:
+            return int(1e100)
+        elif value == -1:
+            return int(-1e100)
+        return int(value)
+    elif type == "d" or type == "f":
+        return float(value)
+    elif type[-1] == "s":
+        if value == 1:
+            return "\U0010FFFF"*256
+        elif value == -1:
+            return ""
+        return str(value)
+    else:
+        print("ERROR: tipo no soportado")
+        return None
+
 def convert(query):
-    print(json.dumps(query, indent=2))
+    #print(json.dumps(query, indent=2))
     if query["action"] == "create_table":
         create_table(query)
     elif query["action"] == "insert":
@@ -161,8 +180,6 @@ def insert(query):
             seq.add(position)
 
         elif index == "btree":
-            print("OLA soy un btree")
-            print()
             btree = Btree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
@@ -231,95 +248,109 @@ def create_index(query):
     
     create_meta(data, nombre_tabla)
 
-
-def select(query):
-    # TODO: TEMPORAL BEGIN
-    query = {
-        "action": "select",
-        "table": "users",
-        "attr": "*",
-        "operations": "(0 AND ((1 OR (NOT 3)) AND (NOT 2)))",
-        "conditions": [
-            {
-                "field": "id",
-                "range_search": True,
-                "range_start": 103,
-                "range_end": 10000
-            },
-            {
-                "field": "name",
-                "range_search": True,
-                "range_start": "L",
-                "range_end": '\U0010FFFF'*256
-            },
-            {
-                "field": "name",
-                "range_search": True,
-                "range_start": "",
-                "range_end": "M"
-            },
-            {
-                "field": "nacimiento",
-                "range_search": True,
-                "range_start": "",
-                "range_end": "2000-01-01"
-            },
-          ]
-    }
-    #TODO: TEMPORAL END
-    expr = query["operations"]
-    tokens = re.findall(r'\(|\)|\d+|AND|OR|NOT', expr)
-    tree = parse_select(tokens)
-    sets = []
+def aux_select(query):
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
 
-    print(query["conditions"])
-    for condition in query["conditions"]:
-        key = condition["field"]
-        index = data["columns"][key]["index"]
+    if query["eval"] is None:
+        heap = Heap(format,
+                    data["key"],
+                    table_filename(query["table"]))
 
-        if index == None:
-            heap = Heap(format,
-                        data["key"],
-                        table_filename(nombre_tabla))
+        return set(heap.get_all())
 
-            if condition["range_search"]:
-                sets.append(set(heap.find(condition["range_start"], condition["range_end"])))
-            else:
-                sets.append(set(heap.find(condition["value"], condition["value"])))
-        elif index == "hash":
-            hash = Hash(format,
-                        key,
-                        index_filename(nombre_tabla, key, "buckets"),
-                        index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla))
+    expr = str(query["eval"])
+    tokens = re.findall(r'\(|\)|\d+|and|or|not', expr)
+    tree = parse_select(tokens)
+    sets = []
 
-            if condition["range_search"]:
-                sets.append(set(hash.range_search(condition["range_start"], condition["range_end"])))
-            else:
-                sets.append(set(hash.search(condition["value"])))
+    for condition in query["conditions"].keys():
+        cond = query["conditions"][condition]
+        key = cond["field"]
 
-        elif index == "btree":
-            btree = Btree(format,
-                          key,
-                          index_filename(nombre_tabla, key, "index"),
+        if key[0] == "[":
+            start = cond["range_start"]
+            end = cond["range_end"]
+
+            rtree_keys = key[1:-1].split(",")
+            for i in range(len(rtree_keys)):
+                rtree_keys[i] = rtree_keys[i].strip("' ")
+
+
+
+            for i in range(len(start)):
+                start[i] = cast(start[i], format[rtree_keys[i]])
+                end[i] = cast(end[i], format[rtree_keys[i]])
+
+
+            print("start", start)
+
+            print("Rtree keys", rtree_keys)
+            rtree = Rtree(format,
+                          data["key"],
+                          rtree_keys,
                           table_filename(nombre_tabla),
-                          M)
+                          index_filename(nombre_tabla, *rtree_keys, "index"))
 
-            if condition["range_search"]:
-                sets.append(set(btree.search_range(condition["range_start"], condition["range_end"])))
+            sets.append(set(rtree.range_search(start, end)))
+
+        else:
+            index = data["columns"][key]["index"]
+
+            left = None
+            right = None
+            val = None
+            if cond["range_search"]:
+                left = cast(cond["range_start"], format[key])
+                right = cast(cond["range_end"], format[key])
             else:
-                sets.append(set(btree.search(condition["value"])))
+                val = cast(cond["value"], format[key])
+
+            if index == None:
+                heap = Heap(format,
+                            cond["field"],
+                            table_filename(nombre_tabla))
+
+                print(left, right, val)
+                if cond["range_search"]:
+                    sets.append(set(heap.search(left, right)))
+                else:
+                    sets.append(set(heap.search(val, val)))
+            elif index == "hash":
+                hash = Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla))
+
+                if cond["range_search"]:
+                    sets.append(set(hash.range_search(left, right)))
+                else:
+                    sets.append(set(hash.search(val)))
+
+            elif index == "btree":
+                btree = Btree(format,
+                              key,
+                              index_filename(nombre_tabla, key, "index"),
+                              table_filename(nombre_tabla),
+                              M)
+
+                if cond["range_search"]:
+                    sets.append(set(btree.search_range(left, right)))
+                else:
+                    sets.append(set(btree.search(val)))
 
     for i in range(len(sets)):
         print(i, ":", sets[i])
 
     # Evaluar la expresión booleana
     universe = set(range(len(sets)))
-    result_set = evaluate_select(tree, sets, universe)
-    print("RESULTADO FINAL DE ", query["operations"])
-    print(result_set)
+    return evaluate_select(tree, sets, universe)
+
+def select(query):
+    print(query)
+    ans_set = aux_select(query)
+    print(ans_set)
