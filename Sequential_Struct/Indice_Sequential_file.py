@@ -4,6 +4,7 @@ import struct
 import csv
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
+from Heap_struct.Heap import Heap
 import math
 
 # Constantes generales
@@ -70,7 +71,8 @@ class Sequential:
     def __init__(self, table_format , name_key: str ,
                  name_index_file = 'Sequential_Struct/index_file.bin', 
                  name_data_file = 'Sequential_Struct/data_file.bin',
-                 num_aux = 1,):
+                 num_aux = 1,
+                 force_create = False):
         
         self.index_file = name_index_file
         self.data_file = name_data_file
@@ -78,6 +80,7 @@ class Sequential:
         self.format_key = table_format[name_key]                                 # Formato de la clave (KEY)
         self._initialize_files()                                                 # Inicializa los archivos de índice y datos
         self.K = num_aux                                                   # Tamaño del archivo auxiliar
+        self.HEAP = Heap(table_format, name_key, name_data_file, force_create=force_create)
 
 
     def _initialize_files(self):
@@ -269,7 +272,7 @@ class Sequential:
         return prev_ptr, -1
 
 
-    def add(self, record: list = None, pos_new_record :int = None):
+    def add(self,pos_new_record :int = None, record: list = None):
 
         # Le el encabezado del archivo de índice
         if record is not None and pos_new_record is not None:
@@ -281,7 +284,7 @@ class Sequential:
             key = self.RT.get_key(record)
 
         if pos_new_record is not None:
-            record = self._read_record(pos_new_record)
+            record = self.HEAP.read(pos_new_record)
             key = self.RT.get_key(record)  # Obtiene la clave del registro 
 
         pos_root, num_dat, tam_aux  = self._read_header()
@@ -408,7 +411,7 @@ class Sequential:
         while temp_ptr != -1:
             index_record = self.read_index(temp_ptr)
             if index_record.key == key:
-                result.append(self._read_record(index_record.pos))
+                result.append(index_record.pos)
             else:
                 break
             temp_ptr = index_record.next
@@ -433,7 +436,7 @@ class Sequential:
         while temp_ptr != -1:
             index_record = self.read_index(temp_ptr)
             if index_record.key >= key1 and index_record.key <= key2:
-                result.append(self._read_record(index_record.pos))
+                result.append(index_record.pos)
             elif index_record.key > key2:
                 break
             temp_ptr = index_record.next
