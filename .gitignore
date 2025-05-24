@@ -1,6 +1,5 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-__pycache__
 *.py[cod]
 *$py.class
 
@@ -83,3 +82,9 @@ Utils/__pycache__/
 BPtree_struct/__pycache__/
 ParserSQL/__pycache__/
 RTree_struct/__pycache__/
+Hash_struct/__pycache__
+Heap_struct/__pycache__
+Utils/__pycache__
+BPtree_struct/__pycache__
+ParserSQL/__pycache__
+RTree_struct/__pycache__
