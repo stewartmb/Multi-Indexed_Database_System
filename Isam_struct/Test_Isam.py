@@ -19,7 +19,7 @@ format_tables = [{"codigo": "i", "nombre": "30s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
                  {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
 
-name_keys = ["ciclo", "iata", "zip_code"]
+name_keys = ["nombre", "iata", "zip_code"]
 
 # numero aleatorio entre 1 y 3
 random_index = 0
@@ -60,8 +60,8 @@ def Create_index(csv_path, index_file, data_file):
 
 
     return isam
-KEYS = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205]
-
+KEYS_NUM = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205]
+KEYS_LETRAS = ['Adriana Mendoza', 'Adrián Montes', 'Agustín Molina', 'Alberto Méndez', 'Alberto Zúñiga', 'Alejandra Montiel', 'Alfonso Navarro', 'Alicia Juárez', 'Ana Belén Soto', 'Ana García', 'Andrea Mendoza', 'Andrés Silva', 'Angélica Fuentes', 'Armando Salas', 'Arturo Delgado', 'Arturo Sandoval', 'Beatriz Paredes', 'Carlos Gómez', 'Carolina Ríos', 'Cecilia Vega', 'Clara Santillán', 'Claudia Flores', 'Cristina López', 'César Figueroa', 'Daniela Herrera', 'David Torres', 'Diana Mejía', 'Diego Rojas', 'Dulce Campos', 'Eduardo Cárdenas', 'Elena Martínez', 'Enrique Peña', 'Ernesto Camacho', 'Esther Ponce', 'Felipe Rangel', 'Fernando Ortega', 'Fernando Ríos', 'Francisco Ruiz', 'Francisco Solís', 'Gabriela Ramírez', 'Gloria Cervantes', 'Guadalupe Reyes', 'Guillermo Rosas', 'Gustavo León', 'Irma Valenzuela', 'Isabel Morales', 'Isabel Vázquez', 'Javier Jiménez', 'Jorge Pacheco', 'José Antonio Mora', 'José Campos', 'José Luis Rocha', 'Juan Pérez', 'Julia Orozco', 'Julio Cisneros', 'Karina Velasco', 'Laura Fernández', 'Laura Martínez', 'Leonardo Andrade', 'Lorena Espinoza', 'Lucía Rivas', 'Luis Martínez', 'Luisa Benítez', 'Manuel Cabrera', 'Manuel Hernández', 'Mariana Díaz', 'Maricela Barajas', 'Marina Delgado', 'Marina Rivas', 'Marisol Lugo', 'Martín Guerrero', 'María López', 'Miriam Acosta', 'Monica Orozco', 'Norma Zamora', 'Olga Serrano', 'Oscar Vega', 'Patricia Medina', 'Patricia Vargas', 'Paula Castro', 'Pedro Sánchez', 'Ramón Delgado', 'Raúl Espinosa', 'Raúl Medina', 'René Ibarra', 'Ricardo Morales', 'Ricardo Nava', 'Ricardo Villanueva', 'Roberto Galván', 'Roberto Núñez', 'Rogelio Del Río', 'Rosa Aguirre', 'Rosario Palacios', 'Rubén Valdez', 'Salvador Tapia', 'Sara Ochoa', 'Sergio Miranda', 'Silvia Cortés', 'Sofía Rodríguez', 'Teresa Cervantes', 'Valentina Soto', 'Vanessa Márquez', 'Verónica Mora', 'Yesenia Arellano', 'Ángel Lozano', 'Óscar Quintero']
 def test_search():
     # BUSQUEDAS
     isam = archivo.ISAM(table_format, name_key, name_index_file = index_file, name_data_file=data_file)
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     # # Prueba de búsqueda por rango
     test_search_range()
     # # Prueba de búsqueda de un registro específico
-    test_onesearch(1)
+    test_onesearch('Carlos Gómez')
     # # Prueba de insercion de un registro específico
     test_insert_eliminar()
     # # # Prueba de eliminación de un registro específico

@@ -167,6 +167,59 @@ def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M,
     format = f'b{(M-1) * format_key}{M * "i"}ii'
     return format
 
+class Index_temp:
+    def __init__(self, key, pos :int = -1):
+        self.key = key
+        self.pos = pos
+
+    def to_bytes(self, format_key):
+        key_to_pack = self.key
+        if key_to_pack is None:
+            if format_key in ('i', 'q', 'Q'):
+                key_to_pack = -2147483648
+            elif format_key == 'f':
+                key_to_pack = float('nan')
+            elif format_key in ('b', '?'):
+                key_to_pack = -128
+            elif 's' in format_key:
+                max_length = int(format_key[:-1])
+                key_to_pack = b'\x00' * max_length
+            else:
+                key_to_pack = 0
+        else:
+            if 's' in format_key and isinstance(key_to_pack, str):
+                max_length = int(format_key[:-1])
+                key_to_pack = key_to_pack.encode('utf-8')[:max_length].ljust(max_length, b'\x00')
+            elif format_key in ('i', 'q', 'Q'):
+                key_to_pack = int(key_to_pack)
+            elif format_key in ('f', 'd'):
+                key_to_pack = float(key_to_pack)
+            elif format_key in ('b', '?'):
+                key_to_pack = bool(key_to_pack)
+        format_index = f'{format_key}i'
+        return struct.pack(format_index, key_to_pack, self.pos)
+        
+    @classmethod
+    def from_bytes(self, data, format_key):
+        format_index = f'{format_key}i'
+        unpacked_data = struct.unpack(format_index, data)
+        key = unpacked_data[0]
+        pos = unpacked_data[1]
+
+        if format_key == 'i' or format_key == 'q' or format_key == 'Q':
+            key = int(key) if key != -2147483648 else None
+        elif format_key == 'f' or format_key == 'd':
+            key = float(key) if not math.isnan(key) else None
+        elif format_key == 'b' or format_key == '?':
+            key = bool(key) if key != -128 else None
+        elif 's' in format_key:
+            max_length = int(format_key[:-1])
+            key = key.decode('utf-8').rstrip('\x00') if key != b'\x00' * max_length else None
+        return Index_temp(key, pos)
+    
+    def __str__(self):
+        return f"key: {self.key}, pos: {self.pos})"
+    
 
 class ISAM():
     def __init__(self, table_format: dict , name_key: str ,
@@ -388,7 +441,9 @@ class ISAM():
                     data = fin.read(record_size)
                     if not data:
                         break
-                    key, offset = struct.unpack(format_temp, data)
+                    record_temp = Index_temp.from_bytes(data, self.format_key)
+                    key = record_temp.key
+                    offset = record_temp.pos
                     block.append((key, offset))
                 if not block:
                     break
@@ -399,7 +454,8 @@ class ISAM():
                 # print (f"Creando {temp_name} con {len(block)} registros")
                 with open(temp_name, 'wb') as fout:
                     for key, offset in block:
-                        fout.write(struct.pack(format_temp, key, offset))
+                        temp_record = Index_temp(key, offset)
+                        fout.write(temp_record.to_bytes(self.format_key))
                 temp_files.append(temp_name)
                 block_count += 1
 
@@ -416,20 +472,25 @@ class ISAM():
         for i, f in enumerate(open_files):
             data = f.read(record_size)
             if data:
-                key, offset = struct.unpack(format_temp, data)
+                record_temp = Index_temp.from_bytes(data, self.format_key)
+                key = record_temp.key
+                offset = record_temp.pos
                 # print(f"Agregando {key} al heap del bloque {i}")
                 heapq.heappush(heap, (key, offset, i))
 
         with open(output_file, 'wb') as fout:
             while heap:
                 key, offset, i = heapq.heappop(heap)
-                fout.write(struct.pack(format_temp, key, offset))
+                record_temp = Index_temp(key, offset)
+                fout.write(record_temp.to_bytes(self.format_key))
                 # print(f"Escribiendo {key} en {output_file}")
 
                 # Leer siguiente elemento del mismo archivo
                 data = open_files[i].read(record_size)
                 if data:
-                    next_key, next_offset = struct.unpack(format_temp, data)
+                    record_temp = Index_temp.from_bytes(data, self.format_key)
+                    next_key = record_temp.key
+                    next_offset = record_temp.pos
                     heapq.heappush(heap, (next_key, next_offset, i))
                 #     print(f"Agregando {next_key} al heap del bloque {i}")
                 # else:
@@ -441,6 +502,7 @@ class ISAM():
             f.close()
 
     ## CONSTRUCCION DE INDICES ESTATICOS ##
+
     def build_index(self):
         """
         Construye el índice estático ordenado en el mismo archivo temp.bin.
@@ -456,7 +518,8 @@ class ISAM():
                 if record is not None:
                     key = self.RT.get_key(record)
                     offset = i
-                    f.write(struct.pack(format_temp, key, offset))
+                    record_temp = Index_temp(key, offset)
+                    f.write(record_temp.to_bytes(self.format_key))
                     print(key, offset, self.HEAP.read(offset))
         print("temp.bin creado")
 
@@ -471,7 +534,9 @@ class ISAM():
         with open(order_file, 'rb') as f:
             for i in range(total_records):
                 data = f.read(record_size)
-                key, offset = struct.unpack(format_temp, data)
+                record_temp = Index_temp.from_bytes(data, self.format_key)
+                key = record_temp.key
+                offset = record_temp.pos
                 HOLA.append(key)
                 print(key, offset, self.HEAP.read(offset))
         print (HOLA)
@@ -479,7 +544,7 @@ class ISAM():
         size = os.path.getsize(order_file)
         num_records = size // record_size
         print(f"Total de registros: {num_records}")
-        self.M , posiciones= Calculate_M(num_records)
+        self.M ,posiciones= Calculate_M(num_records)
         self.indexp_format = get_index_format(self.M, self.format_key)
         self.tam_indexp = struct.calcsize(self.indexp_format)
 
@@ -500,7 +565,9 @@ class ISAM():
             page = Index_Page(leaf=True, M=self.M)
             for i in range(num_records):
                 data = f.read(record_size)
-                key, pos = struct.unpack(format_temp, data)
+                record_temp = Index_temp.from_bytes(data, self.format_key)
+                key = record_temp.key
+                pos = record_temp.pos
                 if i == num_records -1:
                     page.keys[page.key_count] = key
                     page.childrens[page.key_count] = pos
@@ -538,7 +605,9 @@ class ISAM():
                     # print(lista[num], "Nueva pagina")
                     f.seek(lista[num] * record_size)
                     data = f.read(record_size)
-                    key, pos = struct.unpack(format_temp, data)
+                    record_temp = Index_temp.from_bytes(data, self.format_key)
+                    key = record_temp.key
+                    pos = record_temp.pos
                     # print( f"Agregando clave {key} y posicion {pos}")
                     page.keys[page.key_count] = key
                     page.childrens[page.key_count+1] = i
@@ -549,7 +618,9 @@ class ISAM():
                     pos_page,_ , _,_= self._read_header()
                     f.seek(lista[num] * record_size)
                     data = f.read(record_size)
-                    key, pos = struct.unpack(format_temp, data)
+                    record_temp = Index_temp.from_bytes(data, self.format_key)
+                    key = record_temp.key
+                    pos = record_temp.pos
                     page = Index_Page(leaf=False, M=self.M)
                     page.childrens[0] = i
                     # print (page_root.keys , page_root.childrens, page_root.next, "|" ,page_root.key_count , "page root")
