@@ -10,8 +10,16 @@ export default function ResizablePanel() {
     const [message, setMessage] = useState<string | null>(null);
     const [columns, setColumns] = useState<string[]>([]);
     const [currentQuery, setCurrentQuery] = useState<string>('');
+    const [isLoading, setIsLoading] = useState<boolean>(false);
 
     const runQuery = async (query: string) => {
+        // Prevent execution if already loading
+        if (isLoading) {
+            console.log('Query already in progress, ignoring new request');
+            return;
+        }
+
+        setIsLoading(true);
         setData(null);
         setError(null);
         setColumns([]);
@@ -23,7 +31,7 @@ export default function ResizablePanel() {
         // TODO: CAMBIAR EL PUERTO A 8000
         try {
             console.log('Running query:', query);
-            const response = await fetch('http://127.0.0.1:8083/query', {
+            const response = await fetch('http://127.0.0.1:8000/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query }),
@@ -43,6 +51,8 @@ export default function ResizablePanel() {
         } catch (err: any) {
             console.error('Error running query:', err);
             setError(err.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -52,8 +62,8 @@ export default function ResizablePanel() {
 
     return (
         <ResizableLayout
-            top={<SQLEditor onRun={runQuery} query={currentQuery} onQueryChange={setCurrentQuery} />}
-            bottom={<Results data={data} columns={columns} message={message} error={error} history={history} onSelectHistory={handleQueryFromHistory} />}
+            top={<SQLEditor onRun={runQuery} query={currentQuery} onQueryChange={setCurrentQuery} isLoading={isLoading} />}
+            bottom={<Results data={data} columns={columns} message={message} error={error} history={history} onSelectHistory={handleQueryFromHistory} isLoading={isLoading} />}
         />
     );
 }

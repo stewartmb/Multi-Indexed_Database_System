@@ -126,11 +126,7 @@ class Hash:
                  buckets_file_name: str,
                  index_file_name: str,
                  data_file_name: str,
-<<<<<<< HEAD
-                 global_depth: int = 1,
-=======
-                 global_depth: int = 64,
->>>>>>> b77c83e (fully functional (en teoria))
+                 global_depth: int = 16,
                  max_records_per_bucket: int = 4,
                  force_create: bool = False):
         """

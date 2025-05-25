@@ -8,9 +8,10 @@ interface Props {
     history: string[];
     columns: string[];
     onSelectHistory?: (query: string) => void;
+    isLoading?: boolean;
 }
 
-const Results: React.FC<Props> = ({ data, columns, message, error, history, onSelectHistory }) => {
+const Results: React.FC<Props> = ({ data, columns, message, error, history, onSelectHistory, isLoading = false }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'history'>('data'); // Eliminamos 'explain'
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -24,6 +25,10 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
     const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
 
     const handleHistoryClick = (query: string) => {
+        // Prevent history selection while loading
+        if (isLoading) {
+            return;
+        }
         if (onSelectHistory) {
             onSelectHistory(query);
         }
@@ -50,7 +55,12 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
             <div className={styles.tabContent}>
                 {activeTab === 'data' && (
                     <>
-                        {error ? (
+                        {isLoading ? (
+                            <div className={styles.loadingMessage}>
+                                <div className={styles.spinner}></div>
+                                <span>Executing query...</span>
+                            </div>
+                        ) : error ? (
                             <div className={styles.errorMessage}>Error: {error}</div>
                         ) : data ? (
                             <div className={styles.tableContainer}>
@@ -114,7 +124,12 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
 
                 {activeTab === 'messages' && (
                     <div>
-                        {error ? (
+                        {isLoading ? (
+                            <div className={styles.loadingMessage}>
+                                <div className={styles.spinner}></div>
+                                <span>Executing query...</span>
+                            </div>
+                        ) : error ? (
                             <div className={styles.errorMessage}>Error: {error}</div>
                         ) : message ? (
                             <div className={styles.infoMessage}>{message}</div>
@@ -133,9 +148,9 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                                 {history.map((query, idx) => (
                                     <li 
                                         key={idx} 
-                                        className={`${styles.historyItem} ${styles.historyItemClickable}`}
+                                        className={`${styles.historyItem} ${!isLoading ? styles.historyItemClickable : styles.historyItemDisabled}`}
                                         onClick={() => handleHistoryClick(query)}
-                                        title="Click to copy to SQL editor"
+                                        title={isLoading ? "Cannot select while query is running" : "Click to copy to SQL editor"}
                                     >
                                         <code>{query}</code>
                                     </li>

@@ -676,6 +676,10 @@ def copy(query):
     isam = []
 
     for key in data["columns"].keys():
+        format[key] = to_struct(data["columns"][key]["type"])
+
+    for key in data["columns"].keys():
+        
         index = data["columns"][key]["index"]
         if index == None:
             pass
@@ -988,7 +992,7 @@ def drop_table(query):
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
     return {
-        "message": "DELETED INDEX SUCCESSFULLY"
+        "message": "DELETED TABLE SUCCESSFULLY"
     }
 
 def set_stmt(query):
