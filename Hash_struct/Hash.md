@@ -24,7 +24,7 @@ La función hash de esta estructura tiene la caraterística de que genera una se
 
 Ejemplo de extendible hash:
 
-(Imagen)
+![Imagen_hash2](/images/hash2.png)
 
 Un extendible hash se compone de:
 - **Directorio**: Tabla que almacena punteros a buckets. Su tamaño es 2^D (donde D = profundidad global). La profundidad global es el número de bits utilizados por el directorio para indexar los buckets.
@@ -35,7 +35,7 @@ Un extendible hash se compone de:
 ## Representación usando un árbol
 La implementación de la estructura se ha decidido que, en vez de hacer una tabla plana, el directorio estará organizado como un árbol. Este enfoque ha sudo basado en un laboratorio que se tuvo en clase. 
 
-(Imagen 2)
+![Imagen_hash3](/images/hash3.png)
 
 Con este enfoque, el directorio se divide en dos:
 - Nodos Internos (Internal Directory Nodes): Contienen decisiones de enrutamiento basadas en bits del hash.
@@ -72,7 +72,7 @@ Almacena los registros completos en formato no ordenado usando el Heap File.
 ## Algoritmos de las operaciones
 A continuación, se presentará el algoritmo implementado para cada una de las operaciones.
 ### Inserción
-
+Algoritmo de inserción de un elemento:
 ```
 FUNCIÓN insert(record, data_position=None):
     SI data_position es None:
@@ -84,6 +84,8 @@ FUNCIÓN insert(record, data_position=None):
         _add_to_hash(buckets_file, index_file, data_position, index_hash)
 ```
 Se implementaron funciones auxiliares para realizar la inserción:
+
+Algoritmo para añadir una posición al directorio. Realiza split en caso un bucket ya esté lleno.
 ```
 FUNCIÓN _add_to_hash(buckets_file, index_file, data_position, index_hash):
     # Navegar por el árbol
@@ -122,6 +124,7 @@ FUNCIÓN _add_to_hash(buckets_file, index_file, data_position, index_hash):
         _aux_insert(nuevo_registro)
 ```
 
+Algoritmo para insertar un registro dentro de un bucket. Devuelve un booleano para ver si es que se realizó la operación.
 ```
 FUNCIÓN _insert_value_in_bucket(buckets_file, index_file, bucket_position, data_position):
     bucket = leer_bucket(buckets_file, bucket_position)
@@ -139,7 +142,7 @@ FUNCIÓN _insert_value_in_bucket(buckets_file, index_file, bucket_position, data
     RETORNAR True
 ```
 ### Búsqueda
-
+Algoritmo de búsqueda de un elemento específico:
 ```
 FUNCIÓN search(key):
     key = convertir_a_tipo_correcto(key)
@@ -156,6 +159,7 @@ FUNCIÓN search(key):
 
 Funciones auxiliares:
 
+Algoritmo recursivo de búsqueda:
 ```
 FUNCIÓN _aux_search(buckets_file, index_file, node_index, index_hash, key):
     node = leer_nodo(index_file, node_index)
@@ -175,7 +179,7 @@ FUNCIÓN _aux_search(buckets_file, index_file, node_index, index_hash, key):
             matches += buscar_en_bucket(bucket, key)
         
 ```
-
+Algoritmo para buscar una llave en un bucket. Puede retornar varias si existen muchas colisiones:
 ```
 
 FUNCIÓN buscar_en_bucket(bucket, key):
@@ -189,7 +193,7 @@ FUNCIÓN buscar_en_bucket(bucket, key):
 ```
 
 ### Búsqueda por rango
-
+Algoritmo para la búsqueda por rango:
 ```
 FUNCIÓN range_search(lower, upper):
     ABRIR archivos (index_file, buckets_file) EN MODO lectura:
@@ -201,8 +205,9 @@ FUNCIÓN range_search(lower, upper):
 ```
 
 Funciones auxiliares:
-```
 
+Algoritmo para buscar recursivamente por rango:
+```
 FUNCIÓN _aux_range_search(buckets_file, index_file, node_index, lower, upper):
     node = leer_nodo(index_file, node_index)
     lista = []
@@ -221,7 +226,7 @@ FUNCIÓN _aux_range_search(buckets_file, index_file, node_index, lower, upper):
     
     RETORNAR lista
 ```
-
+Algoritmo para buscar elementos dentro de un rango en un bucket.
 ```
 FUNCIÓN buscar_en_rango(bucket, lower, upper):
     matches = []
@@ -233,7 +238,7 @@ FUNCIÓN buscar_en_rango(bucket, lower, upper):
     RETORNAR matches
 ```
 ### Eliminación
-
+Algoritmo de eliminación en el hash:
 ```
 FUNCIÓN delete(key):
     key = convertir_a_tipo_correcto(key)
@@ -248,7 +253,7 @@ FUNCIÓN delete(key):
 ```
 
 Funciones auxiliares:
-
+Algoritmo recursivo para realizar la eliminación
 ```
 FUNCIÓN _aux_delete(buckets_file, index_file, node_index, index_hash, key):
     node = leer_nodo(index_file, node_index)
@@ -269,7 +274,7 @@ FUNCIÓN _aux_delete(buckets_file, index_file, node_index, index_hash, key):
         
         RETORNAR eliminado
 ```
-
+Algoritmo para eliminar de un bucket. Retorna un booleano para verificar si se llego a eliminar.
 ```
 
 FUNCIÓN eliminar_de_bucket(bucket, key):
@@ -285,5 +290,17 @@ FUNCIÓN eliminar_de_bucket(bucket, key):
     RETORNAR False
 ```
 
-## Complejidad
+## Complejidad en términos de acceso a memoria secundaria
 
+| Operación       | Mejor Caso      | Peor Caso         | Escenario Crítico                          |
+|----------------|----------------|------------------|-------------------------------------------|
+| **Inserción**  | `O(1)`         | `O(N + K)`       | Split de buckets + reinserción de registros |
+| **Búsqueda**   | `O(1)`         | `O(log N + M)`   | Registro en último bucket de overflow      |
+| **Búsqueda por Rango**      | `O(N)`         | `O(N)`           | Escaneo completo de todos los buckets      |
+| **Eliminación**| `O(1)`         | `O(log N + M)`   | Eliminación en último bucket de overflow   |
+
+**Clave**:
+- `N`: Número total de registros  
+- `M`: Registros en cadenas de overflow  
+- `K`: Accesos para reorganización (split)  
+- `log N`: Profundidad del árbol de directorios  
