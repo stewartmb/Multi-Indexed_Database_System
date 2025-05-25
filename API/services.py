@@ -642,7 +642,7 @@ def copy(query):
                 table_filename(nombre_tabla))
 
 
-    with open(query["from"], mode='r', newline='') as f:
+    with open(query["from"], mode='r', newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
         next(reader)
 
