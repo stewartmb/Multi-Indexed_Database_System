@@ -109,54 +109,118 @@ class Index_Page():
         # Handle children and metadata
         children_start = M
         instance.childrens = list(unpacked[children_start:children_start + M])
-        instance.next = unpacked[-2]
         instance.key_count = unpacked[-1]
 
         return instance
     
 
 class Indice_Brin():
-    def __init__(self, K, format_key):
-        self.range_values = [None,None]             # Valor mínimo y máximo de la página (formato: formato_key)
-        self.pages = [-1] * K                       # Lista de posiciones de las páginas, inicialmente todas son -1 (no hay páginas)
-        self.page_count = 0                         # Contador de páginas
-        self.format_key = format_key                # El formato de las claves (ej: 'i' para enteros, 'f' para flotantes, 's3' para cadenas de 3 caracteres)
-        self.indexp_format = f'{format_key*2}{'i' * K}i'  
+    def __init__(self, K):
+        self.range_values = [None,None]                      # Valor mínimo y máximo de la página (formato: formato_key)
+        self.pages = [-1] * K                                # Lista de posiciones de las páginas, inicialmente todas son -1 (no hay páginas)
+        self.page_count = 0                                  # Contador de páginas
+        self.K = K                                            # Número máximo de páginas por índice BRIN
 
-    def to_bytes(self):        
+    def to_bytes(self , format_key, format_index):        
         # Prepare keys for packing
         packed_keys = []
         for key in self.range_values:
             if key is None:
                 # For None values, use a sentinel value that fits the format
-                if self.format_key == 'i':  # Entero
+                if format_key == 'i':  # Entero
                     packed_keys.append(-2147483648)  # -2³¹ (fuera del rango normal)
-                elif self.format_key == 'f':  # Float
+                elif format_key == 'f':  # Float
                     packed_keys.append(float('nan'))  # NaN representa None
-                elif self.format_key == 'b' or self.format_key == '?':  # Boolean
+                elif format_key == 'b' or format_key == '?':  # Boolean
                     packed_keys.append(-128)  # Special value for None
-                elif 's' in self.format_key:  # String (ej: '3s')
-                    packed_keys.append(b'\x00' * int(self.format_key[:-1]))  # Bytes nulos
+                elif 's' in format_key:  # String (ej: '3s')
+                    packed_keys.append(b'\x00' * int(format_key[:-1]))  # Bytes nulos
                 else:
                     packed_keys.append(0)  # Default fallback
             else:
                 # Convertir a bytes si es string
-                if 's' in self.format_key and isinstance(key, str):
-                    max_length = int(self.format_key[:-1])  # Elimina la 's' y convierte a entero
+                if 's' in format_key and isinstance(key, str):
+                    max_length = int(format_key[:-1])  # Elimina la 's' y convierte a entero
                     truncated_key = key[:max_length]
                     packed_keys.append(truncated_key.encode('utf-8'))
                 # Asegurar tipo correcto
-                elif self.format_key == 'i' or self.format_key == 'q' or self.format_key == 'Q':
+                elif format_key == 'i' or format_key == 'q' or format_key == 'Q':
                     packed_keys.append(int(key))
-                elif self.format_key == 'f' or self.format_key == 'd':
+                elif format_key == 'f' or format_key == 'd':
                     packed_keys.append(float(key))
-                elif self.format_key == 'b' or self.format_key == '?':
+                elif format_key == 'b' or format_key == '?':
                     packed_keys.append(bool(key))
                 else:
                     packed_keys.append(key)
 
         # Prepare all arguments for packing
         pack_args = packed_keys + self.pages + [self.page_count]
-        return struct.pack(self.indexp_format, *pack_args)
+        return struct.pack(format_index, *pack_args)
+    
+
+    @classmethod
+    def from_bytes(cls, data, K, format_key, format_index):
+        # Verify data size
+        expected_size = struct.calcsize(format_index)
+        if len(data) != expected_size:
+            raise ValueError(f"Data size mismatch: expected {expected_size}, got {len(data)}")
+
+        # Unpack all data
+        unpacked = list(struct.unpack(format_index, data))
+
+        # Create instance
+        instance = cls(K=K)
+
+        # Handle keys
+        for i in range(2):
+            key_value = unpacked[i + 1]
+            if format_key == 'i' or format_key == 'q' or format_key == 'Q':
+                instance.range_values[i] = key_value if key_value != -2147483648 else None
+            elif format_key == 'f' or format_key == 'd':
+                instance.range_values[i] = key_value if not math.isnan(key_value) else None
+            elif format_key == 'b' or format_key == '?':
+                instance.range_values[i] = key_value if key_value != -128 else None
+            elif 's' in format_key:  # String (bytes → str)
+                instance.range_values[i] = key_value.decode('utf-8').strip('\x00') if key_value != b'\x00' * len(key_value) else None
+            else:
+                instance.range_values[i] = key_value
+
+        # Handle children and metadata
+        instance.pages = list(unpacked[children_start:children_start + M])
+        instance.page_count = unpacked[-1]
+
+        return instance
+        
+
+
+class BRIN:
+    def __init__(self, table_format: dict , name_key: str ,
+                 name_index_file = 'Brin_struct/index_file.bin',
+                 name_page_file = 'Brin_struct/page_file.bin',
+                 name_data_file = 'Brin_struct/data_file.bin',
+                 max_num_pages: int = 100,
+                 max_num_keys: int = 100,
+                 force_create = False):
+        self.HEAP = Heap(name_data_file, table_format, name_key, force_create=force_create)
+
+        self.index_file = name_index_file
+        self.page_file = name_page_file
+        self.data_file = name_data_file
+
+        self.RT = RegistroType(table_format, name_key)               # funciones para manejar el registro
+        self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
+        self.tam_registro = self.RT.size                             # Tamaño del registro
+
+        self.M = max_num_keys                                        # Número máximo de claves por página
+        self.K = max_num_pages                                       # Número máximo de páginas por índice BRIN
+
+        self.format_page = get_index_format(self.M, self.format_key)  # Formato de una pagina
+        self.format_index = f'{self.format_key*2}{'i' * self.K}i'   # Formato del índice BRIN
+
+    
+    def 
+
+
+
 
 
