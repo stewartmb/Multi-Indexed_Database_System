@@ -54,7 +54,7 @@ Ver documentación:
 [Sequential File](https://github.com/stewartmb/Proyecto_BD2/blob/main/Sequential_Struct/Sequential.md)
 ## ISAM File
 Ver documentación:
-[ISAM]
+[ISAM](https://github.com/stewartmb/Proyecto_BD2/tree/main/Isam_struct/ISAM.md)
 ## Hash File
 Ver documentación:
 [Extendible Hashing](https://github.com/stewartmb/Proyecto_BD2/blob/main/Hash_struct/Hash.md)
