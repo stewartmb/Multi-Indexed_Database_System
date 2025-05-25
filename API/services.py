@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import csv
+import datetime
 from fastapi import HTTPException
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
@@ -35,6 +36,8 @@ def to_struct(type):
         return "Q"
     if type == "bool":
         return "?"
+    if type == "timestamp":
+        return "26s"
     elif varchar_match:
         size = varchar_match.group(1)  # Extraemos el tamaño entre los corchetes
         return f"{size}s"
@@ -201,7 +204,16 @@ def insert(query):
                 data["key"],
                 table_filename(nombre_tabla))
 
-    position = heap.insert(query["values"][1])
+    if len(format) != query["values"]:
+        i = 0
+        record = query["values"][1]
+        for key in data["columns"].keys():
+            if data["columns"][key]["type"] == "timestamp":
+                record.insert(i, str(datetime.datetime.now()))
+                print(record)
+            i += 1
+
+    position = heap.insert(record)
 
     indexes_data = select_index_meta()
 
@@ -730,9 +742,11 @@ def delete(query):
                     table_filename(nombre_tabla),  
                     index_filename(nombre_tabla, *rtree_keys, "index"))
     
+    rebuild = False
     
     for pos in ans_set:
-        heap.mark_deleted(pos)
+        if heap.mark_deleted(pos):
+            rebuild = True
         # for h in hash:
         #     h.delete(pos)
         # not implemented in b tree
@@ -740,6 +754,89 @@ def delete(query):
         #     s.eliminar(pos)
         if rtree is not None:
             rtree.delete(pos)
+    
+    if rebuild:
+        hash = []
+        seq = []
+        rtree = None
+        btree = []
+        isam = []
+
+        # eliminar indices en la tabla
+        for key in data["columns"].keys():
+            index = data["columns"][key]["index"]
+            if index == "hash":
+                os.remove(index_filename(nombre_tabla, key, "buckets"))
+            if index is not None and index != "rtree":
+                index_file = index_filename(nombre_tabla,
+                                        key,
+                                        "index")
+                os.remove(index_file)
+            
+            # remake index files
+            if index == None:
+                pass
+            elif index == "hash":
+                if indexes_data["hash"] is not None:
+                    hash.append(Hash(format,
+                                key,
+                                index_filename(nombre_tabla, key, "buckets"),
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla), *indexes_data["hash"]))
+                else:
+                    hash.append(Hash(format,
+                                key,
+                                index_filename(nombre_tabla, key, "buckets"),
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla)))
+            elif index == "seq":
+                seq.append(Sequential(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla)))
+            elif index == "btree":
+                if indexes_data["btree"] is not None:
+                    btree.append(Btree(format,
+                                key,
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla),
+                                *indexes_data["btree"]))
+                else:
+                    btree.append(Btree(format,
+                                key,
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla),
+                                M))
+        rtree_keys = data.get("indexes", {}).get("rtree")
+        if rtree_keys is not None:
+            os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
+            
+        rtree_keys = data.get("indexes", {}).get("rtree")
+        if rtree_keys is not None:
+            rtree = Rtree(format, 
+                        data["key"],
+                        rtree_keys, 
+                        table_filename(nombre_tabla),  
+                        index_filename(nombre_tabla, *rtree_keys, "index"))
+        
+        records = heap._select_all()
+
+        os.remove(table_filename(nombre_tabla)) # borro la tabla
+
+        heap = Heap(format,
+                data["key"],
+                table_filename(nombre_tabla))
+
+        for r in records:
+            pos = heap.insert(r)
+            for h in hash:
+                h.insert(r, pos)
+            for bp in btree:
+                bp.add(pos_new_record=pos)
+            for s in seq:
+                s.add(pos_new_record=pos)
+            if rtree is not None:
+                rtree.insert(r, pos)
 
     return {
         "message": "DELETED"

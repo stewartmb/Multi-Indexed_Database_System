@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 
 class Heap:
-    HEADER_FORMAT = 'i'
+    HEADER_FORMAT = 'ii'
     HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
     def __init__(self, table_format, key: str,
@@ -16,23 +16,27 @@ class Heap:
 
         if not os.path.exists(self.filename):
             with open(self.filename, 'wb') as f:
-                f.write(struct.pack(self.HEADER_FORMAT, 0))  # encabezado inicial: 0 registros
+                f.write(struct.pack(self.HEADER_FORMAT, 0, 0))  # encabezado inicial: 0 registros
         elif os.path.getsize(self.filename) < self.HEADER_SIZE:
             with open(self.filename, 'wb') as f:
-                f.write(struct.pack(self.HEADER_FORMAT, 0))  # encabezado inicial: 0 registros
+                f.write(struct.pack(self.HEADER_FORMAT, 0, 0))  # encabezado inicial: 0 registros
 
         if force_create:
             with open(self.filename, 'wb') as f:
-                f.write(struct.pack(self.HEADER_FORMAT, 0))
+                f.write(struct.pack(self.HEADER_FORMAT, 0, 0))
 
     def _read_header(self):
         with open(self.filename, 'rb') as f:
             return struct.unpack(self.HEADER_FORMAT, f.read(self.HEADER_SIZE))[0]
+        
+    def _read_deleted(self):
+        with open(self.filename, 'rb') as f:
+            return struct.unpack(self.HEADER_FORMAT, f.read(self.HEADER_SIZE))[1]
 
-    def _write_header(self, count):
+    def _write_header(self, count, deleted):
         with open(self.filename, 'r+b') as f:
             f.seek(0)
-            f.write(struct.pack(self.HEADER_FORMAT, count))
+            f.write(struct.pack(self.HEADER_FORMAT, count, deleted))
     
     def is_deleted(self, pos):
         if self.read(pos):
@@ -48,7 +52,7 @@ class Heap:
             f.write(b'\x00')
 
         count = self._read_header()
-        self._write_header(count + 1)
+        self._write_header(count + 1, self._read_deleted())
         return count
 
     def read(self, pos: int) -> list | None:
@@ -67,6 +71,12 @@ class Heap:
         with open(self.filename, 'r+b') as f:
             f.seek(self.HEADER_SIZE + (pos * self.record_total_size) + self.RT.size)
             f.write(b'\x01')
+        deleted_count = self._read_deleted()
+        deleted_count += 1
+        if deleted_count == 30:
+            return True
+        self._write_header(self._read_header(), deleted_count)
+        return False
 
 
     def _select_all(self, include_deleted=False):

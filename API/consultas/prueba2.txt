@@ -89,9 +89,6 @@ set btree params (10);
 
 create index on destinos using btree(ciudad);
 
-delete from destinos where latitud, longitud between [30, -100] and [45, 4];
+delete from destinos where latitud, longitud in (-25, 130) closest 35;
 
-select * from destinos where name == "Big Ben";
-
-select * from destinos;
-
+select id from destinos;
