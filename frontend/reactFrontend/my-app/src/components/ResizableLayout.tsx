@@ -53,7 +53,7 @@ const ResizableLayout: React.FC<Props> = ({ top, bottom }) => {
                 onMouseDown={onMouseDown}
                 style={{
                     height: '10px',
-                    backgroundColor: '#0077b6',
+                    backgroundColor: '#415070',
                     cursor: 'row-resize',
                     alignSelf: 'stretch',
                 }}

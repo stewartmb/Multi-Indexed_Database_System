@@ -3,23 +3,32 @@
 /* Tab styles */
 .tabs {
     display: flex;
-    border-bottom: 1px solid #e5e7eb; /* Tailwind gray-300 */
-    background-color: #f3f4f6; /* Tailwind bg-gray-100 */
+    border-bottom: 1px solid #2c5fc1; /* Tailwind gray-300 */
+    background-color: #354360; /* Tailwind bg-gray-100 */
 }
 
 .tabButton {
     padding: 0.5rem 1rem;
     font-size: 0.875rem; /* text-sm */
+    font-family: 'Inter', sans-serif;
     text-transform: capitalize;
+    background-color: #354360; /* Tailwind bg-gray-100 */
+    font-weight: 800; /* Tailwind font-medium */
+    margin: 3px;
 }
 
 .tabButtonActive {
-    border-bottom: 2px solid #3b82f6; /* Tailwind blue-500 */
-    color: #2563eb; /* Tailwind text-blue-600 */
+    border-bottom: 5px solid #3b82f6; /* Tailwind blue-500 */
+    color: #4b75d1; /* Tailwind text-blue-600 */
 }
 
 .tabButtonInactive {
-    color: #4b5563; /* Tailwind text-gray-600 */
+    color: #d2d9e1; /* Tailwind text-gray-600 */
+}
+
+.tabButton:focus {
+    outline: none;
+    box-shadow: none; /* También elimina cualquier sombra de enfoque */
 }
 
 .tabButtonHover {
@@ -45,16 +54,20 @@
     width: 100%;
     table-layout: auto;
     border-collapse: collapse;
+    border-radius: 1rem; /* Redondear la tabla */
+    overflow: hidden; /* Asegura que el contenido no sobresalga */
 }
 
 .table th, .table td {
-    border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+    border: 1px solid #63727e; /* Tailwind border-gray-200 */
     padding: 0.5rem 1rem;
+    border-radius: 0.25rem; /* Redondear las celdas */
 }
 
 .table th {
-    background-color: #f3f4f6; /* Tailwind bg-gray-100 */
+    background-color: #293342; /* Tailwind bg-gray-100 */
     text-align: left;
+    color: #e5e7eb; /* Tailwind text-gray-200 */
 }
 
 .noResults {
@@ -62,21 +75,22 @@
 }
 
 .historyList {
-    list-style-type: decimal;
+    list-style-type: none;
     padding-left: 1.25rem; /* Tailwind pl-5 */
     margin-top: 0.5rem;
     color: #374151; /* Tailwind text-gray-800 */
 }
 
 .historyItem {
-    background-color: white;
+    background-color: #1f2937;
     padding: 0.5rem;
     border-radius: 0.25rem;
+    margin : 0.5rem 0;
     border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
 }
 
 .historyItem code {
-    color: #2563eb; /* Tailwind text-blue-600 */
+    color: #9594a1; /* Tailwind text-blue-600 */
 }
 
 .errorMessage {
@@ -86,5 +100,16 @@
 
 .infoMessage {
     font-style: italic;
-    color: #6b7280; /* Tailwind text-gray-500 */
+    color: #336790; /* Tailwind text-gray-500 */
+}
+
+
+.general{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #1f2937;
+    color: #d6d9df; /* Tailwind text-gray-200 */
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
 }

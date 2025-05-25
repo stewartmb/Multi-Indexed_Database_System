@@ -175,3 +175,17 @@ button:focus-visible {
 .btn-history:hover {
   background-color: #4338ca;
 }
+
+
+/* En tu archivo CSS */
+html, body, #root {
+  height: 100%; /* Asegúrate de que el body y el root ocupen toda la altura */
+  margin: 0;
+  padding: 0;
+}
+
+.resizable-layout-container {
+  height: 100%; /* Hace que el contenedor ocupe toda la altura disponible */
+  display: flex;
+  flex-direction: column;
+}

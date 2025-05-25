@@ -8,15 +8,15 @@ interface Props {
 }
 
 const Results: React.FC<Props> = ({ data, error, history }) => {
-    const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'explain' | 'history'>('data');
+    const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'history'>('data'); // Eliminamos 'explain'
 
     const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
 
     return (
-        <div className="h-full flex flex-col border-t border-gray-300">
+        <div className={styles.general}>
             {/* Tabs */}
             <div className={styles.tabs}>
-                {['data', 'messages', 'explain', 'history'].map((tab) => (
+                {['data', 'messages', 'history'].map((tab) => ( // Eliminamos 'explain'
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab as any)}
@@ -24,8 +24,7 @@ const Results: React.FC<Props> = ({ data, error, history }) => {
                     >
                         {tab === 'data' ? 'Data Output' :
                             tab === 'messages' ? 'Messages' :
-                                tab === 'explain' ? 'Query Plan' :
-                                    'History'}
+                                'History'}
                     </button>
                 ))}
             </div>
@@ -72,18 +71,12 @@ const Results: React.FC<Props> = ({ data, error, history }) => {
                     </div>
                 )}
 
-                {activeTab === 'explain' && (
-                    <div className={styles.infoMessage}>
-                        Query plan will appear here after running <code>EXPLAIN</code>
-                    </div>
-                )}
-
                 {activeTab === 'history' && (
                     <div className={styles.historyList}>
                         {history.length === 0 ? (
                             <p className={styles.infoMessage}>No queries run yet.</p>
                         ) : (
-                            <ul>
+                            <ul style={{ listStyleType: 'none', padding: 0 }}>
                                 {history.map((query, idx) => (
                                     <li key={idx} className={styles.historyItem}>
                                         <code>{query}</code>

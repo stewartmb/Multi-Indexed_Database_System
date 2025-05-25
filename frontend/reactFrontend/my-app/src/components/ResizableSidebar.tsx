@@ -43,33 +43,24 @@ export default function ResizableSidebarLayout({ Sidebar, MainContent }: Resizab
 
     return (
         <div ref={containerRef} className="flex h-screen w-screen select-none">
-            <div style={{ width: sidebarWidth }} className="h-full bg-gray-800 text-white overflow-auto">
-                {Sidebar}
-            </div>
-
-            {/* Barra divisora más ancha y con cursor visible */}
-            <div
-                onMouseDown={onMouseDown}
-                className="w-4 cursor-col-resize bg-gray-600 hover:bg-gray-800"
-                title="Arrastra para redimensionar"
-                style={{ userSelect: 'none' }}
-            >
-                {/* Para que se vea mejor, un pequeño indicador central */}
-                <div
-                    style={{
-                        width: '2px',
-                        height: '40px',
-                        backgroundColor: '#fff',
-                        margin: 'auto',
-                        borderRadius: '1px',
-                        marginTop: 'calc(50% - 20px)',
-                    }}
-                />
-            </div>
-
-            <div style={{ flex: 1 }} className="h-full bg-gray-100 overflow-auto">
-                {MainContent}
-            </div>
+        {/* Sidebar */}
+        <div style={{ width: sidebarWidth }} className="h-full bg-gray-800 text-white overflow-auto">
+            {Sidebar}
         </div>
-    );
+
+        {/* Barra divisora */}
+        <div
+            onMouseDown={onMouseDown}
+            className="w-4 cursor-col-resize bg-gray-600 hover:bg-gray-800"
+            title="Arrastra para redimensionar"
+            style={{ userSelect: 'none', width: '10px' }}
+        >
+        </div>
+
+        {/* Main content */}
+        <div style={{ flex: 1 }} className="h-full bg-gray-100 overflow-hidden">
+            {MainContent}
+        </div>
+    </div>
+);
 }
