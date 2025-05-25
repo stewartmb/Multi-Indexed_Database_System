@@ -279,8 +279,9 @@ class Hash:
         """
         for i in range(bucket['fullness']):
             record = self.HEAP.read(bucket['records'][i])
-            if self.RT.get_key(record) == key:
-                matches.append(bucket['records'][i])
+            if record != None:
+                if self.RT.get_key(record) == key:
+                    matches.append(bucket['records'][i])
         return matches
 
     # Funciones recursivas
@@ -332,27 +333,29 @@ class Hash:
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
                 record = self.HEAP.read(bucket['records'][i])
-                if self.RT.get_key(record) == key:
-                    # Eliminar el registro
-                    bucket['records'][i] = bucket['records'][bucket['fullness'] - 1]
-                    bucket['records'][bucket['fullness'] - 1] = -1
-                    bucket['fullness'] -= 1
-                    buckets_file.seek(node['bucket_position'] * self.BT.size)
-                    buckets_file.write(self.BT.to_bytes(bucket))
-                    return True
+                if record != None:
+                    if self.RT.get_key(record) == key:
+                        # Eliminar el registro
+                        bucket['records'][i] = bucket['records'][bucket['fullness'] - 1]
+                        bucket['records'][bucket['fullness'] - 1] = -1
+                        bucket['fullness'] -= 1
+                        buckets_file.seek(node['bucket_position'] * self.BT.size)
+                        buckets_file.write(self.BT.to_bytes(bucket))
+                        return True
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
                     record = self.HEAP.read(bucket['records'][i])
-                    if self.RT.get_key(record) == key:
-                        # Eliminar el registro
-                        bucket['records'][i] = -1
-                        bucket['fullness'] -= 1
-                        buckets_file.seek(node['bucket_position'] * self.BT.size)
-                        buckets_file.write(self.BT.to_bytes(bucket))
-                        return True
+                    if record != None:
+                        if self.RT.get_key(record) == key:
+                            # Eliminar el registro
+                            bucket['records'][i] = -1
+                            bucket['fullness'] -= 1
+                            buckets_file.seek(node['bucket_position'] * self.BT.size)
+                            buckets_file.write(self.BT.to_bytes(bucket))
+                            return True
         return False
 
     def _aux_range_search(self, buckets_file, index_file, node_index, lower, upper):
@@ -367,16 +370,18 @@ class Hash:
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
                 record = self.HEAP.read(bucket['records'][i])
-                if lower <= self.RT.get_key(record) <= upper:
-                    lista.append(bucket['records'][i])
+                if record != None:
+                    if lower <= self.RT.get_key(record) <= upper:
+                        lista.append(bucket['records'][i])
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
                     record = self.HEAP.read(bucket['records'][i])
-                    if lower <= self.RT.get_key(record) <= upper:
-                        lista.append(bucket['records'][i])
+                    if record != None:
+                        if lower <= self.RT.get_key(record) <= upper:
+                            lista.append(bucket['records'][i])
                 overflow_position = bucket['overflow_position']
 
         return lista

@@ -3,9 +3,12 @@ create table destinos (
     name varchar[25] index seq,
     latitud double,
     longitud double,
-    ciudad varchar[20],
+    ciudad varchar[20] index btree,
     pais varchar[20]
 );
+
+create index on destinos using rtree(latitud, longitud);
+
 
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("1", "Eiffel Tower", "48.8584", "2.2945", "Paris", "France");
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("2", "Statue of Liberty", "40.6892", "-74.0445", "New York", "USA");
@@ -56,6 +59,7 @@ INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("46", "
 
 create index on destinos using rtree(latitud, longitud);
 create index on destinos using isam(name);
+create index on destinos using rtree(latitud, longitud);
 
 select * from destinos where latitud, longitud between [30, -100] and [45, 4];
 select * from destinos where latitud, longitud in (-25, 130) closest 3;
@@ -84,6 +88,17 @@ select * from destinos where name between "Eiffel Tower" and "Great Wall";
 select * from destinos where name == "Big Ben";
 select * from destinos where name != "Big Ben";
 
+drop index btree on values ciudad on destinos;
+
+set btree params (10);
+
+create index on destinos using btree(ciudad);
+
+delete from destinos where latitud, longitud between [30, -100] and [45, 4];
+
+select * from destinos where name == "Big Ben";
+
+select * from destinos;
 drop index btree on values ciudad on destinos;
 
 set btree params (10);

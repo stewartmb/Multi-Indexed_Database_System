@@ -1,0 +1,8 @@
+create table estudiantes (
+    codigo int primary key,
+    nombre varchar[30],
+    ciclo int
+);
+
+copy estudiantes from "Data_test/BPTree.csv";
+

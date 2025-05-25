@@ -60,7 +60,7 @@ def delete_meta(name: str) -> None:
             except json.JSONDecodeError:
                 print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
 
-    # Eliminar entrada anterior 
+    # Eliminar entrada anterior
     all_data = [item for item in all_data if name not in item]
 
     # Se vuelve a escribir el diccionario de metadata
@@ -68,6 +68,47 @@ def delete_meta(name: str) -> None:
         json.dump(all_data, f, indent=4)
 
     print(f"Se elimino la entrada '{name}' en '{filename}'.")
+
+
+def get_info_from_meta() -> dict:
+    """Devuelve el diccionario"""
+    filename = "Schema/metadata"+".meta"
+
+    if not os.path.exists(filename):
+        print(f"El archivo '{filename}' no existe.")
+        return {}
+
+    with open(filename, "r", encoding="utf-8") as f:
+        try:
+            all_data = json.load(f)
+        except json.JSONDecodeError:
+            print("Error: No se pudo leer el archivo. ¿Está corrupto?")
+            return {}
+
+    info = {"name":"Schema 1", "tables":[]}
+
+    for table in all_data:
+        new = {}
+        name = None
+        for attr in table.keys():
+            name = attr
+
+        new["name"] = name
+        new["indices"] = []
+        for col in table[name]["columns"].keys():
+            extra = ""
+            if table[name]["key"] == col:
+                extra += " (PK)"
+            if table[name]["columns"][col]["index"] != None:
+                extra += f" ({table[name]['columns'][col]['index']})"
+            extra += " type::" + table[name]["columns"][col]["type"]
+            new["indices"].append(col + extra)
+
+        info["tables"].append(new)
+
+    return [info]
+
+
 
 def create_index_meta():
     filename = "Schema/indexes"+".meta"
@@ -104,7 +145,7 @@ def set_index_meta(index: str, params: list):
                 all_data = json.load(f)
             except json.JSONDecodeError:
                 print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
-    
+
     all_data[index] = params;
 
     if os.path.exists(filename):
@@ -113,7 +154,7 @@ def set_index_meta(index: str, params: list):
                 json.dump(all_data, f, indent=4)
             except json.JSONDecodeError:
                 print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
-    
+
     print(f"Edited {filename} correcty.")
 
 def select_index_meta():
@@ -134,3 +175,4 @@ def select_index_meta():
             return {}
 
     return all_data
+

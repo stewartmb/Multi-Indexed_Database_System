@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import csv
+import time
 import datetime
 from fastapi import HTTPException
 
@@ -133,6 +134,8 @@ def convert(query):
         return set_stmt(query)
     else:
         print("error: accion no soportada")
+        raise HTTPException(status_code=404, detail="Action not supported")
+
 
 def create_table(query):
     # crear tabla y añadir a metadata
@@ -260,7 +263,7 @@ def insert(query):
                             table_filename(nombre_tabla),
                             M)
             btree.add(pos_new_record=position)
-        
+
         elif index == "isam":
             isam = Isam(format,
                         key,
@@ -277,7 +280,7 @@ def insert(query):
                       table_filename(nombre_tabla),
                       index_filename(nombre_tabla, *rtree_keys, "index"))
         rtree.insert(query["values"][1], position)
-    
+
     return {
         "message": f"INSERTED VALUE ON TABLE {nombre_tabla}"
     }
@@ -342,7 +345,7 @@ def create_index(query):
             data["indexes"] = {}
 
         data["indexes"]["rtree"] = keys
-    
+
     elif index == "isam":
         isam = Isam(format,
                     keys[0],
@@ -384,8 +387,8 @@ def create_index(query):
     return {
         "message": f"CREATED INDEX {index} ON TABLE {nombre_tabla}"
     }
-    
-def aux_select(query): # TODO: añadir isam a busqueda
+
+def aux_select(query):
     # print(json.dumps(query, indent=2))
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
@@ -463,9 +466,20 @@ def aux_select(query): # TODO: añadir isam a busqueda
                             table_filename(nombre_tabla))
 
                 if cond["range_search"]:
-                    sets.append(set(heap.search(left, right)))
-                else:
-                    sets.append(set(heap.search(val, val)))
+                    if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
+                        sets.append(set(heap.search(left, right)))
+                    else:
+                        valid = set(heap.search(left, right))
+                        if cond["op"] == ">":
+                            invalid = set(heap.search(left,left))
+                        elif cond["op"] == "<":
+                            invalid = set(heap.search(right,right))
+                        else:
+                            curr = cast(cond["value"], format[key])
+                            print([curr, cond["value"]])
+                            invalid = set(heap.search(curr,curr))
+
+                        sets.append(valid - invalid)
             elif index == "hash":
                 if indexes_data["hash"] is not None:
                     hash = Hash(format,
@@ -573,7 +587,7 @@ def aux_select(query): # TODO: añadir isam a busqueda
                         sets.append(valid - invalid)
                 else:
                     sets.append(set(isam.search(val)))
-                
+
 
 
 
@@ -590,6 +604,8 @@ def aux_select(query): # TODO: añadir isam a busqueda
     return evaluate_select(tree, sets, universe)
 
 def select(query):
+    #cronometrar
+    start = time.time_ns()
     print(json.dumps(query, indent=4))
 
     ans_set = aux_select(query)
@@ -611,7 +627,7 @@ def select(query):
             result.append(heap.read(i))
 
     column_indices = {name: i for i, name in enumerate(list(data["columns"].keys()))}
-    
+
     if query["attr"] == "*":
         columns_names = list(data["columns"].keys())
     else:
@@ -619,9 +635,12 @@ def select(query):
         indices = [column_indices[x] for x in columns_names]
         result = [[r[i] for i in indices] for r in result]
 
+    end = time.time_ns()
+    t_ms = end - start
     return {
         "columns": columns_names,
-        "data": result
+        "data": result,
+        "message": f"SELECTED {len(result)} RECORDS FROM TABLE {query['table']} in {t_ms/1e6} ms",
     }
 
 def copy(query):
@@ -739,7 +758,7 @@ def delete(query):
     heap = Heap(format,
                 data["key"],
                 table_filename(nombre_tabla))
-    
+
     indexes_data = select_index_meta()
 
     for key in data["columns"].keys():
@@ -782,17 +801,17 @@ def delete(query):
                              key,
                              index_filename(nombre_tabla, key, "index"),
                              table_filename(nombre_tabla)))
-    
+
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
-        rtree = Rtree(format, 
+        rtree = Rtree(format,
                     data["key"],
-                    rtree_keys, 
-                    table_filename(nombre_tabla),  
+                    rtree_keys,
+                    table_filename(nombre_tabla),
                     index_filename(nombre_tabla, *rtree_keys, "index"))
-    
+
     rebuild = False
-    
+
     for pos in ans_set:
         if heap.mark_deleted(pos):
             rebuild = True
@@ -803,7 +822,7 @@ def delete(query):
         #     s.eliminar(pos)
         if rtree is not None:
             rtree.delete(pos)
-    
+
     if rebuild:
         hash = []
         seq = []
@@ -821,7 +840,7 @@ def delete(query):
                                         key,
                                         "index")
                 os.remove(index_file)
-            
+
             # remake index files
             if index == None:
                 pass
@@ -861,19 +880,19 @@ def delete(query):
                                  key,
                                  index_filename(nombre_tabla, key, "index"),
                                  table_filename(nombre_tabla)))
-                
+
         rtree_keys = data.get("indexes", {}).get("rtree")
         if rtree_keys is not None:
             os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
-            
+
         rtree_keys = data.get("indexes", {}).get("rtree")
         if rtree_keys is not None:
-            rtree = Rtree(format, 
+            rtree = Rtree(format,
                         data["key"],
-                        rtree_keys, 
-                        table_filename(nombre_tabla),  
+                        rtree_keys,
+                        table_filename(nombre_tabla),
                         index_filename(nombre_tabla, *rtree_keys, "index"))
-        
+
         records = heap._select_all()
 
         os.remove(table_filename(nombre_tabla)) # borro la tabla
@@ -902,7 +921,7 @@ def drop_index(query):
     index_file = index_filename(nombre_tabla,
                                 *query["attr"],
                                 "index")
-    
+
     # eliminar indice en metadata
 
     data = select_meta(nombre_tabla)
@@ -930,7 +949,7 @@ def drop_table(query):
     print(json.dumps(data, indent=4))
 
     data_file = table_filename(nombre_tabla)
-    
+
     # eliminar indices en la tabla
     for key in data["columns"].keys():
         index = data["columns"][key]["index"]
@@ -945,10 +964,10 @@ def drop_table(query):
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
         os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
-    
+
     # eliminar entrada en metadata
     delete_meta(nombre_tabla)
-    
+
     try:
         os.remove(data_file)
     except FileNotFoundError:
@@ -964,7 +983,7 @@ def set_stmt(query):
         params = [int(x) for x in query["params"]]
     except ValueError as e:
         print("One of the items couldn't be converted:", e)
-    
+
     if index == "btree" and len(params) != 1:
         raise HTTPException(status_code=404, detail="Wrong amount of parameters")
     elif index == "hash" and len(params) != 2:

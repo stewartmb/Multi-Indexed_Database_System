@@ -28,7 +28,7 @@ class Heap:
     def _read_header(self):
         with open(self.filename, 'rb') as f:
             return struct.unpack(self.HEADER_FORMAT, f.read(self.HEADER_SIZE))[0]
-        
+
     def _read_deleted(self):
         with open(self.filename, 'rb') as f:
             return struct.unpack(self.HEADER_FORMAT, f.read(self.HEADER_SIZE))[1]
@@ -37,7 +37,7 @@ class Heap:
         with open(self.filename, 'r+b') as f:
             f.seek(0)
             f.write(struct.pack(self.HEADER_FORMAT, count, deleted))
-    
+
     def is_deleted(self, pos):
         if self.read(pos):
             return False
