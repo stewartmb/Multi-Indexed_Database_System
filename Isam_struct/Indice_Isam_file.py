@@ -509,6 +509,7 @@ class ISAM():
         """
         size = self.HEAP._read_header()
         format_temp = f'{self.format_key}i'  # Formato (key, offset)
+        print(format_temp)
         record_size = struct.calcsize(format_temp)
         order_file = 'temp.bin'
         # 1. Escribir datos (key, offset) en temp.bin

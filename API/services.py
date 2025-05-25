@@ -15,6 +15,7 @@ from Hash_struct.Hash import Hash
 from BPtree_struct.Indice_BPTree_file import BPTree as Btree
 from Sequential_Struct.Indice_Sequential_file import Sequential
 from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
+from Isam_struct.Indice_Isam_file import ISAM as Isam
 
 M = 10
 
@@ -259,6 +260,13 @@ def insert(query):
                             table_filename(nombre_tabla),
                             M)
             btree.add(pos_new_record=position)
+        
+        elif index == "isam":
+            isam = Isam(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla))
+            isam.add(pos_new_record=position)
 
     # indice compuesto en rtree, añadir en el indice
     rtree_keys = data.get("indexes", {}).get("rtree")
@@ -334,6 +342,12 @@ def create_index(query):
             data["indexes"] = {}
 
         data["indexes"]["rtree"] = keys
+    
+    elif index == "isam":
+        isam = Isam(format,
+                    keys[0],
+                    index_filename(nombre_tabla, keys[0], "index"),
+                    table_filename(nombre_tabla))
 
     elif index == "btree":
         if indexes_data["btree"] is None:
@@ -371,7 +385,7 @@ def create_index(query):
         "message": f"CREATED INDEX {index} ON TABLE {nombre_tabla}"
     }
     
-def aux_select(query):
+def aux_select(query): # TODO: añadir isam a busqueda
     # print(json.dumps(query, indent=2))
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
@@ -476,7 +490,7 @@ def aux_select(query):
                         elif cond["op"] == "<":
                             invalid = set(hash.search(right))
                         else:
-                            curr = cond["value"]
+                            curr = cast(cond["value"], format[key])
                             invalid = set(hash.search(curr))
 
                         sets.append(valid - invalid)
@@ -509,7 +523,7 @@ def aux_select(query):
                         elif cond["op"] == "<":
                             invalid = set(btree.search(right))
                         else:
-                            curr = cond["value"]
+                            curr = cast(cond["value"], format[key])
                             invalid = set(btree.search(curr))
 
                         sets.append(valid - invalid)
@@ -532,12 +546,35 @@ def aux_select(query):
                         elif cond["op"] == "<":
                             invalid = set(seq.search(right))
                         else:
-                            curr = cond["value"]
+                            curr = cast(cond["value"], format[key])
                             invalid = set(seq.search(curr))
 
                         sets.append(valid - invalid)
                 else:
                     sets.append(set(seq.search(val)))
+            elif index == "isam":
+                isam = Isam(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla))
+                if cond["range_search"]:
+                    if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
+                        sets.append(set(isam.search_range(left, right)))
+                    else:
+                        valid = set(isam.search_range(left, right))
+                        if cond["op"] == ">":
+                            invalid = set(isam.search(left))
+                        elif cond["op"] == "<":
+                            invalid = set(isam.search(right))
+                        else:
+                            curr = cast(cond["value"], format[key])
+                            invalid = set(isam.search(curr))
+
+                        sets.append(valid - invalid)
+                else:
+                    sets.append(set(isam.search(val)))
+                
+
 
 
     for i in range(len(sets)):
@@ -640,6 +677,11 @@ def copy(query):
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
                             M))
+        elif index == "isam":
+            isam.append(Isam(format,
+                             key,
+                             index_filename(nombre_tabla, key, "index"),
+                             table_filename(nombre_tabla)))
     
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -654,7 +696,7 @@ def copy(query):
                 table_filename(nombre_tabla))
 
 
-    with open(query["from"], mode='r', newline='') as f:
+    with open(query["from"], mode='r', newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
         next(reader)
 
@@ -668,6 +710,8 @@ def copy(query):
                 bp.add(pos_new_record=pos)
             for s in seq:
                 s.add(pos_new_record=pos)
+            for i in isam:
+                i.add(pos_new_record=pos)
             if rtree is not None:
                 rtree.insert(row, pos)
 
@@ -733,6 +777,11 @@ def delete(query):
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
                             M))
+        elif index == "isam":
+            isam.append(Isam(format,
+                             key,
+                             index_filename(nombre_tabla, key, "index"),
+                             table_filename(nombre_tabla)))
     
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -807,6 +856,12 @@ def delete(query):
                                 index_filename(nombre_tabla, key, "index"),
                                 table_filename(nombre_tabla),
                                 M))
+            elif index == "isam":
+                isam.append(Isam(format,
+                                 key,
+                                 index_filename(nombre_tabla, key, "index"),
+                                 table_filename(nombre_tabla)))
+                
         rtree_keys = data.get("indexes", {}).get("rtree")
         if rtree_keys is not None:
             os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
