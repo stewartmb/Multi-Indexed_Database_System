@@ -5,6 +5,7 @@ import math
 from collections import deque
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
+from Heap_struct.Heap import Heap
 
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de registros y puntero al root)
@@ -25,7 +26,8 @@ class BPTree:
     def __init__(self, table_format , name_key: str ,
                  name_index_file = 'BPTree_struct/index_file.bin', 
                  name_data_file = 'BPTree_struct/data_file.bin',
-                 max_num_child = None,):
+                 max_num_child = None,
+                 force_create = False):
         
         self.index_file = name_index_file
         self.data_file = name_data_file
@@ -38,15 +40,18 @@ class BPTree:
         self._initialize_files()                                     # Inicializa los archivos de índice y datos
         self.M = max_num_child  # Orden del árbol B+
         self.tam_registro = self.RT.size                             # Tamaño del registro
+        self.HEAP = Heap(table_format, name_key, name_data_file, force_create=force_create)
 
-    
+
     def _initialize_files (self):
         """
         Inicializa los archivos de índice y datos.
         """
+        os.makedirs(os.path.dirname(self.index_file), exist_ok=True)
         if not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
                 f.write(struct.pack('ii', 0, -2)) # Inicializa el encabezado del archivo de índice (0 datos, -2 indica que recien inicia)
+        os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
         if not os.path.exists(self.data_file):
             with open(self.data_file, 'wb') as f:
                 f.write(struct.pack('i', 0)) # Inicializa el encabezado del archivo de datos
@@ -178,7 +183,7 @@ class BPTree:
             data = f.read(self.tam_registro)
             if len(data) != self.tam_registro:
                 raise ValueError("Tamaño incorrecto al leer registro")
-            return self.RT.from_bytes(data)  
+            return self.RT.from_bytes(data)
         
     def _write_record(self, position, record):
         """
@@ -194,7 +199,7 @@ class BPTree:
         Agrega un nuevo registro al final del archivo de datos.
         """
         size = self._read_header_data()
-        self._write_record(size, record) 
+        self.HEAP.insert(record)
         size += 1
         self._write_header_data(size)
     
@@ -223,65 +228,73 @@ class BPTree:
                         temp = self._read_index_page(pos_node)
                         break
             return pos_node # Retorna un posicion de la hoja en donde deberia estar el registro
-        
-
-    def search_aux(self, pos_node ,key):
+    
+    def search_aux(self, pos_node ,key_min):
         if pos_node == -2:
             return -1
         else:
             temp = self._read_index_page(pos_node)
             while (temp.leaf == False):
-                for i in range(temp.key_count):
-                    if key < temp.keys[i]:
-                        pos_children = temp.childrens[i]
-                        temp = self._read_index_page(pos_children)
-                        break
-                    if i == temp.key_count - 1:
-                        pos_children = temp.childrens[i + 1]
-                        temp = self._read_index_page(pos_children)
-                        break
-            for i in range(temp.key_count):
-                if temp.keys[i] == key:
-                    return temp.childrens[i]  # Retorna un posicion de registro en data_file.bin
-            return -1 # Retorna la posicion de la hoja 
-    
+                i = temp.find_index(key_min) # Busca el indice de la clave minima mas cercana a la clave dada por biseccion
+                pos_children = temp.childrens[i]
+                temp = self._read_index_page(pos_children)
+            return temp # Retorna un posicion de la hoja en donde deberia estar el registro
+
     def search(self, key):
         """
         Busca un registro en el árbol B+.
         """
         root = self._read_header_index()[1]  # posición de la raíz
-        pos_record = self.search_aux(root, key)
-
-        if pos_record == -1:
-            return None
+        temp = self.search_aux(root, key)
+        inicio =True
+        results = []
+        if temp == -1:
+            return results
         else:
-            record = self._read_record(pos_record)
-            return record  # Regresa la tupla del registro encontrado
-        
+            while True:
+                if inicio:
+                    start = temp.find_index(key) # Busca el indice de la clave minima mas cercana a la clave dada por biseccion
+                else:
+                    start = 0
+                for i in range(start,temp.key_count):
+                    if key < temp.keys[i]:
+                        break
+                    if temp.keys[i] == key:
+                        record_temp = self.HEAP.read(temp.childrens[i])
+                        if record_temp is not None:
+                            results.append(temp.childrens[i])
+                if temp.childrens[-1] != -1:
+                    inicio = False
+                    pos_children = temp.childrens[-1]
+                    temp = self._read_index_page(pos_children)
+                else:
+                    break
+            return results
+
     def search_range(self, key1, key2):
         """
         Busca un rango de registros en el árbol B+.
         """
         root = self._read_header_index()[1]  # posición de la raíz
-        pos_leaf = self.search_leaf(key1)  # Busca la posición de la hoja donde se debe insertar el registro
-        if pos_leaf == -1:
-            return None
-        leaf_page = self._read_index_page(pos_leaf)  # Lee la página
-        records = []
-        # Recorre la página y sus siguientes hojas
-        while leaf_page:
-            for i in range(leaf_page.key_count):
-                if key1 <= leaf_page.keys[i] <= key2:
-                    pos_record = leaf_page.childrens[i]
-                    record = self._read_record(pos_record)
-                    records.append(record)
-            # Mueve a la siguiente hoja
-            pos_leaf = leaf_page.childrens[self.M-1]
-            if pos_leaf != -1:
-                leaf_page = self._read_index_page(pos_leaf)
-            else:
-                break
-        return records  # Regresa la lista de registros encontrados
+        temp = self.search_aux(root, key1)
+        results = []
+        if temp == -1:
+            return results
+        else:
+            while True:
+                for i in range(temp.key_count):
+                    if key2 < temp.keys[i]:
+                        break
+                    if temp.keys[i] >= key1 and temp.keys[i] <= key2:
+                        record_temp = self.HEAP.read(temp.childrens[i])
+                        if record_temp is not None:
+                            results.append(temp.childrens[i])
+                if temp.childrens[-1] != -1:
+                    pos_children = temp.childrens[-1]
+                    temp = self._read_index_page(pos_children)
+                else:
+                    break
+            return results # Regresa la lista de registros encontrados
     
     
     ## INSERCION ##
@@ -338,7 +351,7 @@ class BPTree:
         # Divide la página en dos
         header = self._read_header_index()
         pos_new_page = header[0]  # posición de la nueva página
-        new_page = IndexPage(leaf=page.leaf, M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)  # Crea una nueva página de índic
+        new_page = IndexPage(leaf=page.leaf, M = self.M)  # Crea una nueva página de índic
         # Asigna las claves y punteros a la nueva página
         mid_index = (self.M - 1) // 2
         is_even = False
@@ -380,7 +393,7 @@ class BPTree:
         # Divide la página en dos
         header = self._read_header_index()
         pos_new_page = header[0]  # posición de la nueva página
-        new_page = IndexPage(leaf=page.leaf,  M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)  # Crea una nueva página de índic
+        new_page = IndexPage(leaf=page.leaf,  M = self.M)  # Crea una nueva página de índic
         # Asigna las claves y punteros a la nueva página
         mid_index = (self.M - 1) // 2
         is_even = False
@@ -429,9 +442,13 @@ class BPTree:
             return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
         if record is not None:
             pos_new_record = self._read_header_data() 
-            record = self.RT.correct_format(record)  # Formatea el registro
+            # record = self.RT.correct_format(record)  # Formatea el registro
             self._add_record(record)
-            key = self.RT.get_key(record)  # Obtiene la clave del registro 
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
+
+        if pos_new_record is not None:
+            record = self.HEAP.read(pos_new_record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
 
         header = self._read_header_index()
         root = header[1] # posición de la raíz
@@ -440,7 +457,7 @@ class BPTree:
         ## CASO 1: El árbol está vacío ##
         if root == -2 or root == -1:
             # Crea una nueva página de índice
-            new_page = IndexPage(leaf=True, M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)
+            new_page = IndexPage(leaf=True, M = self.M)
             new_page.keys[0] = key
             new_page.childrens[0] = pos_new_record
             new_page.key_count = 1
@@ -472,7 +489,7 @@ class BPTree:
                 ### CASO 2.2.1: Si el padre no existe, se crea uno nuevo ###
                 if parent_pos == -1:
                     pos_new_root = self._read_header_index()[0]
-                    new_root = IndexPage(leaf=False,  M = self.M, format_key = self.format_key , indexp_format = self.indexp_format)
+                    new_root = IndexPage(leaf=False,  M = self.M)
                     new_root.keys[0] = key_up
                     new_root.childrens[0] = current_pos
                     new_root.childrens[1] = pos_new_index
@@ -503,8 +520,11 @@ class BPTree:
                         current_page = self._read_index_page(current_pos)
                         parent_pos = current_page.father
 
+
+                        
+
 class IndexPage():
-    def __init__(self, leaf=True, M=None, format_key=None, indexp_format=None):
+    def __init__(self, leaf=True, M=None):
         self.leaf = leaf
         self.keys = [None] * (M-1)
         self.childrens = [-1] * M
@@ -562,7 +582,7 @@ class IndexPage():
         unpacked = list(struct.unpack(indexp_format, data))
 
         # Create instance
-        instance = cls(leaf=bool(unpacked[0]), M=M, format_key=format_key, indexp_format=indexp_format)
+        instance = cls(leaf=bool(unpacked[0]), M=M)
 
         # Handle keys
         for i in range(M - 1):
@@ -585,3 +605,20 @@ class IndexPage():
         instance.key_count = unpacked[-1]
 
         return instance
+    
+    # busca el indice de la clave minima mas cercana a la clave dada por biseccion
+    def find_index(self, key):
+        """
+        Encuentra el índice donde se debe descender por biseccion.
+        """
+        low = 0
+        high = self.key_count - 1
+        while low <= high:
+            mid = (low + high) // 2
+            if self.keys[mid] < key:
+                low = mid + 1
+            else:
+                high = mid - 1
+        return low
+
+    

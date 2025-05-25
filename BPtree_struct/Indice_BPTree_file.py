@@ -235,17 +235,10 @@ class BPTree:
         else:
             temp = self._read_index_page(pos_node)
             while (temp.leaf == False):
-                for i in range(temp.key_count):
-                    if key_min <= temp.keys[i]:
-                        pos_children = temp.childrens[i]
-                        temp = self._read_index_page(pos_children)
-                        break
-                    if i == temp.key_count - 1:
-                        pos_children = temp.childrens[i + 1]
-                        temp = self._read_index_page(pos_children)
-                        break
+                i = temp.find_index(key_min) # Busca el indice de la clave minima mas cercana a la clave dada por biseccion
+                pos_children = temp.childrens[i]
+                temp = self._read_index_page(pos_children)
             return temp # Retorna un posicion de la hoja en donde deberia estar el registro
-
 
     def search(self, key):
         """
@@ -253,17 +246,25 @@ class BPTree:
         """
         root = self._read_header_index()[1]  # posición de la raíz
         temp = self.search_aux(root, key)
+        inicio =True
         results = []
         if temp == -1:
             return results
         else:
             while True:
-                for i in range(temp.key_count):
+                if inicio:
+                    start = temp.find_index(key) # Busca el indice de la clave minima mas cercana a la clave dada por biseccion
+                else:
+                    start = 0
+                for i in range(start,temp.key_count):
                     if key < temp.keys[i]:
                         break
                     if temp.keys[i] == key:
-                        results.append(temp.childrens[i])
+                        record_temp = self.HEAP.read(temp.childrens[i])
+                        if record_temp is not None:
+                            results.append(temp.childrens[i])
                 if temp.childrens[-1] != -1:
+                    inicio = False
                     pos_children = temp.childrens[-1]
                     temp = self._read_index_page(pos_children)
                 else:
@@ -285,7 +286,9 @@ class BPTree:
                     if key2 < temp.keys[i]:
                         break
                     if temp.keys[i] >= key1 and temp.keys[i] <= key2:
-                        results.append(temp.childrens[i])
+                        record_temp = self.HEAP.read(temp.childrens[i])
+                        if record_temp is not None:
+                            results.append(temp.childrens[i])
                 if temp.childrens[-1] != -1:
                     pos_children = temp.childrens[-1]
                     temp = self._read_index_page(pos_children)
@@ -599,3 +602,20 @@ class IndexPage():
         instance.key_count = unpacked[-1]
 
         return instance
+    
+    # busca el indice de la clave minima mas cercana a la clave dada por biseccion
+    def find_index(self, key):
+        """
+        Encuentra el índice donde se debe descender por biseccion.
+        """
+        low = 0
+        high = self.key_count - 1
+        while low <= high:
+            mid = (low + high) // 2
+            if self.keys[mid] < key:
+                low = mid + 1
+            else:
+                high = mid - 1
+        return low
+
+    

@@ -234,7 +234,7 @@ class ISAM():
         self.RT = RegistroType(table_format, name_key)               # Formato de los datos
         self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
         self.tam_registro = self.RT.size                             # Tamaño del registro
-        self.prueba = True
+
         depends = self._initialize_files()
         if depends:
             self.build_index()
