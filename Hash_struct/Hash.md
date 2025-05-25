@@ -17,5 +17,38 @@ Ejemplo de índice hash:
 
 ![Imagen_hash](/images/hash1.png)
 
-continuará...
+## Extendible Hahsing
+Para el proyecto, se ha decido implementar el Extendible Hashing. A diferencia de un hash tradicional, es un tipo de hash **dinámico** para gestionar base de datos que crecen y reducen su tamaño en el tiempo (transaccionales).
+
+La función hash de esta estructura tiene la caraterística de que genera una secuencia de bits (secuencia binaria). En cualquier momento, solo se usa un prefijo/sufijo del binario para indexar los registros en una tabla de direcciones de buckets.
+
+Ejemplo de extendible hash:
+
+(Imagen)
+
+Un extendible hash se compone de:
+- **Directorio**: Tabla que almacena punteros a buckets. Su tamaño es 2^D (donde D = profundidad global). La profundidad global es el número de bits utilizados por el directorio para indexar los buckets.
+- **Buckets**: Contenedores que almacenan registros. Cada bucket tiene una profundidad local (d). La profundidad local es el número de bits usados por un bucket específico para determinar qué registros almacena.
+- **Función de Hash**: Se usan los D bits más significativos para indexar el directorio.
+
+
+## Representación usando un árbol
+La implementación de la estructura se ha decidido que, en vez de hacer una tabla plana, el directorio estará organizado como un árbol. Este enfoque ha sudo basado en un laboratorio que se tuvo en clase. 
+
+(Imagen 2)
+
+Con este enfoque, el directorio se divide en dos:
+- Nodos Internos (Internal Directory Nodes): Contienen decisiones de enrutamiento basadas en bits del hash.
+- Nodos Hoja (Leaf Directory Nodes): Apuntan directamente a los buckets que almacenan registros.
+
+
+## Estructura del índice:
+
+### Archivo de índice
+### Archivo de bucket 
+### Archivo de datos
+
+## Algoritmos de las operaciones
+
+## Conplejidad
 
