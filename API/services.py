@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import csv
+from fastapi import HTTPException
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Format_Meta import *
@@ -41,7 +42,6 @@ def to_struct(type):
         print("ERROR: tipo no soportado")
         return None
 
-
 def parse_select(tokens: list):
     def helper(pos):
         if tokens[pos] == '(':
@@ -67,7 +67,6 @@ def parse_select(tokens: list):
     tree, _ = helper(0)
     return tree
 
-
 def evaluate_select(node, sets, universe):
     if isinstance(node, int):
         return sets[node]
@@ -82,7 +81,6 @@ def evaluate_select(node, sets, universe):
             return evaluate_select(node[1], sets, universe) | evaluate_select(node[2], sets, universe)
         else:
             raise ValueError("Unknown operator: " + op)
-
 
 def cast(value, type):
     if type == "?":
@@ -132,7 +130,6 @@ def convert(query):
     else:
         print("error: accion no soportada")
 
-
 def create_table(query):
     # crear tabla y añadir a metadata
 
@@ -145,17 +142,27 @@ def create_table(query):
     for key in cols.keys():
         format[key] = to_struct(cols[key]["type"])
 
+    indexes_data = select_index_meta()
+    print(json.dumps(indexes_data, indent=4))
+
     # crear indices
     for key in cols.keys():
         index = cols[key]["index"]
         if index == None:
             pass
         elif index == "hash":
-            hash = Hash(format,
-                        key,
-                        index_filename(query["name"], key, "buckets"),
-                        index_filename(query["name"], key, "index"),
-                        table_filename(query["name"]))
+            if indexes_data["hash"] is not None:
+                hash = Hash(format,
+                            key,
+                            index_filename(query["name"], key, "buckets"),
+                            index_filename(query["name"], key, "index"),
+                            table_filename(query["name"]), *indexes_data["hash"])
+            else:
+                hash = Hash(format,
+                            key,
+                            index_filename(query["name"], key, "buckets"),
+                            index_filename(query["name"], key, "index"),
+                            table_filename(query["name"]))
         elif index == "seq":
             seq = Sequential(format,
                              key,
@@ -163,18 +170,24 @@ def create_table(query):
                              table_filename(query["name"]))
 
         elif index == "btree":
-            btree = Btree(format,
-                          key,
-                          index_filename(query["name"], key, "index"),
-                          table_filename(query["name"]),
-                          M)
+            if indexes_data["btree"] is not None:
+                btree = Btree(format,
+                            key,
+                            index_filename(query["name"], key, "index"),
+                            table_filename(query["name"]),
+                            *indexes_data["btree"])
+            else:
+                btree = Btree(format,
+                            key,
+                            index_filename(query["name"], key, "index"),
+                            table_filename(query["name"]),
+                            M)
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
     return {
         "message": f"CREATED TABLE {query["name"]}"
     }
-
 
 def insert(query):
     nombre_tabla = query["table"]
@@ -190,19 +203,28 @@ def insert(query):
 
     position = heap.insert(query["values"][1])
 
+    indexes_data = select_index_meta()
+
     # insertar en cada indice si existe
     for key in data["columns"].keys():
         index = data["columns"][key]["index"]
         if index == None:
             pass
         elif index == "hash":
-            hash = Hash(format,
-                        key,
-                        index_filename(nombre_tabla, key, "buckets"),
-                        index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla))
-
+            if indexes_data["hash"] is not None:
+                hash = Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla), *indexes_data["hash"])
+            else:
+                hash = Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla))
             hash.insert(query["values"][1], position)
+
         elif index == "seq":
             seq = Sequential(format,
                              key,
@@ -212,11 +234,18 @@ def insert(query):
             seq.add(pos_new_record=position)
 
         elif index == "btree":
-            btree = Btree(format,
-                          key,
-                          index_filename(nombre_tabla, key, "index"),
-                          table_filename(nombre_tabla),
-                          M)
+            if indexes_data["btree"] is not None:
+                btree = Btree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            *indexes_data["btree"])
+            else:
+                btree = Btree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            M)
             btree.add(pos_new_record=position)
 
     # indice compuesto en rtree, añadir en el indice
@@ -233,7 +262,6 @@ def insert(query):
         "message": f"INSERTED VALUE ON TABLE {nombre_tabla}"
     }
 
-
 def create_index(query):
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
@@ -246,6 +274,8 @@ def create_index(query):
         data["columns"][key]["index"] = query["index"]
 
     create_meta(data, nombre_tabla)
+
+    indexes_data = select_index_meta()
 
     keys = query["attr"]
     
@@ -263,15 +293,22 @@ def create_index(query):
     if index == None:
         pass
     elif index == "hash":
-        hash = Hash(format,
-                    keys[0],
-                    index_filename(nombre_tabla, keys[0], "buckets"),
-                    index_filename(nombre_tabla, keys[0], "index"),
-                    table_filename(nombre_tabla))
+        if indexes_data["hash"] is not None:
+            hash = Hash(format,
+                        keys[0],
+                        index_filename(nombre_tabla, keys[0], "buckets"),
+                        index_filename(nombre_tabla, keys[0], "index"),
+                        table_filename(nombre_tabla), *indexes_data["hash"])
+        else:
+            hash = Hash(format,
+                        keys[0],
+                        index_filename(nombre_tabla, keys[0], "buckets"),
+                        index_filename(nombre_tabla, keys[0], "index"),
+                        table_filename(nombre_tabla))
 
     elif index == "seq":
         seq = Sequential(format,
-                         key,
+                         keys[0],
                          index_filename(nombre_tabla, keys[0], "index"),
                          table_filename(nombre_tabla))
 
@@ -287,11 +324,18 @@ def create_index(query):
         data["indexes"]["rtree"] = keys
 
     elif index == "btree":
-        btree = Btree(format,
-                      keys[0],
-                      index_filename(nombre_tabla, keys[0], "index"),
-                      table_filename(nombre_tabla),
-                      M)
+        if indexes_data["btree"] is None:
+            btree = Btree(format,
+                        keys[0],
+                        index_filename(nombre_tabla, keys[0], "index"),
+                        table_filename(nombre_tabla),
+                        M)
+        else:
+            btree = Btree(format,
+                        keys[0],
+                        index_filename(nombre_tabla, keys[0], "index"),
+                        table_filename(nombre_tabla),
+                        *indexes_data["btree"])
 
     else:
         print("INDICE NO IMPLEMENTADO AUN")
@@ -305,17 +349,16 @@ def create_index(query):
         if hash is not None:
             hash.insert(record, pos)
         elif seq is not None:
-            seq.add(pos)
+            seq.add(pos_new_record=pos)
         elif rtree is not None:
             rtree.insert(record, pos)
         elif btree is not None:
-            btree.add(pos)
+            btree.add(pos_new_record=pos)
     
     return {
-        "message": f"CREATED INDEX f{index} ON TABLE {nombre_tabla}"
+        "message": f"CREATED INDEX {index} ON TABLE {nombre_tabla}"
     }
     
-
 def aux_select(query):
     # print(json.dumps(query, indent=2))
     nombre_tabla = query["table"]
@@ -340,6 +383,8 @@ def aux_select(query):
 
     tree = parse_select(tokens)
     sets = []
+
+    indexes_data = select_index_meta()
 
     for condition in query["conditions"].keys():
         cond = query["conditions"][condition]
@@ -396,11 +441,18 @@ def aux_select(query):
                 else:
                     sets.append(set(heap.search(val, val)))
             elif index == "hash":
-                hash = Hash(format,
-                            key,
-                            index_filename(nombre_tabla, key, "buckets"),
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla))
+                if indexes_data["hash"] is not None:
+                    hash = Hash(format,
+                                key,
+                                index_filename(nombre_tabla, key, "buckets"),
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla), *indexes_data["hash"])
+                else:
+                    hash = Hash(format,
+                                key,
+                                index_filename(nombre_tabla, key, "buckets"),
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla))
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
@@ -422,11 +474,18 @@ def aux_select(query):
                     sets.append(set(hash.search(val)))
 
             elif index == "btree":
-                btree = Btree(format,
-                              key,
-                              index_filename(nombre_tabla, key, "index"),
-                              table_filename(nombre_tabla),
-                              M)
+                if indexes_data["btree"] is not None:
+                    btree = Btree(format,
+                                key,
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla),
+                                *indexes_data["btree"])
+                else:
+                    btree = Btree(format,
+                                key,
+                                index_filename(nombre_tabla, key, "index"),
+                                table_filename(nombre_tabla),
+                                M)
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
@@ -481,7 +540,6 @@ def aux_select(query):
         universe = set(heap.get_all())
     return evaluate_select(tree, sets, universe)
 
-
 def select(query):
     ans_set = aux_select(query)
 
@@ -516,6 +574,7 @@ def copy(query):
     nombre_tabla = query["table"]
 
     data = select_meta(nombre_tabla)
+    indexes_data = select_index_meta()
 
     hash = []
     seq = []
@@ -530,22 +589,36 @@ def copy(query):
         if index == None:
             pass
         elif index == "hash":
-            hash.append(Hash(format,
-                        key,
-                        index_filename(nombre_tabla, key, "buckets"),
-                        index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla)))
+            if indexes_data["hash"] is not None:
+                hash.append(Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla), *indexes_data["hash"]))
+            else:
+                hash.append(Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla)))
         elif index == "seq":
             seq.append(Sequential(format,
                         key,
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla)))
         elif index == "btree":
-            btree.append(Btree(format,
-                        key,
-                        index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla),
-                        M))
+            if indexes_data["btree"] is not None:
+                btree.append(Btree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            *indexes_data["btree"]))
+            else:
+                btree.append(Btree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            M))
     
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -601,28 +674,44 @@ def delete(query):
     heap = Heap(format,
                 data["key"],
                 table_filename(nombre_tabla))
+    
+    indexes_data = select_index_meta()
 
     for key in data["columns"].keys():
         index = data["columns"][key]["index"]
         if index == None:
             pass
         elif index == "hash":
-            hash.append(Hash(format,
-                        key,
-                        index_filename(nombre_tabla, key, "buckets"),
-                        index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla)))
+            if indexes_data["hash"] is not None:
+                hash.append(Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla), *indexes_data["hash"]))
+            else:
+                hash.append(Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla)))
         elif index == "seq":
             seq.append(Sequential(format,
                         key,
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla)))
         elif index == "btree":
-            btree.append(Btree(format,
-                        key,
-                        index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla),
-                        M))
+            if indexes_data["btree"] is not None:
+                btree.append(Btree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            *indexes_data["btree"]))
+            else:
+                btree.append(Btree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            M))
     
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -647,12 +736,81 @@ def delete(query):
         "message": "DELETED"
     }
 
-
 def drop_index(query):
-    return {}
+    nombre_tabla = query["table"]
+    index_file = index_filename(nombre_tabla,
+                                *query["attr"],
+                                "index")
+    
+    # eliminar indice en metadata
+
+    data = select_meta(nombre_tabla)
+
+    for key in query["attr"]:
+        data["columns"][str(key)]["index"] = None
+
+    create_meta(data, nombre_tabla)
+
+    try:
+        os.remove(index_file)
+        if query["index"] == "hash":
+            os.remove(index_filename(nombre_tabla, key, "buckets"))
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {
+        "message": "DELETED INDEX SUCCESSFULLY"
+    }
 
 def drop_table(query):
-    return {}
+    nombre_tabla = query["table"]
+    data = select_meta(nombre_tabla)
+
+    print(json.dumps(data, indent=4))
+
+    data_file = table_filename(nombre_tabla)
+    
+    # eliminar indices en la tabla
+    for key in data["columns"].keys():
+        index = data["columns"][key]["index"]
+        if index == "hash":
+            os.remove(index_filename(nombre_tabla, key, "buckets"))
+        if index is not None and index != "rtree":
+            index_file = index_filename(nombre_tabla,
+                                    key,
+                                    "index")
+            os.remove(index_file)
+
+    rtree_keys = data.get("indexes", {}).get("rtree")
+    if rtree_keys is not None:
+        os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
+    
+    # eliminar entrada en metadata
+    delete_meta(nombre_tabla)
+    
+    try:
+        os.remove(data_file)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {
+        "message": "DELETED INDEX SUCCESSFULLY"
+    }
 
 def set_stmt(query):
-    return {}
+    index = query["index"]
+
+    try:
+        params = [int(x) for x in query["params"]]
+    except ValueError as e:
+        print("One of the items couldn't be converted:", e)
+    
+    if index == "btree" and len(params) != 1:
+        raise HTTPException(status_code=404, detail="Wrong amount of parameters")
+    elif index == "hash" and len(params) != 2:
+        raise HTTPException(status_code=404, detail="Wrong amount of parameters")
+
+    set_index_meta(index, params)
+
+    return {
+        "message": "SET INDEXES CORRECTLY"
+    }

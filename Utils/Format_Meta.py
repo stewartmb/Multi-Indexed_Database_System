@@ -46,3 +46,91 @@ def select_meta(name: str) -> dict:
 
     print(f"No se encontró una entrada con el nombre '{name}'.")
     return {}
+
+def delete_meta(name: str) -> None:
+    """Elimina la entrada con clave 'name' de la lista en MetaData"""
+    filename = "Schema/metadata"+".meta"
+    all_data = []
+
+    # Si el archivo existe, cargar la lista existente
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            try:
+                all_data = json.load(f)
+            except json.JSONDecodeError:
+                print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
+
+    # Eliminar entrada anterior 
+    all_data = [item for item in all_data if name not in item]
+
+    # Se vuelve a escribir el diccionario de metadata
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(all_data, f, indent=4)
+
+    print(f"Se elimino la entrada '{name}' en '{filename}'.")
+
+def create_index_meta():
+    filename = "Schema/indexes"+".meta"
+
+    dict = {
+        "hash": None,
+        "btree": None
+    }
+
+    if os.path.exists(filename):
+        with open(filename, "w", encoding="utf-8") as f:
+            try:
+                json.dump(dict, f, indent=4)
+            except json.JSONDecodeError:
+                            print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
+    print(f"Informacion de índices creado en {filename}")
+
+def set_index_meta(index: str, params: list):
+    filename = "Schema/indexes"+".meta"
+
+    dict = {
+        "hash": None,
+        "btree": None
+    }
+
+    if not os.path.exists(filename):
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(dict, f, indent=4)
+            print("a")
+
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            try:
+                all_data = json.load(f)
+            except json.JSONDecodeError:
+                print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
+    
+    all_data[index] = params;
+
+    if os.path.exists(filename):
+        with open(filename, "w", encoding="utf-8") as f:
+            try:
+                json.dump(all_data, f, indent=4)
+            except json.JSONDecodeError:
+                print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
+    
+    print(f"Edited {filename} correcty.")
+
+def select_index_meta():
+    filename = "Schema/indexes"+".meta"
+
+    if not os.path.exists(filename):
+        print(f"El archivo '{filename}' no existe.")
+        return {
+            "hash": None,
+            "btree": None
+        }
+
+    with open(filename, "r", encoding="utf-8") as f:
+        try:
+            all_data = json.load(f)
+        except json.JSONDecodeError:
+            print("Error: No se pudo leer el archivo. ¿Está corrupto?")
+            return {}
+
+    return all_data

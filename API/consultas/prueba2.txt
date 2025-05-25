@@ -83,4 +83,15 @@ select * from destinos where name between "Eiffel Tower" and "Great Wall";
 select * from destinos where name == "Big Ben";
 select * from destinos where name != "Big Ben";
 
+drop index btree on values ciudad on destinos;
+
+set btree params (10);
+
+create index on destinos using btree(ciudad);
+
+delete from destinos where latitud, longitud between [30, -100] and [45, 4];
+
+select * from destinos where name == "Big Ben";
+
+select * from destinos;
 
