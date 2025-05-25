@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import styles from './Results.module.css'; // Importar los estilos CSS
 
 interface Props {
     data: any[] | null;
@@ -14,16 +15,12 @@ const Results: React.FC<Props> = ({ data, error, history }) => {
     return (
         <div className="h-full flex flex-col border-t border-gray-300">
             {/* Tabs */}
-            <div className="flex border-b border-gray-300 bg-gray-100">
+            <div className={styles.tabs}>
                 {['data', 'messages', 'explain', 'history'].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab as any)}
-                        className={`px-4 py-2 text-sm capitalize ${
-                            activeTab === tab
-                                ? 'border-b-2 border-blue-500 text-blue-600'
-                                : 'text-gray-600 hover:text-black'
-                        }`}
+                        className={`${styles.tabButton} ${activeTab === tab ? styles.tabButtonActive : styles.tabButtonInactive} ${activeTab !== tab ? styles.tabButtonHover : ''}`}
                     >
                         {tab === 'data' ? 'Data Output' :
                             tab === 'messages' ? 'Messages' :
@@ -34,32 +31,34 @@ const Results: React.FC<Props> = ({ data, error, history }) => {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-auto p-4 text-sm">
+            <div className={styles.tabContent}>
                 {activeTab === 'data' && (
                     <>
                         {error ? (
-                            <div className="text-red-600">Error: {error}</div>
+                            <div className={styles.errorMessage}>Error: {error}</div>
                         ) : data ? (
-                            <table className="w-full table-auto border-collapse">
-                                <thead>
-                                <tr>
-                                    {headers.map((header) => (
-                                        <th key={header} className="border px-2 py-1 bg-gray-100 text-left">{header}</th>
-                                    ))}
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {data.map((row, idx) => (
-                                    <tr key={idx}>
+                            <div className={styles.tableContainer}>
+                                <table className={styles.table}>
+                                    <thead>
+                                    <tr>
                                         {headers.map((header) => (
-                                            <td key={header} className="border px-2 py-1">{row[header]}</td>
+                                            <th key={header}>{header}</th>
                                         ))}
                                     </tr>
-                                ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                    {data.map((row, idx) => (
+                                        <tr key={idx}>
+                                            {headers.map((header) => (
+                                                <td key={header}>{row[header]}</td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         ) : (
-                            <div className="text-gray-500">No results</div>
+                            <div className={styles.noResults}>No results</div>
                         )}
                     </>
                 )}
@@ -68,26 +67,26 @@ const Results: React.FC<Props> = ({ data, error, history }) => {
                     <div>
                         <p>Ready to execute queries.</p>
                         {error && (
-                            <div className="mt-2 text-red-600">Error: {error}</div>
+                            <div className={styles.errorMessage}>Error: {error}</div>
                         )}
                     </div>
                 )}
 
                 {activeTab === 'explain' && (
-                    <div className="text-gray-500 italic">
+                    <div className={styles.infoMessage}>
                         Query plan will appear here after running <code>EXPLAIN</code>
                     </div>
                 )}
 
                 {activeTab === 'history' && (
-                    <div className="text-sm text-gray-800">
+                    <div className={styles.historyList}>
                         {history.length === 0 ? (
-                            <p className="italic text-gray-500">No queries run yet.</p>
+                            <p className={styles.infoMessage}>No queries run yet.</p>
                         ) : (
-                            <ul className="list-decimal pl-5 space-y-1">
+                            <ul>
                                 {history.map((query, idx) => (
-                                    <li key={idx} className="bg-white p-2 rounded border border-gray-200">
-                                        <code className="text-blue-600">{query}</code>
+                                    <li key={idx} className={styles.historyItem}>
+                                        <code>{query}</code>
                                     </li>
                                 ))}
                             </ul>

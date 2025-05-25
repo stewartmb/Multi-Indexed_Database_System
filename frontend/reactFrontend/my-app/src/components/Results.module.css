@@ -1,0 +1,90 @@
+/* Results.module.css */
+
+/* Tab styles */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb; /* Tailwind gray-300 */
+    background-color: #f3f4f6; /* Tailwind bg-gray-100 */
+}
+
+.tabButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem; /* text-sm */
+    text-transform: capitalize;
+}
+
+.tabButtonActive {
+    border-bottom: 2px solid #3b82f6; /* Tailwind blue-500 */
+    color: #2563eb; /* Tailwind text-blue-600 */
+}
+
+.tabButtonInactive {
+    color: #4b5563; /* Tailwind text-gray-600 */
+}
+
+.tabButtonHover {
+    &:hover {
+        color: #1f2937; /* Tailwind hover:text-black */
+    }
+}
+
+/* Tab Content styles */
+.tabContent {
+    flex: 1;
+    overflow: auto;
+    padding: 1rem;
+    font-size: 0.875rem; /* text-sm */
+}
+
+.tableContainer {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    table-layout: auto;
+    border-collapse: collapse;
+}
+
+.table th, .table td {
+    border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+    padding: 0.5rem 1rem;
+}
+
+.table th {
+    background-color: #f3f4f6; /* Tailwind bg-gray-100 */
+    text-align: left;
+}
+
+.noResults {
+    color: #6b7280; /* Tailwind text-gray-500 */
+}
+
+.historyList {
+    list-style-type: decimal;
+    padding-left: 1.25rem; /* Tailwind pl-5 */
+    margin-top: 0.5rem;
+    color: #374151; /* Tailwind text-gray-800 */
+}
+
+.historyItem {
+    background-color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+}
+
+.historyItem code {
+    color: #2563eb; /* Tailwind text-blue-600 */
+}
+
+.errorMessage {
+    margin-top: 0.5rem;
+    color: #dc2626; /* Tailwind text-red-600 */
+}
+
+.infoMessage {
+    font-style: italic;
+    color: #6b7280; /* Tailwind text-gray-500 */
+}

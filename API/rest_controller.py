@@ -25,6 +25,12 @@ parser = Lark(sql_grammar, start='start', parser='lalr', transformer=SQLTransfor
 class QueryInput(BaseModel):
     query: str
 
+
+@app.get("/")
+def read_root():
+    return {"state": "Running"}
+
+
 @app.post("/query")
 def parse_sql_query(input: QueryInput):
     sql_code = input.query
@@ -52,9 +58,9 @@ consultas = ["", "", "", "", "", ""]
 # consultas[1]= "API/consultas/crear_indice.txt"
 # consultas[2]= "API/consultas/insertar_datos.txt"
 # consultas[3]= "API/consultas/select_datos.txt"
-# consultas[4] = "API/consultas/prueba2.txt"
+consultas[4] = "API/consultas/prueba2.txt"
 # consultas[5]= "API/consultas/copy.txt"
-consultas[5]= "ParserSQL/test2.txt"
+# consultas[5]= "ParserSQL/test2.txt"
 
 # eliminar todo lo de la  carpeta Schema
 def eliminar_directorio(directorio):

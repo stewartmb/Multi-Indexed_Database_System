@@ -15,12 +15,16 @@ export default function ResizablePanel() {
         // Agrega al historial antes de ejecutar
         setHistory((prev) => [query, ...prev]);
 
+        // TODO: CAMBIAR EL PUERTO A 8000
         try {
-            const response = await fetch('http://127.0.0.1:8000/query', {
+            console.log('Running query:', query);
+            const response = await fetch('http://127.0.0.1:8080/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query }),
             });
+
+            console.log('Response:', response);
 
             const result = await response.json();
 
@@ -36,6 +40,7 @@ export default function ResizablePanel() {
                 setData([]);
             }
         } catch (err: any) {
+            console.error('Error running query:', err);
             setError(err.message);
         }
     };
