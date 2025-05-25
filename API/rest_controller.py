@@ -68,7 +68,7 @@ consultas = ["", "", "", "", "", ""]
 # consultas[4] = "API/consultas/prueba2.txt"
 # consultas[5]= "API/consultas/copy.txt"
 # consultas[5]= "ParserSQL/test2.txt"
-consultas[5]= "API/consultas/aaa.txt"
+# consultas[5]= "API/consultas/aaa.txt"
 
 # eliminar todo lo de la  carpeta Schema
 def eliminar_directorio(directorio):

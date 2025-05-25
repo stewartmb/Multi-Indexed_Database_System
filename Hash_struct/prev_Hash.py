@@ -126,7 +126,7 @@ class Hash:
                  buckets_file_name: str,
                  index_file_name: str,
                  data_file_name: str,
-                 global_depth: int = 1,
+                 global_depth: int = 16,
                  max_records_per_bucket: int = 4,
                  force_create: bool = False):
         """
@@ -175,51 +175,38 @@ class Hash:
                 f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
                 f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
 
+
     def _insert_value_in_bucket(self, buckets_file, index_file, bucket_position, data_position):
         """
-        Inserta la posición del dato en el bucket. Si el bucket está lleno y en profundidad máxima,
-        se maneja con overflow por push-front. Si no está en profundidad máxima, retorna False para disparar un split.
+        Inserta al bucket la referencia a la posicion de un registro
         """
         buckets_file.seek(bucket_position * self.BT.size)
         bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
 
-        # Si el bucket no está lleno, simplemente insertamos
+        # Si el bucket no esta lleno, se agrega el registro
         if bucket['fullness'] < self.max_records:
             bucket['records'][bucket['fullness']] = data_position
             bucket['fullness'] += 1
             buckets_file.seek(bucket_position * self.BT.size)
             buckets_file.write(self.BT.to_bytes(bucket))
-            return True
-
-        # Si el bucket está lleno pero su profundidad es menor que la global → split
-        if bucket['local_depth'] < self.global_depth:
-            return False
-
-        # Si está lleno y en profundidad máxima → manejar con push-front de overflow
-        new_bucket_pos = self.Header.read(index_file, 2)
-        self.Header.write(index_file, new_bucket_pos + 1, 2)
-
-        new_bucket = {
-            'records': [-1] * self.max_records,
-            'fullness': 1,
-            'local_depth': self.global_depth,
-            'overflow_position': bucket['overflow_position']  # encadena al antiguo primer overflow
-        }
-        new_bucket['records'][0] = data_position
-
-        # El bucket base apunta ahora al nuevo overflow (nuevo "head" de la cadena)
-        bucket['overflow_position'] = new_bucket_pos
-
-        # Escribimos ambos buckets
-        buckets_file.seek(bucket_position * self.BT.size)
-        buckets_file.write(self.BT.to_bytes(bucket))
-
-        buckets_file.seek(new_bucket_pos * self.BT.size)
-        buckets_file.write(self.BT.to_bytes(new_bucket))
-
+        else:
+            if bucket['local_depth'] != self.global_depth:
+                return False # Trigger split
+            if bucket['overflow_position'] == -1:
+                # print("creando overflow")
+                overflow_pos = self.Header.read(index_file, 2)
+                self.Header.write(index_file, overflow_pos + 1, 2)
+                bucket['overflow_position'] = overflow_pos
+                empty_bucket = {'records': [-1]*self.max_records,
+                               'local_depth': self.global_depth,
+                               'fullness': 0,
+                               'overflow_position': -1}
+                buckets_file.seek(bucket_position * self.BT.size)
+                buckets_file.write(self.BT.to_bytes(bucket))
+                buckets_file.seek(overflow_pos * self.BT.size)
+                buckets_file.write(self.BT.to_bytes(empty_bucket))
+            self._insert_value_in_bucket(buckets_file, index_file, bucket['overflow_position'], data_position)
         return True
-
-
 
     def _add_to_hash(self, buckets_file, index_file, data_position, index_hash):
         node_index = 0

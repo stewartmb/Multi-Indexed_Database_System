@@ -389,7 +389,7 @@ def create_index(query):
     }
 
 def aux_select(query):
-    # print(json.dumps(query, indent=2))
+    print(json.dumps(query, indent=2))
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
@@ -411,12 +411,14 @@ def aux_select(query):
         calc_universe = True
 
     tree = parse_select(tokens)
+    print("tree: ", tree)
     sets = []
 
     indexes_data = select_index_meta()
 
     for condition in query["conditions"].keys():
         cond = query["conditions"][condition]
+        print("cond", cond)
         key = cond["field"]
 
         if isinstance(key, list):
@@ -461,14 +463,17 @@ def aux_select(query):
                 val = cast(cond["value"], format[key])
 
             if index == None:
+                print("Entered heap")
                 heap = Heap(format,
                             cond["field"],
                             table_filename(nombre_tabla))
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
+                        print("entered ==")
                         sets.append(set(heap.search(left, right)))
                     else:
+                        print("entered other")
                         valid = set(heap.search(left, right))
                         if cond["op"] == ">":
                             invalid = set(heap.search(left,left))
@@ -480,6 +485,9 @@ def aux_select(query):
                             invalid = set(heap.search(curr,curr))
 
                         sets.append(valid - invalid)
+                else:
+                    sets.append(set(heap.search(val, val)))
+
             elif index == "hash":
                 if indexes_data["hash"] is not None:
                     hash = Hash(format,
@@ -601,6 +609,8 @@ def aux_select(query):
                     data["key"],
                     table_filename(query["table"]))
         universe = set(heap.get_all())
+    print(tree, sets, universe)
+
     return evaluate_select(tree, sets, universe)
 
 def select(query):
