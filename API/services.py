@@ -109,7 +109,6 @@ def cast(value, type):
         print("ERROR: tipo no soportado")
         return None
 
-
 def convert(query):
     # print(json.dumps(query, indent=2))
     if query["action"] == "create_table":
@@ -119,11 +118,17 @@ def convert(query):
     elif query["action"] == "select":
         return select(query)
     elif query["action"] == "delete":
-        print("Z")
+        return delete(query)
     elif query["action"] == "index":
         return create_index(query)
     elif query["action"] == "copy":
-        copy(query)
+        return copy(query)
+    elif query["action"] == "drop index":
+        return drop_index(query)
+    elif query["action"] == "drop table":
+        return drop_table(query)
+    elif query["action"] == "set":
+        return set_stmt(query)
     else:
         print("error: accion no soportada")
 
@@ -244,11 +249,11 @@ def create_index(query):
 
     keys = query["attr"]
     
-    hash = []
-    seq = []
-    rtree = []
-    btree = []
-    isam = []
+    hash = None
+    seq = None
+    rtree = None
+    btree = None
+    isam = None
 
     heap = Heap(format,
                 data["key"],
@@ -292,16 +297,19 @@ def create_index(query):
         print("INDICE NO IMPLEMENTADO AUN")
 
     records = heap._select_all()
+    positions = heap.get_all()
     create_meta(data, nombre_tabla)
 
     # añadir los registros ya en la tabla al indice creado
-    for record in records:
+    for record, pos in zip(records, positions):
         if hash is not None:
-            hash.insert(record, )
+            hash.insert(record, pos)
         elif seq is not None:
-            seq.add(record)
+            seq.add(pos)
         elif rtree is not None:
-            rtree.insert(record)
+            rtree.insert(record, pos)
+        elif btree is not None:
+            btree.add(pos)
     
     return {
         "message": f"CREATED INDEX f{index} ON TABLE {nombre_tabla}"
@@ -490,7 +498,8 @@ def select(query):
         heap = Heap(format,
                     data["key"],
                     table_filename(query["table"]))
-        result.append(heap.read(i))
+        if not heap.is_deleted(i):
+            result.append(heap.read(i))
 
     columns_names = list(data["columns"].keys())
 
@@ -567,3 +576,83 @@ def copy(query):
                 s.add(pos_new_record=pos)
             if rtree is not None:
                 rtree.insert(row, pos)
+
+    return {
+        "message": f"COPIED {query["from"]} ON TABLE {nombre_tabla}"
+    }
+
+def delete(query):
+    ans_set = aux_select(query)
+
+    nombre_tabla = query["table"]
+    data = select_meta(nombre_tabla)
+
+    hash = []
+    seq = []
+    rtree = None
+    btree = []
+    isam = []
+
+    format = {}
+
+    for key in data["columns"].keys():
+        format[key] = to_struct(data["columns"][key]["type"])
+
+    heap = Heap(format,
+                data["key"],
+                table_filename(nombre_tabla))
+
+    for key in data["columns"].keys():
+        index = data["columns"][key]["index"]
+        if index == None:
+            pass
+        elif index == "hash":
+            hash.append(Hash(format,
+                        key,
+                        index_filename(nombre_tabla, key, "buckets"),
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla)))
+        elif index == "seq":
+            seq.append(Sequential(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla)))
+        elif index == "btree":
+            btree.append(Btree(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla),
+                        M))
+    
+    rtree_keys = data.get("indexes", {}).get("rtree")
+    if rtree_keys is not None:
+        rtree = Rtree(format, 
+                    data["key"],
+                    rtree_keys, 
+                    table_filename(nombre_tabla),  
+                    index_filename(nombre_tabla, *rtree_keys, "index"))
+    
+    
+    for pos in ans_set:
+        heap.mark_deleted(pos)
+        # for h in hash:
+        #     h.delete(pos)
+        # not implemented in b tree
+        # for s in seq:
+        #     s.eliminar(pos)
+        if rtree is not None:
+            rtree.delete(pos)
+
+    return {
+        "message": "DELETED"
+    }
+
+
+def drop_index(query):
+    return {}
+
+def drop_table(query):
+    return {}
+
+def set_stmt(query):
+    return {}

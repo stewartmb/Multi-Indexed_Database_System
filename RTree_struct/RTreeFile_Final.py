@@ -439,6 +439,29 @@ class RTreeFile:
                 self.mbr = RTreeFile.MBR.calc_mbr_rec(file, self.rectangles)
             else:
                 self.mbr = RTreeFile.MBR(RTreeFile.Point().coords, RTreeFile.Point().coords)
+        
+        def remove_exact(self, file, obj):
+            """
+            Elimina obj del objeto Rectangle
+            obj puede ser un punto o la posición de un rectangulo
+            """
+            if self.is_leaf:
+                for p in self.points:
+                    if p.coords == obj.coords and p.index == obj.index:
+                        self.points.remove(p)
+            elif not self.is_leaf and obj.pos in self.rectangles:
+                self.rectangles.remove(obj.pos)
+                rec = file.get_rec_at(obj.pos)
+                rec.deleted = True
+                file.write_rec_at(obj.pos, rec)
+
+            if self.is_leaf and self.points:
+                self.mbr = RTreeFile.MBR.calc_mbr(self.points)
+            elif not self.is_leaf and self.rectangles:
+                self.mbr = RTreeFile.MBR.calc_mbr_rec(file, self.rectangles)
+            else:
+                self.mbr = RTreeFile.MBR(RTreeFile.Point().coords, RTreeFile.Point().coords)
+
 
         def intersects(self, min_coords, max_coords):
             """
@@ -594,13 +617,14 @@ class RTreeFile:
             f.seek(header_size + pos * total_size)
             return self.Rectangle.from_binary(self, f.read(total_size))
     
-    def get_record_at(self, pos):
+    def get_key_at(self, pos):
         """
-        Obtiene el registro en la posicion pos en el archivo de data
+        Obtiene el key del registro en la posicion pos en el archivo de data
         """
         with open(self.data_filename, "r+b") as f:
             f.seek(pos * self.RT.size + 4)
-            return self.RT.from_bytes(f.read(self.RT.size))
+            record = self.RT.from_bytes(f.read(self.RT.size))
+            return self.RT.get_key(record)
 
     def choose_subtree(self, u, p):
         """
@@ -1114,7 +1138,7 @@ class RTreeFile:
         node = self.get_rec_at(node_pos)
         if node.is_leaf:
             for p in node.points:
-                if p.coords == point.coords:
+                if p.coords == point.coords and p.index == point.index:
                     return node_pos
             return -1
         else:
@@ -1187,16 +1211,19 @@ class RTreeFile:
 
         return
     
-    def aux_delete(self, point):
+    def aux_delete(self, pos):
         """
         Funcion auxiliar que elimina un punto en el archivo de índices
         """
+        point = self.Point(self.get_key_at(pos), index=pos)
         while True:
             rec_pos = self.find_rec(self.get_root(), point)
             if rec_pos == -1:
                 break
             rec = self.get_rec_at(rec_pos)
-            rec.remove(self, point)
+            for p in rec.points:
+                if p.index == pos:
+                    rec.remove_exact(self, point)
             self.write_rec_at(rec_pos, rec)
             self.condense_tree(rec_pos)
 
@@ -1204,13 +1231,18 @@ class RTreeFile:
         if not root.is_leaf and len(root.rectangles) == 1:
             self.write_root(root.rectangles[0])
     
-    def delete(self, query):
+    def delete(self, positions):
         """
         Funcion para eliminar los puntos que sean iguales a query
 
         Parametros
         ---------------
-            query: list
-                lista con las coordenadas de los puntos a eliminar
+            positions: list
+                lista con las posiciones de los puntos a eliminar
         """
-        self.aux_delete(RTreeFile.Point(coords=query))
+
+        if not isinstance(positions, list):
+            positions = [positions]
+
+        for pos in positions:
+            self.aux_delete(pos)

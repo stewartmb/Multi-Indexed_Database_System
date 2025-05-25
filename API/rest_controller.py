@@ -54,6 +54,7 @@ consultas = ["", "", "", "", "", ""]
 # consultas[3]= "API/consultas/select_datos.txt"
 # consultas[4] = "API/consultas/prueba2.txt"
 # consultas[5]= "API/consultas/copy.txt"
+consultas[5]= "ParserSQL/test2.txt"
 
 # eliminar todo lo de la  carpeta Schema
 def eliminar_directorio(directorio):
@@ -62,7 +63,7 @@ def eliminar_directorio(directorio):
             os.remove(os.path.join(root, name))
         for name in dirs:
             os.rmdir(os.path.join(root, name))
-# eliminar_directorio("Schema")
+eliminar_directorio("Schema")
 
 for c in consultas:
     if c != "":

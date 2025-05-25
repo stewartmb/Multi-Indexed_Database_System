@@ -33,6 +33,11 @@ class Heap:
         with open(self.filename, 'r+b') as f:
             f.seek(0)
             f.write(struct.pack(self.HEADER_FORMAT, count))
+    
+    def is_deleted(self, pos):
+        if self.read(pos):
+            return False
+        return True
 
     def insert(self, registro):
         with open(self.filename, 'ab') as f:

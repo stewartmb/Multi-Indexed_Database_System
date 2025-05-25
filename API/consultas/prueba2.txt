@@ -7,9 +7,6 @@ create table destinos (
     pais varchar[20]
 );
 
-create index on destinos using rtree(latitud, longitud);
-
-
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("1", "Eiffel Tower", "48.8584", "2.2945", "Paris", "France");
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("2", "Statue of Liberty", "40.6892", "-74.0445", "New York", "USA");
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("3", "Colosseum", "41.8902", "12.4922", "Rome", "Italy");
@@ -57,6 +54,7 @@ INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("44", "
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("45", "Serengeti National Park", "-2.3333", "34.8333", "Serengeti", "Tanzania");
 INSERT INTO destinos (id, name, latitud, longitud, ciudad, pais) VALUES ("46", "Victoria Falls", -17.9243, "25.8567", "Livingstone", "Zambia");
 
+create index on destinos using rtree(latitud, longitud);
 
 select * from destinos where latitud, longitud between [30, -100] and [45, 4];
 select * from destinos where latitud, longitud in (-25, 130) closest 3;
