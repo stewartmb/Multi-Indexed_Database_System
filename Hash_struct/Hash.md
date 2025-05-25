@@ -43,12 +43,247 @@ Con este enfoque, el directorio se divide en dos:
 
 
 ## Estructura del índice:
+El índice implementado se divide en tres partes:
 
 ### Archivo de índice
-### Archivo de bucket 
+El archivo de índices tiene dos partes:
+- **Header**: 	Metadatos globales. Contiene:
+  - Profundidad global del árbol
+  - Última posición usada en Heap File
+  - Última posición usada en buckets_file
+  - Última posición usada para nodos del árbol
+- **Árbol de directorios**: Estructura jerárquica que guía la búsqueda usando bits del hash. Contiene:
+  - Puntero al bucket (-1 si es nodo interno)
+  - Índice del hijo izquierdo
+  - Índice del hijo derecho
+  - Profundidad del nodo en el árbol
+  
+### Archivo de buckets 
+El archivo de buckets contiene los buckets que almacenan referencias a registros en el Heap File.	
+Además, tiene:
+- Posiciones en Heap File (-1 = vacío)
+- Profundidad local del bucket
+- Cantidad de registros almacenados
+- Puntero a bucket de overflow (-1 = no hay)
+
 ### Archivo de datos
+Almacena los registros completos en formato no ordenado usando el Heap File.
 
 ## Algoritmos de las operaciones
+A continuación, se presentará el algoritmo implementado para cada una de las operaciones.
+### Inserción
 
-## Conplejidad
+```
+FUNCIÓN insert(record, data_position=None):
+    SI data_position es None:
+        data_position = HEAP.insert(record)  # Insertar en Heap File
+    
+    index_hash = get_bits(clave_del_registro, global_depth)
+    
+    ABRIR archivos (index_file, buckets_file) EN MODO lectura/escritura:
+        _add_to_hash(buckets_file, index_file, data_position, index_hash)
+```
+Se implementaron funciones auxiliares para realizar la inserción:
+```
+FUNCIÓN _add_to_hash(buckets_file, index_file, data_position, index_hash):
+    # Navegar por el árbol
+    node_index = 0
+    k = 1
+    MIENTRAS True:
+        node = leer_nodo(index_file, node_index)
+        SI node.bucket_position != -1:
+            DETENER
+        SI index_hash[-k] == '0':
+            node_index = node.left
+        SI NO:
+            node_index = node.right
+        k += 1
+    
+    # Intentar inserción en bucket
+    inserted = _insert_value_in_bucket(buckets_file, index_file, node.bucket_position, data_position)
+    
+    SI NO inserted:  # Bucket lleno y necesita split
+        old_bucket = leer_bucket(buckets_file, node.bucket_position)
+        
+        # Crear nuevos buckets
+        bucket_left_pos = node.bucket_position
+        bucket_right_pos = reservar_nuevo_bucket()
+        
+        # Actualizar árbol
+        nuevo_nodo_padre = crear_nodo_interno()
+        nuevo_nodo_izq = crear_nodo_hoja(bucket_left_pos)
+        nuevo_nodo_der = crear_nodo_hoja(bucket_right_pos)
+        
+        # Reinsertar registros del bucket viejo
+        PARA cada registro en old_bucket:
+            _aux_insert(registro)
+        
+        # Reinsertar el nuevo registro
+        _aux_insert(nuevo_registro)
+```
+
+```
+FUNCIÓN _insert_value_in_bucket(buckets_file, index_file, bucket_position, data_position):
+    bucket = leer_bucket(buckets_file, bucket_position)
+    
+    SI bucket no está lleno:
+        agregar data_position al bucket
+        actualizar_bucket(buckets_file, bucket)
+    SI NO:
+        SI bucket.local_depth < global_depth:
+            RETORNAR False  # Trigger split
+        SI NO:
+            SI no tiene overflow:
+                crear_nuevo_bucket_overflow()
+            insertar_en_overflow(buckets_file, index_file, bucket.overflow_position, data_position)
+    RETORNAR True
+```
+### Búsqueda
+
+```
+FUNCIÓN search(key):
+    key = convertir_a_tipo_correcto(key)
+    index_hash = get_bits(key, global_depth)
+    
+    ABRIR archivos (index_file, buckets_file) EN MODO lectura:
+        root = leer_nodo(index_file, 0)
+        SI index_hash[-1] == '0':
+            RETORNAR _aux_search(buckets_file, index_file, root.left, index_hash[:-1], key)
+        SI NO:
+            RETORNAR _aux_search(buckets_file, index_file, root.right, index_hash[:-1], key)
+
+```
+
+Funciones auxiliares:
+
+```
+FUNCIÓN _aux_search(buckets_file, index_file, node_index, index_hash, key):
+    node = leer_nodo(index_file, node_index)
+    
+    SI node es nodo_interno:
+        SI index_hash[-1] == '0':
+            RETORNAR _aux_search(buckets_file, index_file, node.left, index_hash[:-1], key)
+        SI NO:
+            RETORNAR _aux_search(buckets_file, index_file, node.right, index_hash[:-1], key)
+    SI NO:  # Es nodo hoja
+        bucket = leer_bucket(buckets_file, node.bucket_position)
+        matches = buscar_en_bucket(bucket, key)
+        
+        # Buscar en overflow chain
+        MIENTRAS bucket.overflow_position != -1:
+            bucket = leer_bucket(buckets_file, bucket.overflow_position)
+            matches += buscar_en_bucket(bucket, key)
+        
+```
+
+```
+
+FUNCIÓN buscar_en_bucket(bucket, key):
+    matches = []
+    PARA cada posición_en_heap en bucket.records:
+        SI posición_en_heap != -1:
+            record = HEAP.read(posición_en_heap)
+            SI record.clave == key:
+                matches.append(posición_en_heap)
+    RETORNAR matches
+```
+
+### Búsqueda por rango
+
+```
+FUNCIÓN range_search(lower, upper):
+    ABRIR archivos (index_file, buckets_file) EN MODO lectura:
+        root = leer_nodo(index_file, 0)
+        SI root es nodo_interno:
+            lista = _aux_range_search(buckets_file, index_file, root.left, lower, upper)
+            lista += _aux_range_search(buckets_file, index_file, root.right, lower, upper)
+        RETORNAR lista
+```
+
+Funciones auxiliares:
+```
+
+FUNCIÓN _aux_range_search(buckets_file, index_file, node_index, lower, upper):
+    node = leer_nodo(index_file, node_index)
+    lista = []
+    
+    SI node es nodo_interno:
+        lista += _aux_range_search(buckets_file, index_file, node.left, lower, upper)
+        lista += _aux_range_search(buckets_file, index_file, node.right, lower, upper)
+    SI NO:
+        bucket = leer_bucket(buckets_file, node.bucket_position)
+        lista += buscar_en_rango(bucket, lower, upper)
+        
+        # Buscar en overflow chain
+        MIENTRAS bucket.overflow_position != -1:
+            bucket = leer_bucket(buckets_file, bucket.overflow_position)
+            lista += buscar_en_rango(bucket, lower, upper)
+    
+    RETORNAR lista
+```
+
+```
+FUNCIÓN buscar_en_rango(bucket, lower, upper):
+    matches = []
+    PARA cada posición_en_heap en bucket.records:
+        SI posición_en_heap != -1:
+            record = HEAP.read(posición_en_heap)
+            SI lower <= record.clave <= upper:
+                matches.append(posición_en_heap)
+    RETORNAR matches
+```
+### Eliminación
+
+```
+FUNCIÓN delete(key):
+    key = convertir_a_tipo_correcto(key)
+    index_hash = get_bits(key, global_depth)
+    
+    ABRIR archivos (index_file, buckets_file) EN MODO lectura/escritura:
+        root = leer_nodo(index_file, 0)
+        SI index_hash[-1] == '0':
+            RETORNAR _aux_delete(buckets_file, index_file, root.left, index_hash[:-1], key)
+        SI NO:
+            RETORNAR _aux_delete(buckets_file, index_file, root.right, index_hash[:-1], key)
+```
+
+Funciones auxiliares:
+
+```
+FUNCIÓN _aux_delete(buckets_file, index_file, node_index, index_hash, key):
+    node = leer_nodo(index_file, node_index)
+    
+    SI node es nodo_interno:
+        SI index_hash[-1] == '0':
+            RETORNAR _aux_delete(buckets_file, index_file, node.left, index_hash[:-1], key)
+        SI NO:
+            RETORNAR _aux_delete(buckets_file, index_file, node.right, index_hash[:-1], key)
+    SI NO:  # Es nodo hoja
+        bucket = leer_bucket(buckets_file, node.bucket_position)
+        eliminado = eliminar_de_bucket(bucket, key)
+        
+        # Buscar en overflow chain
+        MIENTRAS NO eliminado Y bucket.overflow_position != -1:
+            bucket = leer_bucket(buckets_file, bucket.overflow_position)
+            eliminado = eliminar_de_bucket(bucket, key)
+        
+        RETORNAR eliminado
+```
+
+```
+
+FUNCIÓN eliminar_de_bucket(bucket, key):
+    PARA cada posición_en_heap en bucket.records:
+        SI posición_en_heap != -1:
+            record = HEAP.read(posición_en_heap)
+            SI record.clave == key:
+                # Eliminación lógica (marcar como vacío)
+                bucket.records[i] = -1
+                bucket.fullness -= 1
+                actualizar_bucket(buckets_file, bucket)
+                RETORNAR True
+    RETORNAR False
+```
+
+## Complejidad
 
