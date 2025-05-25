@@ -541,6 +541,8 @@ def aux_select(query):
     return evaluate_select(tree, sets, universe)
 
 def select(query):
+    print(json.dumps(query, indent=4))
+
     ans_set = aux_select(query)
 
     # print(ans_set)
@@ -559,7 +561,14 @@ def select(query):
         if not heap.is_deleted(i):
             result.append(heap.read(i))
 
-    columns_names = list(data["columns"].keys())
+    column_indices = {name: i for i, name in enumerate(list(data["columns"].keys()))}
+    
+    if query["attr"] == "*":
+        columns_names = list(data["columns"].keys())
+    else:
+        columns_names = query["attr"]
+        indices = [column_indices[x] for x in columns_names]
+        result = [[r[i] for i in indices] for r in result]
 
     return {
         "columns": columns_names,
