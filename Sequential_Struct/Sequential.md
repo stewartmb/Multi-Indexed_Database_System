@@ -22,7 +22,7 @@ Teniendo esto en cuenta, al momento de hacer búsquedas, estas se deben realizar
 
 Ejemplo sequential con espacio extra ordenado por clave:
 
-![Imagen_aux1](/images/aux.png)
+![Imagen_aux1](/images/aux3.png)
 
 **Observación 2**: Llegará un punto en dónde el sequential como su espacio extra se llenen. Esto significa que necesitamos una manera de reconstruir el archivo de índice (Combinamos el sequential con su auxiliar para formar un nuevo sequential). Por ello, tendremos un algoritmo que reconstruya el archivo cuando el espacio auxiliar se llene.
 
