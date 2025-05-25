@@ -488,6 +488,8 @@ def aux_select(query):
                 else:
                     sets.append(set(heap.search(val, val)))
 
+                else:
+                    sets.append(set(heap.search(val, val)))
             elif index == "hash":
                 if indexes_data["hash"] is not None:
                     hash = Hash(format,
@@ -602,6 +604,7 @@ def aux_select(query):
     for i in range(len(sets)):
         print(i, ":", sets[i])
 
+    print("a")
     # Evaluar la expresión booleana
     universe = None
     if calc_universe:
@@ -663,6 +666,9 @@ def copy(query):
     data = select_meta(nombre_tabla)
     indexes_data = select_index_meta()
 
+    for key in data["columns"].keys():
+        format[key] = to_struct(data["columns"][key]["type"])
+    
     hash = []
     seq = []
     rtree = None
@@ -670,8 +676,6 @@ def copy(query):
     isam = []
 
     for key in data["columns"].keys():
-        format[key] = to_struct(data["columns"][key]["type"])
-
         index = data["columns"][key]["index"]
         if index == None:
             pass
@@ -732,7 +736,8 @@ def copy(query):
         for row in reader:
             # insertar en el principal y en todos los índices
             pos = heap.insert(row)
-
+            print(pos)
+            print(heap.read(pos))
             for h in hash:
                 h.insert(row, pos)
             for bp in btree:
