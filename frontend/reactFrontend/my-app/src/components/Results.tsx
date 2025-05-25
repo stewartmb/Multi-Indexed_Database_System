@@ -12,6 +12,13 @@ interface Props {
 const Results: React.FC<Props> = ({ data, columns, message, error, history }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'history'>('data'); // Eliminamos 'explain'
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 10;
+
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    const paginatedData = data ? data.slice(startIdx, startIdx + rowsPerPage) : [];
+    const totalPages = data ? Math.ceil(data.length / rowsPerPage) : 1;
+
     const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
 
     return (
@@ -48,7 +55,7 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history }) =>
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {data.map((row, idx) => (
+                                    {paginatedData.map((row, idx) => (
                                         <tr key={idx}>
                                             {headers.map((header) => (
                                                 <td key={header}>{row[header]}</td>
@@ -57,6 +64,15 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history }) =>
                                     ))}
                                     </tbody>
                                 </table>
+                                <div className={styles.pagination}>
+                                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                        Previous
+                                    </button>
+                                    <span>Page {currentPage} of {totalPages}</span>
+                                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                        Next
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <div className={styles.noResults}>No results</div>
