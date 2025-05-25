@@ -31,8 +31,8 @@ const Sidebar = () => {
         setError(null);  // Limpiamos el error previo
         setStructureData([]);  // Limpiamos los datos previos
 
-        try {
-            const response = await fetch('http://127.0.0.1:8082/info');  // Hacemos la solicitud GET al backend
+        try { // TODO: CAMBIAR A 8000 el puerto
+            const response = await fetch('http://127.0.0.1:8083/info');  // Hacemos la solicitud GET al backend
 
             if (!response.ok) {
                 throw new Error('Failed to fetch data');
