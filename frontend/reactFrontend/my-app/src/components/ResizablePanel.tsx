@@ -7,10 +7,14 @@ export default function ResizablePanel() {
     const [data, setData] = useState<any[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [history, setHistory] = useState<string[]>([]);
+    const [message, setMessage] = useState<string | null>(null);
+    const [columns, setColumns] = useState<string[]>([]);
 
     const runQuery = async (query: string) => {
         setData(null);
         setError(null);
+        setColumns([]);
+        setMessage(null);
 
         // Agrega al historial antes de ejecutar
         setHistory((prev) => [query, ...prev]);
@@ -24,21 +28,16 @@ export default function ResizablePanel() {
                 body: JSON.stringify({ query }),
             });
 
-            console.log('Response:', response);
-
             const result = await response.json();
 
             if (!response.ok) {
                 throw new Error(result.details || 'Query failed');
             }
 
-            if (Array.isArray(result)) {
-                setData(result);
-            } else if (result.data) {
-                setData(result.data);
-            } else {
-                setData([]);
-            }
+            console.log('Response:', result);
+
+            setData(result.data);
+            setColumns(result.columns);
         } catch (err: any) {
             console.error('Error running query:', err);
             setError(err.message);
@@ -48,7 +47,7 @@ export default function ResizablePanel() {
     return (
         <ResizableLayout
             top={<SQLEditor onRun={runQuery} />}
-            bottom={<Results data={data} error={error} history={history} />}
+            bottom={<Results data={data} columns={columns} error={error} history={history} />}
         />
     );
 }

@@ -5,9 +5,10 @@ interface Props {
     data: any[] | null;
     error: string | null;
     history: string[];
+    columns: string[];
 }
 
-const Results: React.FC<Props> = ({ data, error, history }) => {
+const Results: React.FC<Props> = ({ data, columns, error, history }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'history'>('data'); // Eliminamos 'explain'
 
     const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
