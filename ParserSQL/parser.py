@@ -29,7 +29,7 @@ index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")"
 insert_stmt: "insert"i "into"i NAME "(" attr_list ")" "values"i "(" value_list ")"
 value_list: VALUE ("," VALUE)*
 
-delete_stmt: "delete"i "from"i NAME "where"i condition ("and"i condition)*
+delete_stmt: "delete"i "from"i NAME "where"i expr
 
 ?expr: expr "or"i expr     -> or_expr
      | expr "and"i expr    -> and_expr
@@ -128,7 +128,23 @@ class SQLTransformer(Transformer):
         return {"action": "insert", "table": str(items[0]), "values": items[1:]}
 
     def delete_stmt(self, items):
-        return {"action": "delete", "table": str(items[0]), "condition": items[1:]}
+        global counter, conditions_map, condition_expr
+
+        table = str(items[0])
+        if len(items) > 1:
+            raw_expr = items[1]
+            labeled_expr = self.label_conditions(raw_expr)
+            condition_expr = labeled_expr
+        ans = {
+            "action": "delete",
+            "table": table,
+            "eval": condition_expr,
+            "conditions": conditions_map
+        }
+        counter = 0
+        conditions_map = {}
+        condition_expr = None
+        return ans;
 
     def index_stmt(self, items):
         return {"action": "index", "table": str(items[0]), "index": items[1], "attr": items[2]}

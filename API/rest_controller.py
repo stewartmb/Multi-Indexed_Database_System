@@ -4,17 +4,28 @@ import sys
 from lark import Lark
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from ParserSQL.parser import *
-import services
+from API.services import *
 
 app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["http://localhost:3000"] to be specific
+    allow_credentials=True,
+    allow_methods=["*"],  # or ["GET", "POST"]
+    allow_headers=["*"],
+)
+
 parser = Lark(sql_grammar, start='start', parser='lalr', transformer=SQLTransformer())
 
 class QueryInput(BaseModel):
     query: str
 
-#@app.post("/query")
+@app.post("/query")
 def parse_sql_query(input: QueryInput):
     sql_code = input.query
     try:
@@ -27,9 +38,12 @@ def parse_sql_query(input: QueryInput):
         )
     for line in result:
         if isinstance(line, list):
-            services.convert(line[0])
+            response = convert(line[0])
         else:
-            services.convert(line)
+            response = convert(line)
+    
+    print(response)
+    return response
 
 print("comenzar")
 
@@ -38,8 +52,9 @@ consultas = ["", "", "", "", "", ""]
 # consultas[1]= "API/consultas/crear_indice.txt"
 # consultas[2]= "API/consultas/insertar_datos.txt"
 # consultas[3]= "API/consultas/select_datos.txt"
-consultas[4] = "API/consultas/prueba2.txt"
+# consultas[4] = "API/consultas/prueba2.txt"
 # consultas[5]= "API/consultas/copy.txt"
+consultas[5]= "ParserSQL/test2.txt"
 
 # eliminar todo lo de la  carpeta Schema
 def eliminar_directorio(directorio):
