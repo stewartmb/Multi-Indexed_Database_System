@@ -31,6 +31,13 @@ def read_root():
     return {"state": "Running"}
 
 
+@app.get("/info")
+def get_info():
+    return JSONResponse(
+        content={"info": get_info_from_meta()},
+        status_code=200
+    )
+
 @app.post("/query")
 def parse_sql_query(input: QueryInput):
     sql_code = input.query
@@ -58,9 +65,9 @@ consultas = ["", "", "", "", "", ""]
 # consultas[1]= "API/consultas/crear_indice.txt"
 # consultas[2]= "API/consultas/insertar_datos.txt"
 # consultas[3]= "API/consultas/select_datos.txt"
-consultas[4] = "API/consultas/prueba2.txt"
+# consultas[4] = "API/consultas/prueba2.txt"
 # consultas[5]= "API/consultas/copy.txt"
-# consultas[5]= "ParserSQL/test2.txt"
+consultas[5]= "API/consultas/aaa.txt"
 
 # eliminar todo lo de la  carpeta Schema
 def eliminar_directorio(directorio):
@@ -69,7 +76,7 @@ def eliminar_directorio(directorio):
             os.remove(os.path.join(root, name))
         for name in dirs:
             os.rmdir(os.path.join(root, name))
-eliminar_directorio("Schema")
+# eliminar_directorio("Schema")
 
 for c in consultas:
     if c != "":
@@ -82,3 +89,7 @@ for c in consultas:
         parse_sql_query(test_query)
 
 print("terminar")
+
+
+
+print(json.dumps(get_info_from_meta(), indent=4))
