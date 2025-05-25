@@ -47,11 +47,11 @@ def test_insert_CSV(csv_path, index_file, data_file):
     Inserta registros en el ORDEN EXACTO de CODIGOS_A_USAR.
     """
     # Eliminar archivos existentes
-    try:
-        os.remove(index_file)
-        os.remove(data_file)
-    except FileNotFoundError:
-        pass
+    # try:
+    #     os.remove(index_file)
+    #     os.remove(data_file)
+    # except FileNotFoundError:
+    #     pass
 
     # Leer todos los registros del CSV y guardarlos en un diccionario por código
     Sequential = archivo.Sequential(table_format, name_key, name_index_file = index_file, name_data_file=data_file, num_aux=ma)
