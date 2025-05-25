@@ -1,22 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { oneDark } from '@codemirror/theme-one-dark'; // tema oscuro legible
 
 interface Props {
     onRun: (query: string) => void;
+    query?: string;
+    onQueryChange?: (query: string) => void;
 }
 
-const SQLEditor: React.FC<Props> = ({ onRun }) => {
-    const [query, setQuery] = useState('');
+const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange }) => {
+    const [localQuery, setLocalQuery] = useState(query);
 
-    const handleClear = () => setQuery('');
+    // Update local query when external query changes (from history selection)
+    useEffect(() => {
+        setLocalQuery(query);
+    }, [query]);
+
+    const handleQueryChange = (value: string) => {
+        setLocalQuery(value);
+        if (onQueryChange) {
+            onQueryChange(value);
+        }
+    };
+
+    const handleClear = () => {
+        setLocalQuery('');
+        if (onQueryChange) {
+            onQueryChange('');
+        }
+    };
 
     return (
         <div className="sql-editor-container h-full flex flex-col">
             <div className="sql-editor-header p-2 bg-gray-100">
                 <div className="sql-editor-toolbar flex gap-2">
-                    <button className="btn-run" onClick={() => onRun(query)}>
+                    <button className="btn-run" onClick={() => onRun(localQuery)}>
                         <span className="mr-1">▶</span> Run
                     </button>
                     <button className="btn-clear" onClick={handleClear}>
@@ -42,9 +61,9 @@ const SQLEditor: React.FC<Props> = ({ onRun }) => {
                 </style>
 
                 <CodeMirror className={"sql-editor-body"}
-                            value={query}
+                            value={localQuery}
                             extensions={[sql()]}
-                            onChange={(value) => setQuery(value)}
+                            onChange={handleQueryChange}
                             theme={oneDark}
                             placeholder="Write your SQL query here..."
                             basicSetup={{lineNumbers: true}}

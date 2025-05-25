@@ -9,6 +9,7 @@ export default function ResizablePanel() {
     const [history, setHistory] = useState<string[]>([]);
     const [message, setMessage] = useState<string | null>(null);
     const [columns, setColumns] = useState<string[]>([]);
+    const [currentQuery, setCurrentQuery] = useState<string>('');
 
     const runQuery = async (query: string) => {
         setData(null);
@@ -45,10 +46,14 @@ export default function ResizablePanel() {
         }
     };
 
+    const handleQueryFromHistory = (query: string) => {
+        setCurrentQuery(query);
+    };
+
     return (
         <ResizableLayout
-            top={<SQLEditor onRun={runQuery} />}
-            bottom={<Results data={data} columns={columns} message={message} error={error} history={history} />}
+            top={<SQLEditor onRun={runQuery} query={currentQuery} onQueryChange={setCurrentQuery} />}
+            bottom={<Results data={data} columns={columns} message={message} error={error} history={history} onSelectHistory={handleQueryFromHistory} />}
         />
     );
 }

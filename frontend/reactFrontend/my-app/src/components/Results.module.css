@@ -97,6 +97,23 @@
     border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
 }
 
+.historyItemClickable {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.historyItemClickable:hover {
+    background-color: #374151;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.historyItemClickable:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
 .historyItem code {
     color: #9594a1; /* Tailwind text-blue-600 */
 }
