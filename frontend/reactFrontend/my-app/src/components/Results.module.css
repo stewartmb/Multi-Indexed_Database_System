@@ -47,7 +47,6 @@
 
 .tableContainer {
     width: 100%;
-    overflow-x: auto;
 }
 
 .table {
@@ -56,6 +55,7 @@
     border-collapse: collapse;
     border-radius: 1rem; /* Redondear la tabla */
     overflow: hidden; /* Asegura que el contenido no sobresalga */
+
 }
 
 .table th, .table td {

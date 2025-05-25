@@ -201,7 +201,8 @@ html, body, #root {
   overflow-y: auto;
   box-sizing: border-box;
   position: relative;
-  font-family: 'Arial', sans-serif;
+  font-family: "JetBrains Mono Thin", monospace;
+  font-weight: 800;
 }
 
 /* Estilo del título */
@@ -278,4 +279,16 @@ html, body, #root {
 
 .sidebar-container .text-gray-500 {
   color: #6b7280;
+}
+
+
+.sidebar-container {
+  overflow-x: hidden;  /* Evita desplazamiento horizontal */
+  overflow-y: scroll;  /* Permite desplazamiento vertical */
+  -webkit-overflow-scrolling: touch;  /* Mejora la experiencia en dispositivos móviles */
+}
+
+/* Ocultar la barra de desplazamiento en WebKit (Chrome, Safari, etc.) */
+.sidebar-container::-webkit-scrollbar {
+  display: none;
 }

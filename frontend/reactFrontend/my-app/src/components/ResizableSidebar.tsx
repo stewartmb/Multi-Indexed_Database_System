@@ -53,7 +53,7 @@ export default function ResizableSidebarLayout({ Sidebar, MainContent }: Resizab
             onMouseDown={onMouseDown}
             className="w-4 cursor-col-resize bg-gray-600 hover:bg-gray-800"
             title="Arrastra para redimensionar"
-            style={{ userSelect: 'none', width: '10px' }}
+            style={{ userSelect: 'none', width: '10px', backgroundColor: '#41506f'}}
         >
         </div>
 
