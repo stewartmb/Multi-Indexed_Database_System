@@ -41,8 +41,8 @@ const Results: React.FC<Props> = ({ data, columns, error, history }) => {
                                 <table className={styles.table}>
                                     <thead>
                                     <tr>
-                                        {headers.map((header) => (
-                                            <th key={header}>{header}</th>
+                                        {columns.map((columns) => (
+                                            <th key={columns}>{columns}</th>
                                         ))}
                                     </tr>
                                     </thead>
