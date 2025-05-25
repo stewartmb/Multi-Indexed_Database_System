@@ -11,22 +11,25 @@ from Heap_struct.Heap import Heap
 from collections import deque
 
 # Constantes generales
-TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
-TAM_ENCABEZAD_IND = 16  # Tamaño del encabezado en bytes (cantidad de pages(data), cantidad de pages(overflow), M , y pososicion del root)
+TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de paginas)
+TAM_ENCABEZAD_BRIN = 4  # Tamaño del encabezado en bytes (cantidad de pages)
+
+
+def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M, el formato del índice cambie automáticamente
+    """
+    Genera el formato del índice dinámicamente basado en M.
+    """
+    format = f'b{(M) * format_key}{M * "i"}ii'
+    return format
 
 class Index_Page():
-    def __init__(self, leaf=True, M=None):
-        self.leaf = leaf
-        self.keys = [None] * (M)
-        self.childrens = [-1] * M
-        self.next = -1 
-        self.key_count = 0
-        self.M = M
+    def __init__(self, M=None):
+        self.keys = [None] * (M)                # Lista de claves, inicialmente todas son None
+        self.childrens = [-1] * M               # Lista de posiciones, inicialmente todas son -1 (no hay hijos)
+        self.key_count = 0                      # Contador de claves
+        self.M = M                              # Número máximo de claves por página
 
     def to_bytes(self, format_key, indexp_format):
-        # Convert leaf to integer (1 for True, 0 for False)
-        leaf_int = 1 if self.leaf else 0
-        
         # Prepare keys for packing
         packed_keys = []
         for key in self.keys:
@@ -59,7 +62,7 @@ class Index_Page():
                     packed_keys.append(key)
 
         # Prepare all arguments for packing
-        pack_args = [leaf_int] + packed_keys + self.childrens + [self.next, self.key_count]
+        pack_args = packed_keys + self.childrens + [self.key_count]
         return struct.pack(indexp_format, *pack_args)
     
 
@@ -112,9 +115,48 @@ class Index_Page():
         return instance
     
 
-def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M, el formato del índice cambie automáticamente
-    """
-    Genera el formato del índice dinámicamente basado en M.
-    """
-    format = f'b{(M-1) * format_key}{M * "i"}ii'
-    return format
+class Indice_Brin():
+    def __init__(self, K, format_key):
+        self.range_values = [None,None]             # Valor mínimo y máximo de la página (formato: formato_key)
+        self.pages = [-1] * K                       # Lista de posiciones de las páginas, inicialmente todas son -1 (no hay páginas)
+        self.page_count = 0                         # Contador de páginas
+        self.format_key = format_key                # El formato de las claves (ej: 'i' para enteros, 'f' para flotantes, 's3' para cadenas de 3 caracteres)
+        self.indexp_format = f'{format_key*2}{'i' * K}i'  
+
+    def to_bytes(self):        
+        # Prepare keys for packing
+        packed_keys = []
+        for key in self.range_values:
+            if key is None:
+                # For None values, use a sentinel value that fits the format
+                if self.format_key == 'i':  # Entero
+                    packed_keys.append(-2147483648)  # -2³¹ (fuera del rango normal)
+                elif self.format_key == 'f':  # Float
+                    packed_keys.append(float('nan'))  # NaN representa None
+                elif self.format_key == 'b' or self.format_key == '?':  # Boolean
+                    packed_keys.append(-128)  # Special value for None
+                elif 's' in self.format_key:  # String (ej: '3s')
+                    packed_keys.append(b'\x00' * int(self.format_key[:-1]))  # Bytes nulos
+                else:
+                    packed_keys.append(0)  # Default fallback
+            else:
+                # Convertir a bytes si es string
+                if 's' in self.format_key and isinstance(key, str):
+                    max_length = int(self.format_key[:-1])  # Elimina la 's' y convierte a entero
+                    truncated_key = key[:max_length]
+                    packed_keys.append(truncated_key.encode('utf-8'))
+                # Asegurar tipo correcto
+                elif self.format_key == 'i' or self.format_key == 'q' or self.format_key == 'Q':
+                    packed_keys.append(int(key))
+                elif self.format_key == 'f' or self.format_key == 'd':
+                    packed_keys.append(float(key))
+                elif self.format_key == 'b' or self.format_key == '?':
+                    packed_keys.append(bool(key))
+                else:
+                    packed_keys.append(key)
+
+        # Prepare all arguments for packing
+        pack_args = packed_keys + self.pages + [self.page_count]
+        return struct.pack(self.indexp_format, *pack_args)
+
+
