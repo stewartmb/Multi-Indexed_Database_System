@@ -3,12 +3,13 @@ import styles from './Results.module.css'; // Importar los estilos CSS
 
 interface Props {
     data: any[] | null;
+    message: string | null;
     error: string | null;
     history: string[];
     columns: string[];
 }
 
-const Results: React.FC<Props> = ({ data, columns, error, history }) => {
+const Results: React.FC<Props> = ({ data, columns, message, error, history }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'history'>('data'); // Eliminamos 'explain'
 
     const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
@@ -65,9 +66,12 @@ const Results: React.FC<Props> = ({ data, columns, error, history }) => {
 
                 {activeTab === 'messages' && (
                     <div>
-                        <p>Ready to execute queries.</p>
-                        {error && (
+                        {error ? (
                             <div className={styles.errorMessage}>Error: {error}</div>
+                        ) : message ? (
+                            <div className={styles.infoMessage}>{message}</div>
+                        ) : (
+                            <p className={styles.infoMessage}>Ready to execute queries.</p>
                         )}
                     </div>
                 )}

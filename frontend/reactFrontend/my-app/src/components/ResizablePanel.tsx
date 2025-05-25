@@ -38,6 +38,7 @@ export default function ResizablePanel() {
 
             setData(result.data);
             setColumns(result.columns);
+            setMessage(result.message || null);
         } catch (err: any) {
             console.error('Error running query:', err);
             setError(err.message);
@@ -47,7 +48,7 @@ export default function ResizablePanel() {
     return (
         <ResizableLayout
             top={<SQLEditor onRun={runQuery} />}
-            bottom={<Results data={data} columns={columns} error={error} history={history} />}
+            bottom={<Results data={data} columns={columns} message={message} error={error} history={history} />}
         />
     );
 }

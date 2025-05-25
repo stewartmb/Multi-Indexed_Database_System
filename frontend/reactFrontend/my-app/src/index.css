@@ -292,3 +292,28 @@ html, body, #root {
 .sidebar-container::-webkit-scrollbar {
   display: none;
 }
+
+
+
+
+/* Estilos del área de edición SQL */
+.sql-editor-body {
+  overflow-x: auto;            /* Evita desplazamiento horizontal */
+  overflow-y: auto;              /* Permite desplazamiento vertical si es necesario */
+  -webkit-overflow-scrolling: touch;  /* Scroll suave en iOS */
+  background-color: #282c34;     /* Fondo tipo VSCode */
+  height: 100%;                  /* Ocupa todo el alto disponible */
+  position: relative;            /* Requerido para hijos con height full */
+}
+
+/* Ocultar barra de scroll en navegadores basados en WebKit (Chrome, Safari, Edge Chromium) */
+.sql-editor-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ocultar barra de scroll en Firefox */
+.sql-editor-body {
+  scrollbar-width: none;  /* Firefox */
+}
+
+

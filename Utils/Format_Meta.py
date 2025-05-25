@@ -100,7 +100,7 @@ def get_info_from_meta() -> dict:
             if table[name]["key"] == col:
                 extra += " (PK)"
             if table[name]["columns"][col]["index"] != None:
-                extra += " (Index)"
+                extra += f" ({table[name]['columns'][col]['index']})"
             extra += " type::" + table[name]["columns"][col]["type"]
             new["indices"].append(col + extra)
 

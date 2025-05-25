@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import csv
+import time
 from fastapi import HTTPException
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
@@ -129,6 +130,7 @@ def convert(query):
         return set_stmt(query)
     else:
         print("error: accion no soportada")
+        raise HTTPException(status_code=404, detail="Action not supported")
 
 def create_table(query):
     # crear tabla y añadir a metadata
@@ -437,9 +439,20 @@ def aux_select(query):
                             table_filename(nombre_tabla))
 
                 if cond["range_search"]:
-                    sets.append(set(heap.search(left, right)))
-                else:
-                    sets.append(set(heap.search(val, val)))
+                    if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
+                        sets.append(set(heap.search(left, right)))
+                    else:
+                        valid = set(heap.search(left, right))
+                        if cond["op"] == ">":
+                            invalid = set(heap.search(left,left))
+                        elif cond["op"] == "<":
+                            invalid = set(heap.search(right,right))
+                        else:
+                            curr = cast(cond["value"], format[key])
+                            print([curr, cond["value"]])
+                            invalid = set(heap.search(curr,curr))
+
+                        sets.append(valid - invalid)
             elif index == "hash":
                 if indexes_data["hash"] is not None:
                     hash = Hash(format,
@@ -541,6 +554,8 @@ def aux_select(query):
     return evaluate_select(tree, sets, universe)
 
 def select(query):
+    #cronometrar
+    start = time.time_ns()
     print(json.dumps(query, indent=4))
 
     ans_set = aux_select(query)
@@ -570,9 +585,12 @@ def select(query):
         indices = [column_indices[x] for x in columns_names]
         result = [[r[i] for i in indices] for r in result]
 
+    end = time.time_ns()
+    t_ms = end - start
     return {
         "columns": columns_names,
-        "data": result
+        "data": result,
+        "message": f"SELECTED {len(result)} RECORDS FROM TABLE {query['table']} in {t_ms/1e6} ms",
     }
 
 def copy(query):

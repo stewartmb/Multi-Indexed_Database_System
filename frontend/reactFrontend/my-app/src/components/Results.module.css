@@ -43,7 +43,15 @@
     overflow: auto;
     padding: 1rem;
     font-size: 0.875rem; /* text-sm */
+    overflow-x: auto;            /* Evita desplazamiento horizontal */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
+
+.tabContent::-webkit-scrollbar {
+    display: none;
+}
+
 
 .tableContainer {
     width: 100%;
@@ -99,8 +107,7 @@
 }
 
 .infoMessage {
-    font-style: italic;
-    color: #336790; /* Tailwind text-gray-500 */
+    color: #c7d1da; /* Tailwind text-gray-500 */
 }
 
 
