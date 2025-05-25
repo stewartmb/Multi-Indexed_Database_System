@@ -7,6 +7,8 @@ from Utils.Registro import *
 import math
 import heapq
 from sympy import symbols, Eq, solve
+from Heap_struct.Heap import Heap
+from collections import deque
 
 # Constantes generales
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
@@ -90,11 +92,41 @@ class Index_Page():
         # Prepare all arguments for packing
         pack_args = [leaf_int] + packed_keys + self.childrens + [self.next, self.key_count]
         return struct.pack(indexp_format, *pack_args)
+    
+
+    def order_page(self):
+        """
+        Ordena las claves y sus hijos en una página de índice.
+        """
+        # Combina claves y hijos en una lista de tuplas
+        keys_children = list(zip(self.keys[:self.key_count], self.childrens[:self.key_count]))
+        # Ordena la lista por claves
+        keys_children.sort(key=lambda x: x[0])
+        # Desempaqueta las claves y los hijos ordenados
+        self.keys[:self.key_count] = [k for k, _ in keys_children]
+        self.childrens[:self.key_count] = [c for _, c in keys_children]
+
+
+    # eliminar un elemento de la pagina de indice
+    def remove_key(self, key):
+        """
+        Elimina una clave y su hijo asociado de la página de índice.
+        """
+        for i in range(self.key_count):
+            if self.keys[i] == key:
+                # Desplazar los elementos hacia la izquierda
+                for j in range(i, self.key_count - 1):
+                    self.keys[j] = self.keys[j + 1]
+                    self.childrens[j] = self.childrens[j + 1]
+                # Actualizar el conteo de claves
+                self.key_count -= 1
+                self.keys[self.key_count] = None
+                self.childrens[self.key_count] = -1 
+
 
     @classmethod
     def from_bytes(cls, data, M, format_key, indexp_format):
         # Verify data size
-        print (f"Data size: {len(data)}, Expected size: {struct.calcsize(indexp_format)} , Format: {indexp_format}")
         expected_size = struct.calcsize(indexp_format)
         if len(data) != expected_size:
             raise ValueError(f"Data size mismatch: expected {expected_size}, got {len(data)}")
@@ -140,10 +172,11 @@ class ISAM():
     def __init__(self, table_format: dict , name_key: str ,
                  name_index_file = 'Isam_Struct/index_file.bin', 
                  name_data_file = 'Isam_Struct/data_file.bin',
-                 ):
-        
+                 force_create = False):
+        self.HEAP = Heap(table_format =table_format, key =name_key, data_file_name=name_data_file, force_create=force_create)
         self.index_file = name_index_file
         self.data_file = name_data_file
+
 
         self.RT = RegistroType(table_format, name_key)               # Formato de los datos
         self.format_key = table_format[name_key]                     # Formato de la clave (KEY)
@@ -158,7 +191,62 @@ class ISAM():
             self.tam_indexp = struct.calcsize(self.indexp_format)        # Tamaño de la página de índice
 
 
+    ### IMPRIMIR ISAM ###
 
+    def print_ISAM_by_levels(self):
+        """
+        Imprime el ISAM por niveles, mostrando claves y punteros en cada nodo, incluyendo los overflow.
+        """
+        num_pages, num_over, _, pos_root = self._read_header()
+        
+        if pos_root == -1:
+            print("Árbol vacío")
+            return
+        
+        # Inicializar cola para BFS
+        queue = deque()
+        queue.append((pos_root, 0, "Root"))  # (posición, nivel, tipo)
+        
+        current_level = 0
+        print("\n=== Estructura ISAM ===")
+        
+        while queue:
+            pos, level, node_type = queue.popleft()
+            
+            # Manejar cambio de nivel
+            if level != current_level:
+                print()
+                current_level = level
+            
+            # Leer la página
+            page = self._read_index_page(pos)
+            
+            # Imprimir información del nodo
+            print(f"[Nivel {level} {node_type} Pos:{pos}] ", end="")
+            print("Keys:", [k for k in page.keys[:page.key_count] if k is not None], end=" | ")
+            print("Children:", [c for c in page.childrens[:page.key_count+1] if c != -1], end="")
+            
+            # Para hojas, mostrar next
+            if page.leaf:
+                print(f" | Next: {page.next}", end="")
+                
+                # Si tiene overflow, agregar a la cola
+                if page.next != -1:
+                    queue.append((page.next, level, "Overflow"))
+            print()
+            
+            # Agregar hijos no hoja a la cola
+            if not page.leaf:
+                for child_pos in page.childrens[:page.key_count+1]:
+                    if child_pos != -1:
+                        queue.append((child_pos, level+1, "Interno"))
+        
+        # Mostrar información de páginas
+        print("\n=== Resumen ===")
+        print(f"Total páginas de datos: {num_pages}")
+        print(f"Total páginas de overflow: {num_over}")
+        print(f"Orden del árbol (M): {self.M}")
+        print(f"Posición raíz: {pos_root}")
 
 
 
@@ -258,8 +346,17 @@ class ISAM():
         """
         num_pages, num_over , max_num_child ,  pos_root= self._read_header()
         self._write_index_page(num_pages, page) 
-        num_pages += 1
-        self._write_header(num_pages, num_over,max_num_child ,pos_root)  # Actualiza el encabezado del archivo de índice
+        self._write_header(num_pages +1, num_over,max_num_child ,pos_root)  # Actualiza el encabezado del archivo de índice
+        return num_pages
+    
+    def _add_overflow_page(self, page):
+        """
+        Agrega una nueva página de overflow al final del archivo.
+        """
+        num_pages, num_over , max_num_child ,  pos_root= self._read_header()
+        self._write_index_page(num_pages + num_over, page) 
+        self._write_header( num_pages, num_over + 1,max_num_child ,pos_root)
+        return num_pages + num_over
 
     ### FUNCIONES PARA GENERAR LOS INDICES DEL ISAM ###
 
@@ -348,18 +445,19 @@ class ISAM():
         """
         Construye el índice estático ordenado en el mismo archivo temp.bin.
         """
-        size = self._read_data_header()
+        size = self.HEAP._read_header()
         format_temp = f'{self.format_key}i'  # Formato (key, offset)
         record_size = struct.calcsize(format_temp)
         order_file = 'temp.bin'
         # 1. Escribir datos (key, offset) en temp.bin
         with open(order_file, 'wb') as f:
             for i in range(size):
-                record = self._read_record(i)
-                key = self.RT.get_key(record)
-                offset = i
-                f.write(struct.pack(format_temp, key, offset))
-                print(key, offset, self._read_record(offset))
+                record = self.HEAP.read(i)
+                if record is not None:
+                    key = self.RT.get_key(record)
+                    offset = i
+                    f.write(struct.pack(format_temp, key, offset))
+                    print(key, offset, self.HEAP.read(offset))
         print("temp.bin creado")
 
         # 2. Ordenar usando merge sort externo
@@ -369,12 +467,14 @@ class ISAM():
         print("Leyendo temp.bin ordenado:")
         file_size = os.path.getsize(order_file)
         total_records = file_size // record_size
+        HOLA = []
         with open(order_file, 'rb') as f:
             for i in range(total_records):
                 data = f.read(record_size)
                 key, offset = struct.unpack(format_temp, data)
-                print(key, offset, self._read_record(offset))
-
+                HOLA.append(key)
+                print(key, offset, self.HEAP.read(offset))
+        print (HOLA)
         # 3. Calcula M y lista de posiciones
         size = os.path.getsize(order_file)
         num_records = size // record_size
@@ -404,7 +504,9 @@ class ISAM():
                 if i == num_records -1:
                     page.keys[page.key_count] = key
                     page.childrens[page.key_count] = pos
+                    page.key_count += 1
                     self._add_index_page(page)
+                    break
                 # Si la lista de posiciones está vacía, crear una nueva página
                 if i == limit and i != 0 :
                     self._add_index_page(page)
@@ -456,7 +558,8 @@ class ISAM():
                     page_root.key_count += 1
 
                 i += 1
-            
+            # print (page.keys , page.childrens, page.next, "|" ,page.key_count)
+            self._add_index_page(page)
             if page_root.key_count == self.M - 1:
                 num_pages, num_over,_ , _ = self._read_header()
                 self._add_index_page(page_root)
@@ -475,6 +578,11 @@ class ISAM():
         print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
         print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")
         print ("leyendo indice de primer nivel")
+
+        # eliminar archivo temporal
+        if os.path.exists(order_file):
+            os.remove(order_file)
+            print(f"Archivo temporal {order_file} eliminado.")
 
     ### FUNCIONES DEL ISAM ###
 
@@ -495,44 +603,221 @@ class ISAM():
                         pos_children = temp.childrens[i + 1]
                         temp = self._read_index_page(pos_children)
                         break
-            return temp
-        
+            return pos_children
+    
+    def search_in_overflow(self, page_leaf : Index_Page, key1 , key2 , detener):
+        result_overflow = []
+        if page_leaf.next == -1:
+            return result_overflow , detener
+        else:
+            overflow = page_leaf.next
+            while overflow != -1:
+                temp = self._read_index_page(overflow)
+                for i in range(temp.key_count):
+                    if temp.keys[i] >= key1 and temp.keys[i] <= key2:
+                        result_overflow.append(temp.childrens[i])
+                    if temp.keys[i] > key2:
+                        detener = True
+                overflow = temp.next
+            return result_overflow , detener
+
+
     def search(self, key):
         """
         Busca un registro en el árbol B+.
         """
-
-        print (f"{self.M} nodos hijos por página")
-        print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
-        print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")
-        root = self._read_header()[2]  # posición de la raíz
-        temp = self.search_aux(root, key)
-        print (f"Buscando {key} en la raíz: {temp.keys} | Posición: {root}")
+        _, _ , _ ,  pos_root = self._read_header()  # posición de la raíz
+        pos_leaf = self.search_aux(pos_root, key)
+        detener = False
         results = []
-        if temp == -1:
+        if pos_leaf == -1:
             return results
         else:
             while True:
+                temp = self._read_index_page(pos_leaf)
                 for i in range(temp.key_count):
-                    if key < temp.keys[i]:
-                        break
+                    if temp.keys[i] > key:
+                        detener = True
                     if temp.keys[i] == key:
-                        results.append(temp.childrens[i])
-                if temp.childrens[-1] != -1:
-                    pos_children = temp.childrens[-1]
-                    temp = self._read_index_page(pos_children)
+                        if self.HEAP.read(temp.childrens[i]) is not None:
+                            results.append(temp.childrens[i])
+                search_overflow, detener = self.search_in_overflow(temp, key, key ,detener)
+                results.extend(search_overflow)
+                if not detener:
+                    pos_leaf = pos_leaf+1
+                    if pos_leaf == self.M **2:
+                        break
                 else:
                     break
             return results
+        
+    ## BUSQUEDA POR RANGO ##
 
+    def search_range(self, key1, key2):
+        """
+        Busca un registro en el árbol B+.
+        """
+        _, _ , _ ,  pos_root = self._read_header()  # posición de la raíz
+        pos_children = self.search_aux(pos_root, key1)
+        detener = False
+        results = []
+        if pos_children == -1:
+            return results
+        else:
+            while True:
+                temp = self._read_index_page(pos_children)
+                for i in range(temp.key_count):
+                    if temp.keys[i] > key2:
+                        detener = True
+                    if temp.keys[i] >= key1 and temp.keys[i] <= key2:
+                        if self.HEAP.read(temp.childrens[i]) is not None:
+                            results.append(temp.childrens[i])
+                search_overflow, detener = self.search_in_overflow(temp, key1, key2 ,detener)
+                results.extend(search_overflow)
+                if not detener:
+                    pos_children = pos_children+1
+                    if pos_children == self.M **2:
+                        break
+                else:
+                    break
+
+            for i in results:
+                print (self.HEAP.read(i))
+            return results        
+        
+    ## INSERTION ##
+
+    def add(self, record: list = None, pos_new_record :int = None):
+        """
+        Inserta un registro en el árbol B+.
+        """
+        # Le el encabezado del archivo de índice
+        if record is not None and pos_new_record is not None:
+            return "Error: Debe ingresar solo uno de los dos argumentos (record o pos_new_record)"
+        if record is None and pos_new_record is None:
+            return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
+        if record is not None:
+            pos_new_record = self.HEAP.insert(record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
+
+        if pos_new_record is not None:
+            record = self.HEAP.read(pos_new_record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
+
+        _, _ , _ ,  pos_root = self._read_header()  # posición de la raíz
+        pos_leaf = self.search_aux(pos_root, key)
+        page_leaf = self._read_index_page(pos_leaf)
+
+        if page_leaf.key_count < self.M - 1:
+            # Si la página hoja tiene espacio, insertar directamente
+            page_leaf.keys[page_leaf.key_count] = key
+            page_leaf.childrens[page_leaf.key_count] = pos_new_record
+            page_leaf.key_count += 1
+            self._write_index_page(pos_leaf, page_leaf)
+        
+        else:
+            # Buscar el último nodo de overflow
+            while page_leaf.next != -1:
+                pos_leaf = page_leaf.next
+                page_leaf = self._read_index_page(pos_leaf)
+            if page_leaf.key_count < self.M - 1:
+                # Si el último nodo de overflow tiene espacio, insertar ahí
+                page_leaf.keys[page_leaf.key_count] = key
+                page_leaf.childrens[page_leaf.key_count] = pos_new_record
+                page_leaf.key_count += 1
+                self._write_index_page(pos_leaf, page_leaf)
+            else:
+                # Si no hay espacio, crear un nuevo nodo de overflow
+                new_overflow = Index_Page(leaf=True, M=self.M)
+                new_overflow.keys[0] = key
+                new_overflow.childrens[0] = pos_new_record
+                new_overflow.key_count = 1
+                new_overflow.next = -1
+                pos_overflow = self._add_overflow_page(new_overflow)
+                # conectar el nuevo nodo de overflow al último nodo de overflow
+                page_leaf.next = pos_overflow
+                self._write_index_page(pos_leaf, page_leaf)
+
+
+    ## DELETE ##
+
+    def delete(self, key):
+        """
+        Elimina un registro del árbol B+.
+        """
+        _, _ , _ ,  pos_root = self._read_header()
+        first_pos_leaf = self.search_aux(pos_root, key)
+        page_leaf = self._read_index_page(first_pos_leaf)
+
+        resultado = self.search(key)
+        
+        if resultado == []:
+            return
+        
+        while True:
+                detener = self.delete_in_one_leaf( first_pos_leaf, key, detener=False)
+                if not detener:
+                    first_pos_leaf = first_pos_leaf+1
+                    if first_pos_leaf == self.M **2:
+                        break
+                else:
+                    break
     
-
-    
-    
-
-
-
-
+    def delete_in_one_leaf(self, first_pos_leaf ,key , detener = False):
+        page_leaf = self._read_index_page(first_pos_leaf)
+        if page_leaf.next == -1:
+            page_replace = Index_Page(leaf=True, M=self.M)
+            for i in range(page_leaf.key_count):
+                if page_leaf.keys[i] > key:
+                    detener = True
+                if page_leaf.keys[i] != key:
+                    page_replace.keys[page_replace.key_count] = page_leaf.keys[i]
+                    page_replace.childrens[page_replace.key_count] = page_leaf.childrens[i]
+                    page_replace.key_count += 1
+            self._write_index_page(first_pos_leaf, page_replace)
+            return detener
+        else:
+            #conseguir la posicion de todos los nodos de overflow
+            page_replace = Index_Page(leaf=True, M=self.M)
+            for i in range(page_leaf.key_count):
+                print (page_leaf.keys , key , page_leaf.key_count)
+                if page_leaf.keys[i] > key:
+                    detener = True
+                elif page_leaf.keys[i] != key:
+                    page_replace.keys[page_replace.key_count] = page_leaf.keys[i]
+                    page_replace.childrens[page_replace.key_count] = page_leaf.childrens[i]
+                    page_replace.key_count += 1
+            page_replace.next = page_leaf.next
+            self._write_index_page(first_pos_leaf, page_replace)
+            overflow_pos = []
+            overflow_pos.append(page_leaf.next)
+            while page_leaf.next != -1:
+                page_leaf = self._read_index_page(page_leaf.next)
+                overflow_pos.append(page_leaf.next)
+            print ("lista de overflows",overflow_pos)
+            prev_pos = first_pos_leaf
+            for j in range (len(overflow_pos)):
+                if overflow_pos[j] == -1:
+                    break
+                page_overflow = self._read_index_page(overflow_pos[j])
+                overflow_replace = Index_Page(leaf=True, M=self.M)
+                for i in range(page_overflow.key_count):
+                    print (page_overflow.keys , key , page_overflow.key_count)
+                    if page_overflow.keys[i] > key:
+                        detener = True
+                    elif page_overflow.keys[i] != key:
+                        overflow_replace.keys[overflow_replace.key_count] = page_overflow.keys[i]
+                        overflow_replace.childrens[overflow_replace.key_count] = page_overflow.childrens[i]
+                        overflow_replace.key_count += 1
+                overflow_replace.next = page_overflow.next
+                if overflow_replace.key_count > 0:
+                    self._write_index_page(overflow_pos[j], overflow_replace)
+                    prev_pos = overflow_pos[j]
+                else: 
+                    page_prev = self._read_index_page(prev_pos)
+                    page_prev.next = overflow_replace.next
+                    self._write_index_page(prev_pos, page_prev)
+            return detener 
 
 
         
