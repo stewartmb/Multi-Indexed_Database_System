@@ -164,7 +164,7 @@ def create_table(query):
             seq = Sequential(format,
                              key,
                              index_filename(query["name"], key, "index"),
-                             table_filename(query["name"]))
+                             table_filename(query["name"]), *params)
 
         elif index == "bptree":
             if len(params) != 0:
@@ -229,7 +229,7 @@ def insert(query):
             seq = Sequential(format,
                              key,
                              index_filename(nombre_tabla, key, "index"),
-                             table_filename(nombre_tabla))
+                             table_filename(nombre_tabla), *params)
 
             seq.add(pos_new_record=position)
 
@@ -277,8 +277,10 @@ def create_index(query):
         format[key] = to_struct(data["columns"][key]["type"])
 
     for key in query["attr"]:
-        data["columns"][key]["index"] = query["index"]
-
+        if data["columns"][key]["index"] is not None:
+            data["columns"][key]["index"] = query["index"]
+        else:
+            raise HTTPException(404, f"Index already created on attribute {key}")
     create_meta(data, nombre_tabla)
 
     keys = query["attr"]
@@ -307,7 +309,7 @@ def create_index(query):
         seq = Sequential(format,
                          keys[0],
                          index_filename(nombre_tabla, keys[0], "index"),
-                         table_filename(nombre_tabla))
+                         table_filename(nombre_tabla), *query["params"])
 
     elif index == "rtree":
         rtree = Rtree(format,
@@ -517,7 +519,7 @@ def aux_select(query):
                 seq = Sequential(format,
                                  key,
                                  index_filename(nombre_tabla, key, "index"),
-                                 table_filename(nombre_tabla))
+                                 table_filename(nombre_tabla), *params)
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
@@ -653,7 +655,7 @@ def copy(query):
             seq.append(Sequential(format,
                         key,
                         index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla)))
+                        table_filename(nombre_tabla), *params))
         elif index == "bptree":
             if len(params) != 0:
                 bptree.append(Bptree(format,
@@ -746,7 +748,7 @@ def delete(query):
             seq.append(Sequential(format,
                         key,
                         index_filename(nombre_tabla, key, "index"),
-                        table_filename(nombre_tabla)))
+                        table_filename(nombre_tabla), *params))
         elif index == "bptree":
             if len(params) != 0:
                 bptree.append(Bptree(format,
@@ -814,7 +816,7 @@ def delete(query):
                 seq.append(Sequential(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla)))
+                            table_filename(nombre_tabla), *params))
             elif index == "bptree":
                 if len(params) != 0:
                     bptree.append(Bptree(format,
