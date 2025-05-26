@@ -319,6 +319,7 @@ def create_index(query):
                 table_filename(nombre_tabla))
 
     index = query["index"]
+    data["key"]["params"] = query["params"]
     if index == None:
         pass
     elif index == "hash":
