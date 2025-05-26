@@ -3,7 +3,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { tags } from '@lezer/highlight';
+import { tags as t } from '@lezer/highlight';
 import { useQueryUrl } from '../contexts/QueryUrlContext.tsx';
 
 interface Props {
@@ -13,19 +13,21 @@ interface Props {
     isLoading?: boolean;
 }
 
-// Define custom syntax highlighting
+// Define custom syntax highlighting based on the parser grammar
 const myHighlightStyle = HighlightStyle.define([
-    { tag: tags.keyword, color: "#60a5fa" },           // SELECT, FROM, WHERE
-    { tag: tags.operator, color: "#94a3b8" },          // =, <, >
-    { tag: tags.number, color: "#f87171" },            // Numbers
-    { tag: tags.string, color: "#4ade80" },            // String literals
-    { tag: tags.comment, color: "#64748b", fontStyle: "italic" }, // Comments
-    { tag: tags.variableName, color: "#e879f9" },      // Column names
-    { tag: tags.definition, color: "#38bdf8" },        // Table names
-    { tag: tags.punctuation, color: "#cbd5e1" },       // Punctuation
-    { tag: tags.propertyName, color: "#a78bfa" },      // Properties
-    { tag: tags.function(tags.variableName), color: "#c084fc" }, // Functions
-    { tag: tags.special(tags.variableName), color: "#f472b6" }, // Special variables
+    // Keywords from parser
+    { tag: t.keyword, color: "#60a5fa" },           // create, select, insert, delete, where, from, etc.
+    { tag: t.atom, color: "#38bdf8" },              // int, float, double, varchar, etc.
+    { tag: t.string, color: "#4ade80" },            // String literals
+    { tag: t.number, color: "#f87171" },            // Numbers
+    { tag: t.operator, color: "#94a3b8" },          // ==, !=, <, >, <=, >=
+    { tag: t.keyword, color: "#c084fc" },           // primary key
+    { tag: t.variableName, color: "#e879f9" },      // column names
+    { tag: t.name, color: "#38bdf8" },              // table names
+    { tag: t.comment, color: "#64748b", fontStyle: "italic" }, // Comments
+    { tag: t.atom, color: "#fb923c" },              // closest, between, and special keywords
+    { tag: t.atom, color: "#a78bfa" },              // rtree, bptree, seq, isam, hash
+    { tag: t.punctuation, color: "#cbd5e1" },       // ( ) , ;
 ]);
 
 // Define custom theme
