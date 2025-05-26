@@ -195,8 +195,16 @@ def create_table(query):
     create_meta(query["data"], query["name"])
     end = time.time_ns()
     t_ms = end - start
-    
+
+    lista = []
+    for key in query["data"]["columns"].keys():
+        column = query["data"]["columns"][key]
+        lista.append([key, column["type"], column["index"]])
+
+
     return {
+        "columns": ["column", "type", "index"],
+        "data": lista,
         "message": f"CREATED TABLE {query["name"]} in {t_ms/1e6} ms"
     }
 
@@ -295,7 +303,7 @@ def create_index(query):
         if data["columns"][key]["index"] is None:
             data["columns"][key]["index"] = query["index"]
         else:
-            raise HTTPException(404, f"Index already created on attribute {key}")
+            raise HTTPException(status_code=404, detail=f"Index already created on attribute {key}")
 
     keys = query["attr"]
     
@@ -627,6 +635,7 @@ def select(query):
 
     end = time.time_ns()
     t_ms = end - start
+    print("RESULT_DATA:",result)
     return {
         "columns": columns_names,
         "data": result,
