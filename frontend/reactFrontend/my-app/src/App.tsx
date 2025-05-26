@@ -4,29 +4,72 @@ import Sidebar from './components/Sidebar.tsx';
 import ResizablePanel from './components/ResizablePanel.tsx';
 import { QueryUrlProvider } from './contexts/QueryUrlContext.tsx';
 
+interface QueryResult {
+    data: any[] | null;
+    columns: string[] | null;
+    message: string | null;
+    error: string | null;
+    details?: string | null;
+}
 
 function App() {
-    const [results, setResults] = useState<any[] | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [queryResult, setQueryResult] = useState<QueryResult>({
+        data: null,
+        columns: null,
+        message: null,
+        error: null,
+        details: null
+    });
 
     const handleRunQuery = async (query: string) => {
         try {
-            setError(null);
-            setResults(null);
+            setQueryResult({
+                data: null,
+                columns: null,
+                message: null,
+                error: null,
+                details: null
+            });
 
-            // Simulando una llamada a la API
-            const response = await fetch('/api/query', {
+            const response = await fetch('http://127.0.0.1:8000/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query }),
             });
 
-            if (!response.ok) throw new Error('Error ejecutando la consulta');
+            const result = await response.json();
 
-            const data = await response.json();
-            setResults(data.rows || []);
+            if (!response.ok) {
+                throw new Error(JSON.stringify({
+                    error: result.error || 'Error executing query',
+                    details: result.details || ''
+                }));
+            }
+            
+            setQueryResult({
+                data: result.data || null,
+                columns: result.columns || null,
+                message: result.message || null,
+                error: null,
+                details: null
+            });
         } catch (err: any) {
-            setError(err.message);
+            let errorMessage = 'Error executing query';
+            let errorDetails = '';
+            
+            try {
+                const parsedError = JSON.parse(err.message);
+                errorMessage = parsedError.error;
+                errorDetails = parsedError.details;
+            } catch {
+                errorMessage = err.message;
+            }
+
+            setQueryResult(prev => ({
+                ...prev,
+                error: errorMessage,
+                details: errorDetails
+            }));
         }
     };
 
@@ -34,7 +77,7 @@ function App() {
         <QueryUrlProvider>
             <ResizableSidebarLayout
                 Sidebar={<Sidebar />}
-                MainContent={<ResizablePanel />}
+                MainContent={<ResizablePanel queryResult={queryResult} onRunQuery={handleRunQuery} />}
             />
         </QueryUrlProvider>
     );

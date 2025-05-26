@@ -5,13 +5,14 @@ interface Props {
     data: any[] | null;
     message: string | null;
     error: string | null;
+    details?: string | null;
     history: string[];
     columns: string[];
     onSelectHistory?: (query: string) => void;
     isLoading?: boolean;
 }
 
-const Results: React.FC<Props> = ({ data, columns, message, error, history, onSelectHistory, isLoading = false }) => {
+const Results: React.FC<Props> = ({ data, columns, message, error, details, history, onSelectHistory, isLoading = false }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'history'>('data'); // Eliminamos 'explain'
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -46,9 +47,9 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
     };
 
     // Function to safely render cell content
-    const renderCellContent = (row: any, column: string) => {
-        console.log('Rendering cell:', { column, rowData: row, value: row[column] });
-        const value = row[column];
+    const renderCellContent = (row: any, columnIndex: number) => {
+        console.log('Rendering cell:', { columnIndex, rowData: row });
+        const value = Array.isArray(row) ? row[columnIndex] : row[columnIndex];
         
         if (value === null || value === undefined) {
             return 'NULL';
@@ -65,10 +66,10 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
             console.log('Sample data row:', data[0]);
             console.log('Available columns:', columns);
             console.log('Column values in first row:', 
-                columns.map(col => ({ 
+                columns.map((col, idx) => ({ 
                     column: col, 
-                    value: data[0][col],
-                    type: typeof data[0][col]
+                    value: data[0][idx],
+                    type: typeof data[0][idx]
                 }))
             );
         }
@@ -101,7 +102,10 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                                 <span>Executing query...</span>
                             </div>
                         ) : error ? (
-                            <div className={styles.errorMessage}>Error: {error}</div>
+                            <div className={styles.errorMessage}>
+                                <div>Error: {error}</div>
+                                {details && <pre className={styles.errorDetails}>{details}</pre>}
+                            </div>
                         ) : data && data.length > 0 ? (
                             <div className={styles.tableContainer}>
                                 <table className={styles.table}>
@@ -119,9 +123,9 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                                         console.log(`Row ${rowIdx} data:`, row);
                                         return (
                                             <tr key={rowIdx}>
-                                                {columns.map((column, colIdx) => (
-                                                    <td key={`${rowIdx}-${colIdx}`} title={String(row[column])}>
-                                                        {renderCellContent(row, column)}
+                                                {columns.map((_, colIdx) => (
+                                                    <td key={`${rowIdx}-${colIdx}`} title={String(row[colIdx])}>
+                                                        {renderCellContent(row, colIdx)}
                                                     </td>
                                                 ))}
                                             </tr>
@@ -179,7 +183,10 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                                 <span>Executing query...</span>
                             </div>
                         ) : error ? (
-                            <div className={styles.errorMessage}>{"Error: \n" + error}</div>
+                            <div className={styles.errorMessage}>
+                                <div>Error: {error}</div>
+                                {details && <pre className={styles.errorDetails}>{details}</pre>}
+                            </div>
                         ) : message ? (
                             <div className={styles.infoMessage}>{message}</div>
                         ) : (

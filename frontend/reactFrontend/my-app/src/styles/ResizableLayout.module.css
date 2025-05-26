@@ -1,0 +1,42 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #0f172a;
+}
+
+
+.topPanel {
+    min-height: 100px;
+    overflow: hidden;
+    background-color: #0f172a;
+}
+
+.bottomPanel {
+    min-height: 100px;
+    overflow: hidden;
+    background-color: #0f172a;
+}
+
+.dragBar {
+    height: 8px;
+    background-color: #1e293b;
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+    user-select: none;
+}
+
+.dragBar:hover {
+    background-color: #2d3748;
+}
+
+.dragBarInner {
+    width: 32px;
+    height: 2px;
+    background-color: #4b5563;
+    border-radius: 1px;
+    pointer-events: none;
+} 

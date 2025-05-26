@@ -1,73 +1,67 @@
 import React, { useState } from 'react';
 import SQLEditor from './SQLEditor';
-import Results from './results/Results.tsx';
+import Results from './results/Results';
 import ResizableLayout from './ResizableLayout';
 import { useQueryUrl } from '../contexts/QueryUrlContext';
 
+interface QueryResult {
+    data: any[] | null;
+    columns: string[] | null;
+    message: string | null;
+    error: string | null;
+    details?: string | null;
+}
 
-export default function ResizablePanel() {
-    const [data, setData] = useState<any[] | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [history, setHistory] = useState<string[]>([]);
-    const [message, setMessage] = useState<string | null>(null);
-    const [columns, setColumns] = useState<string[]>([]);
-    const [currentQuery, setCurrentQuery] = useState<string>('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+interface Props {
+    queryResult: QueryResult;
+    onRunQuery: (query: string) => void;
+}
 
-    const { queryUrl } = useQueryUrl();
+const ResizablePanel: React.FC<Props> = ({ queryResult, onRunQuery }) => {
+    const [query, setQuery] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [queryHistory, setQueryHistory] = useState<string[]>([]);
 
-    const runQuery = async (query: string) => {
-        // Prevent execution if already loading
-        if (isLoading) {
-            console.log('Query already in progress, ignoring new request');
-            return;
-        }
-
+    const handleRunQuery = async (sql: string) => {
         setIsLoading(true);
-        setData(null);
-        setError(null);
-        setColumns([]);
-        setMessage(null);
-
-        // Agrega al historial antes de ejecutar
-        setHistory((prev) => [query, ...prev]);
-
-        // TODO: CAMBIAR EL PUERTO A 8000
         try {
-            console.log('Running query:', query);
-            const response = await fetch(`${queryUrl}/query`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.details || 'Query failed');
+            await onRunQuery(sql);
+            if (!queryHistory.includes(sql)) {
+                setQueryHistory(prev => [sql, ...prev].slice(0, 50));
             }
-
-            console.log('Response:', result);
-
-            setData(result.data);
-            setColumns(result.columns);
-            setMessage(result.message || null);
-        } catch (err: any) {
-            console.error('Error running query:', err);
-            setError(err.message);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleQueryFromHistory = (query: string) => {
-        setCurrentQuery(query);
+    const handleHistorySelect = (selectedQuery: string) => {
+        setQuery(selectedQuery);
     };
 
     return (
         <ResizableLayout
-            top={<SQLEditor onRun={runQuery} query={currentQuery} onQueryChange={setCurrentQuery} isLoading={isLoading} />}
-            bottom={<Results data={data} columns={columns} message={message} error={error} history={history} onSelectHistory={handleQueryFromHistory} isLoading={isLoading} />}
+            topContent={
+                <SQLEditor
+                    onRun={handleRunQuery}
+                    isLoading={isLoading}
+                    query={query}
+                    onQueryChange={setQuery}
+                />
+            }
+            bottomContent={
+                <Results
+                    data={queryResult.data}
+                    columns={queryResult.columns || []}
+                    message={queryResult.message}
+                    error={queryResult.error}
+                    details={queryResult.details}
+                    history={queryHistory}
+                    onSelectHistory={handleHistorySelect}
+                    isLoading={isLoading}
+                />
+            }
         />
     );
-}
+};
+
+export default ResizablePanel;

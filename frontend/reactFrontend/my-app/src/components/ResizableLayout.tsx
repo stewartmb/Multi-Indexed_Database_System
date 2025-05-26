@@ -1,110 +1,69 @@
 // components/ResizableLayout.tsx
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import styles from '../styles/ResizableLayout.module.css';
 
 interface Props {
-    top: React.ReactNode;
-    bottom: React.ReactNode;
+    topContent: React.ReactNode;
+    bottomContent: React.ReactNode;
 }
 
-const ResizableLayout: React.FC<Props> = ({ top, bottom }) => {
+const ResizableLayout: React.FC<Props> = ({ topContent, bottomContent }) => {
+    const [topHeight, setTopHeight] = useState('50%');
     const containerRef = useRef<HTMLDivElement>(null);
-    const [topHeight, setTopHeight] = useState(200);
-    const isDragging = useRef(false);
-
-    const onMouseDown = (e: React.MouseEvent) => {
-        e.preventDefault();
-        isDragging.current = true;
-    };
-
-    const onMouseUp = () => {
-        isDragging.current = false;
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-        if (!isDragging.current || !containerRef.current) return;
-
-        const rect = containerRef.current.getBoundingClientRect();
-        let newHeight = e.clientY - rect.top;
-
-        newHeight = Math.max(50, Math.min(newHeight, rect.height - 50));
-        setTopHeight(newHeight);
-    };
+    const isDraggingRef = useRef(false);
+    const startYRef = useRef(0);
+    const startHeightRef = useRef(0);
 
     useEffect(() => {
-        window.addEventListener('mouseup', onMouseUp);
-        window.addEventListener('mousemove', onMouseMove);
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDraggingRef.current || !containerRef.current) return;
+
+            const containerHeight = containerRef.current.offsetHeight;
+            const deltaY = e.clientY - startYRef.current;
+            const newHeight = Math.min(Math.max(startHeightRef.current + deltaY, 100), containerHeight - 100);
+            
+            setTopHeight(`${(newHeight / containerHeight) * 100}%`);
+        };
+
+        const handleMouseUp = () => {
+            isDraggingRef.current = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
         return () => {
-            window.removeEventListener('mouseup', onMouseUp);
-            window.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
         };
     }, []);
 
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (!containerRef.current) return;
+
+        isDraggingRef.current = true;
+        startYRef.current = e.clientY;
+        startHeightRef.current = containerRef.current.offsetHeight * (parseInt(topHeight as string) / 100);
+        
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+    };
+
     return (
-        <div
-            ref={containerRef}
-            className={`flex flex-col w-full h-full ${isDragging.current ? 'select-none' : 'select-auto'}`}
-            style={{ 
-                background: 'linear-gradient(145deg, #0f172a, #1e293b)',
-                border: '2px solid #374151',
-                borderRadius: '0.75rem',
-                overflow: 'hidden',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
-            }}
-        >
-            <div 
-                style={{ 
-                    height: topHeight, 
-                    background: 'linear-gradient(145deg, #0f172a, #1e293b)',
-                    borderRadius: '0.75rem 0.75rem 0 0',
-                    overflow: 'hidden'
-                }}
-            >
-                {top}
+        <div ref={containerRef} className={styles.container}>
+            <div style={{ height: topHeight }} className={styles.topPanel}>
+                {topContent}
             </div>
-
             <div
-                onMouseDown={onMouseDown}
-                style={{
-                    height: '12px',
-                    background: 'linear-gradient(145deg, #0f172a, #1e293b)',
-                    cursor: 'row-resize',
-                    alignSelf: 'stretch',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    borderTop: '1px solid #374151',
-                    borderBottom: '1px solid #374151',
-                }}
-                title="Drag to resize"
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(145deg, #1e293b, #2d3748)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(145deg, #0f172a, #1e293b)';
-                }}
+                className={styles.dragBar}
+                onMouseDown={handleMouseDown}
             >
-                {/* Visual indicator for drag handle */}
-                <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: '40px',
-                    height: '3px',
-                    background: 'linear-gradient(90deg, #374151, #4b5563, #374151)',
-                    borderRadius: '2px',
-                    opacity: 0.5
-                }} />
+                <div className={styles.dragBarInner}></div>
             </div>
-
-            <div
-                style={{
-                    flex: 1,
-                    background: 'linear-gradient(145deg, #0f172a, #1e293b)',
-                    overflow: 'auto',
-                    borderRadius: '0 0 0.75rem 0.75rem'
-                }}
-            >
-                {bottom}
+            <div style={{ height: `calc(100% - ${topHeight} - 8px)` }} className={styles.bottomPanel}>
+                {bottomContent}
             </div>
         </div>
     );

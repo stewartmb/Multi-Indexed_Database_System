@@ -73,6 +73,7 @@ def parse_select(tokens: list):
     return tree
 
 def evaluate_select(node, sets, universe):
+    print(f"node is {node}")
     if isinstance(node, int):
         return sets[node]
     elif isinstance(node, tuple):
@@ -222,7 +223,7 @@ def insert(query):
                 data["key"],
                 table_filename(nombre_tabla))
 
-    if len(format) != query["values"]:
+    if len(format) != query["values"][1]:
         i = 0
         record = query["values"][1]
         for key in data["columns"].keys():
@@ -230,6 +231,9 @@ def insert(query):
                 record.insert(i, str(datetime.datetime.now()))
                 print(record)
             i += 1
+        if len(format) != len(record):
+            print(True)
+            raise HTTPException(status_code=404, detail="Not enough columns.")
 
     position = heap.insert(record)
 
@@ -319,7 +323,7 @@ def create_index(query):
                 table_filename(nombre_tabla))
 
     index = query["index"]
-    data["key"]["params"] = query["params"]
+    data["columns"][key]["params"] = query["params"]
     if index == None:
         pass
     elif index == "hash":
@@ -591,7 +595,8 @@ def aux_select(query):
     for i in range(len(sets)):
         print(i, ":", sets[i])
 
-    print("a")
+    print("sets:")
+    print(sets)
     # Evaluar la expresión booleana
     universe = None
     if calc_universe:
@@ -599,6 +604,7 @@ def aux_select(query):
                     data["key"],
                     table_filename(query["table"]))
         universe = set(heap.get_all())
+    print("before evaluate")
     print(tree, sets, universe)
 
     return evaluate_select(tree, sets, universe)
