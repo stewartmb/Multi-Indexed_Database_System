@@ -112,8 +112,11 @@ def cast(value, type):
         print("ERROR: tipo no soportado")
         return None
 
-def convert(query):
-    # print(json.dumps(query, indent=2))
+def execute_parsed_query(query):
+    '''
+    funcion principal del service.
+    Recibe un query parseado y ejecuta la accion correspondiente
+    '''
     if query["action"] == "create_table":
         return create_table(query)
     elif query["action"] == "insert":
@@ -130,8 +133,6 @@ def convert(query):
         return drop_index(query)
     elif query["action"] == "drop table":
         return drop_table(query)
-    elif query["action"] == "set":
-        return set_stmt(query)
     else:
         print("error: accion no soportada")
         raise HTTPException(status_code=404, detail="Action not supported")

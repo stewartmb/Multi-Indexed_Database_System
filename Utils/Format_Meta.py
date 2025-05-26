@@ -1,5 +1,6 @@
 import json
 import os
+from fastapi import HTTPException
 
 def create_meta(data: dict, name: str) -> None:
     """Agrega un nuevo diccionario con clave 'name' a una lista en MetaData"""
@@ -23,6 +24,7 @@ def create_meta(data: dict, name: str) -> None:
     # Guardar la lista actualizada
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(all_data, f, indent=4)
+
     print(f"Dato guardado bajo la clave '{name}' en '{filename}'.")
 
 def select_meta(name: str) -> dict:
@@ -37,15 +39,13 @@ def select_meta(name: str) -> dict:
         try:
             all_data = json.load(f)
         except json.JSONDecodeError:
-            print("Error: No se pudo leer el archivo. ¿Está corrupto?")
-            return {}
+            raise HTTPException(status_code=500, detail="Error: No se pudo leer el archivo metadata.")
 
     for item in all_data:
         if name in item:
             return item[name]
 
-    print(f"No se encontró una entrada con el nombre '{name}'.")
-    return {}
+    raise HTTPException(status_code=404, detail=f"No se encontró una entrada con el nombre '{name}'.")
 
 def delete_meta(name: str) -> None:
     """Elimina la entrada con clave 'name' de la lista en MetaData"""
@@ -82,8 +82,7 @@ def get_info_from_meta() -> dict:
         try:
             all_data = json.load(f)
         except json.JSONDecodeError:
-            print("Error: No se pudo leer el archivo. ¿Está corrupto?")
-            return {}
+            raise HTTPException(status_code=500, detail="Error: No se pudo leer el archivo metadata.")
 
     info = {"name":"Schema 1", "tables":[]}
 
@@ -123,7 +122,7 @@ def create_index_meta():
             try:
                 json.dump(dict, f, indent=4)
             except json.JSONDecodeError:
-                            print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
+                print("Advertencia: El archivo estaba corrupto. Se sobrescribirá.")
     print(f"Informacion de índices creado en {filename}")
 
 def set_index_meta(index: str, params: list):
@@ -171,8 +170,7 @@ def select_index_meta():
         try:
             all_data = json.load(f)
         except json.JSONDecodeError:
-            print("Error: No se pudo leer el archivo. ¿Está corrupto?")
-            return {}
+            raise HTTPException(status_code=500, detail="Error: No se pudo leer el archivo metadata.")
 
     return all_data
 
