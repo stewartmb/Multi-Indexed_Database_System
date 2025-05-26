@@ -193,13 +193,17 @@ FUNCIÓN buscar_en_bucket(bucket, key):
 ```
 
 ### Búsqueda por rango
+
+Como se sabe, las técnicas de hashing no sorpotan por defecto la búsqueda por rango. Por lo que para este algoritmo, se hace una búsqueda recorriendo todos los bucekts que se encuentren en el hash.
+
 Algoritmo para la búsqueda por rango:
+
 ```
 FUNCIÓN range_search(lower, upper):
     ABRIR archivos (index_file, buckets_file) EN MODO lectura:
         root = leer_nodo(index_file, 0)
         SI root es nodo_interno:
-            lista = _aux_range_search(buckets_file, index_file, root.left, lower, upper)
+            lista += _aux_range_search(buckets_file, index_file, root.left, lower, upper)
             lista += _aux_range_search(buckets_file, index_file, root.right, lower, upper)
         RETORNAR lista
 ```
