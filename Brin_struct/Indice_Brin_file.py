@@ -17,7 +17,7 @@ def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M,
     """
     Genera el formato del índice dinámicamente basado en M.
     """
-    format = f'b{(M) * format_key}{M * "i"}{format_key * 2}i?i'
+    format = f'{(M) * format_key}{M * "i"}{format_key * 2}i?i'
     return format
 
 class Index_Page():
@@ -32,7 +32,6 @@ class Index_Page():
 
     def to_bytes(self, format_key, indexp_format):
         # Prepare keys for packing
-        packed_keys = []
 
         def binary_format(list):
             packed_keys = []
@@ -90,7 +89,7 @@ class Index_Page():
 
         # Handle keys
         for i in range(M):
-            key_value = unpacked[i + 1]
+            key_value = unpacked[i]
             if format_key == 'i' or format_key == 'q' or format_key == 'Q':
                 instance.keys[i] = key_value if key_value != -2147483648 else None
             elif format_key == 'f' or format_key == 'd':
@@ -104,6 +103,16 @@ class Index_Page():
 
         # Handle children and metadata
         instance.childrens = list(unpacked [M: M + M])
+        for i in range(2* M, 2 * M + 2):
+            value = unpacked[i]
+            if format_key == 'i' or format_key == 'q' or format_key == 'Q':
+                instance.range_values[i - 2 * M] = value if value != -2147483648 else None
+            elif format_key == 'f' or format_key == 'd':
+                instance.range_values[i - 2 * M] = value if not math.isnan(value) else None
+            elif format_key == 'b' or format_key == '?':
+                instance.range_values[i - 2 * M] = value if value != -128 else None
+            elif 's' in format_key:
+                instance.range_values[i - 2 * M] = value.decode('utf-8').strip('\x00') if value != b'\x00' * len(value) else None
         instance.key_count = unpacked[-3]
         instance.is_order = unpacked[-2]
         instance.father_brin = unpacked[-1]
@@ -184,7 +193,7 @@ class Indice_Brin():
 
         # Handle keys
         for i in range(2):
-            key_value = unpacked[i + 1]
+            key_value = unpacked[i]
             if format_key == 'i' or format_key == 'q' or format_key == 'Q':
                 instance.range_values[i] = key_value if key_value != -2147483648 else None
             elif format_key == 'f' or format_key == 'd':
@@ -230,7 +239,7 @@ class BRIN:
         self.tam_index = struct.calcsize(self.format_index)              # Tamaño del índice BRIN
 
         self._initialize_files()                                     # Inicializa los archivos de índice y página
-        self.HEAP = Heap(name_data_file, table_format, name_key, force_create=force_create)
+        self.HEAP = Heap(table_format, name_key, name_data_file, force_create=force_create)
 
     def _initialize_files(self):
         """
@@ -367,10 +376,12 @@ class BRIN:
             # Actualizar order
             prev_brin = self._read_brin(num_brins - 1)
             if prev_brin.range_values[1] > key:
-                self._update_order(False)  # Si el nuevo índice no está ordenado, actualizar el encabezado
-        
+                is_order = False  # Si el nuevo índice no está ordenado, actualizar el encabezado
         self._write_brin(num_brins, brin)
         self._write_header_index(num_brins + 1, is_order)
+
+        page = self._read_page(pos_page)
+        brin = self._read_brin(num_brins)
         return num_brins , pos_page
     
     def _update_ranges(self, pos_page : Index_Page, key):
@@ -379,6 +390,7 @@ class BRIN:
         """
         page = self._read_page(pos_page)
 
+        # Actualiza los valores de rango de la página
         if key >= page.range_values[1]:
             page.range_values[1] = key
         else:
@@ -386,6 +398,7 @@ class BRIN:
         if key <= page.range_values[0]:
             page.range_values[0] = key
         
+        # Actualiza el padre del índice BRIN
         father_brin = self._read_brin(page.father_brin)
         if key >= father_brin.range_values[1]:
             father_brin.range_values[1] = key
@@ -409,15 +422,21 @@ class BRIN:
         """
         # Leer todas los brins del archivo de índice
         low = 0
+        first_occurrence = -1   # Para guardar el primer x encontrado
+        floor_index = -1        # Para guardar el mayor valor < x    
         high = self._read_header_index()[0] - 1
         while low <= high:
             mid = (low + high) // 2
             min_value = self._read_brin(mid).range_values[0]
-            if min_value < key:
+            if min_value == key:
+                first_occurrence = mid
+                high = mid - 1
+            elif min_value < key:
+                floor_index = mid
                 low = mid + 1
             else:
                 high = mid - 1
-        return low
+        return first_occurrence if first_occurrence != -1 else floor_index
 
     def binary_find_index(self, brin : Indice_Brin, key):
         """
@@ -425,15 +444,44 @@ class BRIN:
         """
         low = 0
         high = brin.page_count - 1
+        first_occurrence = -1   # Para guardar el primer x encontrado
+        floor_index = -1        # Para guardar el mayor valor < x    
         while low <= high:
             mid = (low + high) // 2
             pos_page = brin.pages[mid]
             page = self._read_page(pos_page)  # Leer la página correspondiente
-            if page.range_values[0] < key:
+            min_value = page.range_values[0]
+            if min_value == key:
+                first_occurrence = mid
+                high = mid - 1
+            elif min_value < key:
+                floor_index = mid
                 low = mid + 1
             else:
                 high = mid - 1
-        return low
+        return first_occurrence if first_occurrence != -1 else floor_index
+
+
+
+    def print_all_brins(self):
+        """
+        Imprime todos los índices BRIN del archivo de índice.
+        """
+        num_brins, is_order = self._read_header_index()
+        if num_brins == 0:
+            print("No hay índices BRIN.")
+            return
+        
+        # Imprime el encabezado del índice BRIN
+        print(f"Encabezado del índice BRIN: Número de BRINs: {num_brins}, Ordenado: {is_order}")
+        
+        for i in range(num_brins):
+            brin = self._read_brin(i)
+            print(f"BRIN {i}: Rango: {brin.range_values}, Páginas: {brin.page_count}, Ordenado: {brin.is_order}")
+            for j in range(brin.page_count):
+                pos_page = brin.pages[j]
+                page = self._read_page(pos_page)
+                print(f"  Página {j}: Claves: {page.keys[:page.key_count]}, Hijos: {page.childrens[:page.key_count]}, Rango: {page.range_values}, Ordenada: {page.is_order}")
 
 
     ### FUNCIONES ###
@@ -455,8 +503,9 @@ class BRIN:
             record = self.HEAP.read(pos_new_record)
             key = self.RT.get_key(record)  # Obtiene la clave del registro
 
+
         num_brins, is_order = self._read_header_index()
-        
+
         if num_brins == 0:
             # Si no hay índices BRIN, crea uno nuevo
             return self._add_brin(key, pos_new_record)
@@ -470,14 +519,18 @@ class BRIN:
             pos_last_page = self._read_header_page() - 1
             last_page = self._read_page(pos_last_page)
 
+
             # Verifica si hay espacio en su ultima pagina
             if last_page.key_count < self.M:
                 # Si hay espacio, agrega el registro a la última página
                 last_page.keys[last_page.key_count] = key
                 last_page.childrens[last_page.key_count] = pos_new_record
                 last_page.key_count += 1
+                self._write_page(pos_last_page, last_page)
                 self._update_ranges(pos_last_page, key)
-                
+                last_page = self._read_page(pos_last_page)  # Leer la página actualizada
+                return
+            
             else:
                 # Si no hay espacio, verifica si se puede crear una nueva pagina al índice BRIN
                 if brin.page_count < self.K:
@@ -497,10 +550,12 @@ class BRIN:
                     brin.page_count += 1
                     self._write_brin(pos_brin, brin)
                     self._update_ranges(pos_new_page, key)
-
+                    return
                 else:
                     # Si no hay espacio en el índice BRIN, crea un nuevo índice BRIN
-                    self._add_brin(key, pos_new_record)
+                    pos_new_brin = self._add_brin(key, pos_new_record)
+                    return
+                        
     
     def search(self, key):
         """
@@ -529,13 +584,13 @@ class BRIN:
                 if brin.range_values[0] <= key <= brin.range_values[1]:
                     list_pos_brin.append(i)
         
+
         # Buscar en las páginas de los brins encontrados 
         for pos_brin in list_pos_brin:
             brin = self._read_brin(pos_brin)
-            
+            pos_page = self.binary_find_index(brin, key)
             # Si el brin está ordenado, busca en la página correspondiente
             if brin.is_order:
-                pos_page = self.binary_find_index(brin, key)
                 for i in range(pos_page, brin.page_count):
                     pos_page = brin.pages[i]
                     page = self._read_page(pos_page)
@@ -555,10 +610,35 @@ class BRIN:
                             for j in range(page.key_count):
                                 if page.keys[j] == key:
                                     results.append(page.childrens[j])
-                            
-                    else:
+
+                    elif page.range_values[0] > key:
                         break
-            
+                            
+            else:
+                # Si el brin no está ordenado, busca en todas las páginas
+                for i in range(brin.page_count):
+                    pos_page = brin.pages[i]
+                    page = self._read_page(pos_page)
+                    if page.range_values[0] <= key <= page.range_values[1]:
+                        if page.is_order:
+                            # Si la página está ordenada, busca el índice del key
+                            index = page.binary_find_index(key)
+                            for j in range(index, page.key_count):
+                                if page.keys[j] == key:
+                                    results.append(page.childrens[j])
+                                elif page.keys[j] > key:
+                                    break
+                        else:
+                            # Si la página no está ordenada, busca secuencialmente
+                            for j in range(page.key_count):
+                                if page.keys[j] == key:
+                                    results.append(page.childrens[j])
+        return results
+
+
+
+                    
+    
 
 
 
