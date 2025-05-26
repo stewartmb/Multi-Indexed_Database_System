@@ -1,7 +1,9 @@
-create table estudiantes (
-    codigo int primary key,
-    nombre varchar[30],
-    ciclo int
+create table destinos (
+    id int primary key ,
+    name varchar[25] ,
+    latitud double,
+    longitud double,
+    ciudad varchar[20],
+    pais varchar[20]
 );
-
-copy estudiantes from "Data_test/BPTree.csv";
+copy destinos from "Data_test/destinos.csv";
