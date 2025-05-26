@@ -13,12 +13,12 @@ from Utils.file_format import *
 from Heap_struct.Heap import *
 
 from Hash_struct.Hash import Hash
-from BPtree_struct.Indice_BPTree_file import BPTree as Btree
+from BPtree_struct.Indice_BPTree_file import BPTree as Bptree
 from Sequential_Struct.Indice_Sequential_file import Sequential
 from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 from Isam_struct.Indice_Isam_file import ISAM as Isam
 
-M = 10
+M = 1000
 
 
 def to_struct(type):
@@ -176,15 +176,15 @@ def create_table(query):
                              index_filename(query["name"], key, "index"),
                              table_filename(query["name"]))
 
-        elif index == "btree":
-            if indexes_data["btree"] is not None:
-                btree = Btree(format,
+        elif index == "bptree":
+            if indexes_data["bptree"] is not None:
+                bptree = Bptree(format,
                             key,
                             index_filename(query["name"], key, "index"),
                             table_filename(query["name"]),
-                            *indexes_data["btree"])
+                            *indexes_data["bptree"])
             else:
-                btree = Btree(format,
+                bptree = Bptree(format,
                             key,
                             index_filename(query["name"], key, "index"),
                             table_filename(query["name"]),
@@ -249,20 +249,20 @@ def insert(query):
 
             seq.add(pos_new_record=position)
 
-        elif index == "btree":
-            if indexes_data["btree"] is not None:
-                btree = Btree(format,
+        elif index == "bptree":
+            if indexes_data["bptree"] is not None:
+                bptree = Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
-                            *indexes_data["btree"])
+                            *indexes_data["bptree"])
             else:
-                btree = Btree(format,
+                bptree = Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
                             M)
-            btree.add(pos_new_record=position)
+            bptree.add(pos_new_record=position)
 
         elif index == "isam":
             isam = Isam(format,
@@ -305,7 +305,7 @@ def create_index(query):
     hash = None
     seq = None
     rtree = None
-    btree = None
+    bptree = None
     isam = None
 
     heap = Heap(format,
@@ -352,19 +352,19 @@ def create_index(query):
                     index_filename(nombre_tabla, keys[0], "index"),
                     table_filename(nombre_tabla))
 
-    elif index == "btree":
-        if indexes_data["btree"] is None:
-            btree = Btree(format,
+    elif index == "bptree":
+        if indexes_data["bptree"] is None:
+            bptree = Bptree(format,
                         keys[0],
                         index_filename(nombre_tabla, keys[0], "index"),
                         table_filename(nombre_tabla),
                         M)
         else:
-            btree = Btree(format,
+            bptree = Bptree(format,
                         keys[0],
                         index_filename(nombre_tabla, keys[0], "index"),
                         table_filename(nombre_tabla),
-                        *indexes_data["btree"])
+                        *indexes_data["bptree"])
 
     else:
         print("INDICE NO IMPLEMENTADO AUN")
@@ -381,8 +381,8 @@ def create_index(query):
             seq.add(pos_new_record=pos)
         elif rtree is not None:
             rtree.insert(record, pos)
-        elif btree is not None:
-            btree.add(pos_new_record=pos)
+        elif bptree is not None:
+            bptree.add(pos_new_record=pos)
     
     return {
         "message": f"CREATED INDEX {index} ON TABLE {nombre_tabla}"
@@ -488,8 +488,6 @@ def aux_select(query):
                 else:
                     sets.append(set(heap.search(val, val)))
 
-                else:
-                    sets.append(set(heap.search(val, val)))
             elif index == "hash":
                 if indexes_data["hash"] is not None:
                     hash = Hash(format,
@@ -523,15 +521,15 @@ def aux_select(query):
                 else:
                     sets.append(set(hash.search(val)))
 
-            elif index == "btree":
-                if indexes_data["btree"] is not None:
-                    btree = Btree(format,
+            elif index == "bptree":
+                if indexes_data["bptree"] is not None:
+                    bptree = Bptree(format,
                                 key,
                                 index_filename(nombre_tabla, key, "index"),
                                 table_filename(nombre_tabla),
-                                *indexes_data["btree"])
+                                *indexes_data["bptree"])
                 else:
-                    btree = Btree(format,
+                    bptree = Bptree(format,
                                 key,
                                 index_filename(nombre_tabla, key, "index"),
                                 table_filename(nombre_tabla),
@@ -539,20 +537,20 @@ def aux_select(query):
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
-                        sets.append(set(btree.search_range(left, right)))
+                        sets.append(set(bptree.search_range(left, right)))
                     else:
-                        valid = set(btree.search_range(left, right))
+                        valid = set(bptree.search_range(left, right))
                         if cond["op"] == ">":
-                            invalid = set(btree.search(left))
+                            invalid = set(bptree.search(left))
                         elif cond["op"] == "<":
-                            invalid = set(btree.search(right))
+                            invalid = set(bptree.search(right))
                         else:
                             curr = cast(cond["value"], format[key])
-                            invalid = set(btree.search(curr))
+                            invalid = set(bptree.search(curr))
 
                         sets.append(valid - invalid)
                 else:
-                    sets.append(set(btree.search(val)))
+                    sets.append(set(bptree.search(val)))
 
             elif index == "seq":
                 seq = Sequential(format,
@@ -672,7 +670,7 @@ def copy(query):
     hash = []
     seq = []
     rtree = None
-    btree = []
+    bptree = []
     isam = []
 
     for key in data["columns"].keys():
@@ -701,15 +699,15 @@ def copy(query):
                         key,
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla)))
-        elif index == "btree":
-            if indexes_data["btree"] is not None:
-                btree.append(Btree(format,
+        elif index == "bptree":
+            if indexes_data["bptree"] is not None:
+                bptree.append(Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
-                            *indexes_data["btree"]))
+                            *indexes_data["bptree"]))
             else:
-                btree.append(Btree(format,
+                bptree.append(Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
@@ -744,7 +742,7 @@ def copy(query):
             print(heap.read(pos))
             for h in hash:
                 h.insert(row, pos)
-            for bp in btree:
+            for bp in bptree:
                 bp.add(pos_new_record=pos)
             for s in seq:
                 s.add(pos_new_record=pos)
@@ -766,7 +764,7 @@ def delete(query):
     hash = []
     seq = []
     rtree = None
-    btree = []
+    bptree = []
     isam = []
 
     format = {}
@@ -802,15 +800,15 @@ def delete(query):
                         key,
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla)))
-        elif index == "btree":
-            if indexes_data["btree"] is not None:
-                btree.append(Btree(format,
+        elif index == "bptree":
+            if indexes_data["bptree"] is not None:
+                bptree.append(Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
-                            *indexes_data["btree"]))
+                            *indexes_data["bptree"]))
             else:
-                btree.append(Btree(format,
+                bptree.append(Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
@@ -846,7 +844,7 @@ def delete(query):
         hash = []
         seq = []
         rtree = None
-        btree = []
+        bptree = []
         isam = []
 
         # eliminar indices en la tabla
@@ -881,15 +879,15 @@ def delete(query):
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla)))
-            elif index == "btree":
-                if indexes_data["btree"] is not None:
-                    btree.append(Btree(format,
+            elif index == "bptree":
+                if indexes_data["bptree"] is not None:
+                    bptree.append(Bptree(format,
                                 key,
                                 index_filename(nombre_tabla, key, "index"),
                                 table_filename(nombre_tabla),
-                                *indexes_data["btree"]))
+                                *indexes_data["bptree"]))
                 else:
-                    btree.append(Btree(format,
+                    bptree.append(Bptree(format,
                                 key,
                                 index_filename(nombre_tabla, key, "index"),
                                 table_filename(nombre_tabla),
@@ -924,7 +922,7 @@ def delete(query):
             pos = heap.insert(r)
             for h in hash:
                 h.insert(r, pos)
-            for bp in btree:
+            for bp in bptree:
                 bp.add(pos_new_record=pos)
             for s in seq:
                 s.add(pos_new_record=pos)
@@ -1003,7 +1001,7 @@ def set_stmt(query):
     except ValueError as e:
         print("One of the items couldn't be converted:", e)
 
-    if index == "btree" and len(params) != 1:
+    if index == "bptree" and len(params) != 1:
         raise HTTPException(status_code=404, detail="Wrong amount of parameters")
     elif index == "hash" and len(params) != 2:
         raise HTTPException(status_code=404, detail="Wrong amount of parameters")

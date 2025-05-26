@@ -46,7 +46,7 @@ condition: NAME OP VALUE
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
 VALUE: "-"? /[0-9]+(\.[0-9]+)?/ | ESCAPED_STRING
-INDEX: "rtree"i | "btree"i | "seq"i | "isam"i | "hash"i
+INDEX: "rtree"i | "bptree"i | "seq"i | "isam"i | "hash"i
 KEY: "primary key"i
 BETWEEN: "between"i
 CLOSEST: "closest"i
