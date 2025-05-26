@@ -303,7 +303,7 @@ class ISAM():
 
 
 
-    def _initialize_files (self):
+    def _initialize_files(self):
         """
         Inicializa los archivos de índice y datos.
         """

@@ -1,18 +1,13 @@
-import pandas as pd
 import os
 import Indice_Isam_file as archivo
-import random
-import sys
-import csv
-from pathlib import Path
 
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
 KEYS = []
 PATH = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
 print("PATH", PATH)
-index_file = 'Isam_Struct/index_file.bin'
-data_file = 'Isam_Struct/data_file.bin'
+index_file = 'Isam_struct/index_file.bin'
+data_file = 'Isam_struct/data_file.bin'
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv","/destinos.csv"]
 
 format_tables = [{"codigo": "i", "nombre": "30s", "ciclo": "i"},

@@ -1,18 +1,16 @@
 import sys
 import os
 import struct
-import csv
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 import math
-import heapq
-from sympy import symbols, Eq, solve
 from Heap_struct.Heap import Heap
-from collections import deque
+
 
 # Constantes generales
 TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de paginas)
 TAM_ENCABEZAD_BRIN = 4  # Tamaño del encabezado en bytes (cantidad de pages)
+TAM_ENCABEZAD_DATA = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 
 
 def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M, el formato del índice cambie automáticamente
@@ -186,7 +184,7 @@ class Indice_Brin():
                 instance.range_values[i] = key_value
 
         # Handle children and metadata
-        instance.pages = list(unpacked[children_start:children_start + M])
+        instance.pages = unpacked[2:2+K]
         instance.page_count = unpacked[-1]
 
         return instance
@@ -201,7 +199,6 @@ class BRIN:
                  max_num_pages: int = 100,
                  max_num_keys: int = 100,
                  force_create = False):
-        self.HEAP = Heap(name_data_file, table_format, name_key, force_create=force_create)
 
         self.index_file = name_index_file
         self.page_file = name_page_file
@@ -217,8 +214,126 @@ class BRIN:
         self.format_page = get_index_format(self.M, self.format_key)  # Formato de una pagina
         self.format_index = f'{self.format_key*2}{'i' * self.K}i'   # Formato del índice BRIN
 
+        self._initialize_files()                                     # Inicializa los archivos de índice y página
+        self.HEAP = Heap(name_data_file, table_format, name_key, force_create=force_create)
+
+    def _initialize_files(self):
+        """
+        Inicializa los archivos de índice y página.
+        """
+        # Crear o limpiar el archivo de índice
+        if not os.path.exists(self.data_file):
+            with open(self.data_file, 'wb') as f:
+                f.write(struct.pack('i', 0)) 
+        if not os.path.exists(self.index_file):
+            with open(self.index_file, 'wb') as f:
+                f.write(struct.pack('i', 0))
+        if not os.path.exists(self.page_file):
+            with open(self.page_file, 'wb') as f:
+                f.write(struct.pack('i', 0))
+
+    ### MANEJO DE ENCABEZADOS ###
+
+    ## Encabezado de archivo para paginas ##
+    def _read_header_page(self):
+        """
+        Lee el encabezado del archivo de páginas.
+        """
+        with open(self.page_file, 'rb') as f:
+            header = f.read(TAM_ENCABEZAD_PAGE)
+            if not header:
+                return 0
+            return struct.unpack('i', header)[0]
+
+    def _write_header_page(self, num_pages):
+        """
+        Escribe el encabezado del archivo de páginas.
+        """
+        with open(self.page_file, 'r+b') as f:
+            f.seek(0)
+            f.write(struct.pack('i', num_pages))
     
-    def 
+    ## Encabezado de archivo para indice BRIN ##
+    def _read_header_index(self):
+        """
+        Lee el encabezado del archivo de índice BRIN.
+        """
+        with open(self.index_file, 'rb') as f:
+            header = f.read(TAM_ENCABEZAD_BRIN)
+            if not header:
+                return 0
+            return struct.unpack('i', header)[0]
+        
+    def _write_header_index(self, num_indexes):
+        """
+        Escribe el encabezado del archivo de índice BRIN.
+        """
+        with open(self.index_file, 'r+b') as f:
+            f.seek(0)
+            f.write(struct.pack('i', num_indexes))
+    
+    ## Encabezado de archivo para datos ##
+    def _read_header_data(self):
+        """
+        Lee el encabezado del archivo de datos.
+        """
+        with open(self.data_file, 'rb') as f:
+            header = f.read(TAM_ENCABEZAD_DATA)
+            if not header:
+                return 0
+            return struct.unpack('i', header)[0]
+    
+    def _write_header_data(self, num_records):
+        """
+        Escribe el encabezado del archivo de datos.
+        """
+        with open(self.data_file, 'r+b') as f:
+            f.seek(0)
+            f.write(struct.pack('i', num_records))
+
+    ### MANEJO DE DATOS (CASE INDEPENT) ###
+
+    def _read_data_header(self):
+        """
+        Lee el encabezado del archivo de datos.
+        """
+        with open(self.data_file, 'rb') as f:
+            f.seek(0)
+            header = f.read(TAM_ENCABEZAD_DATA)
+            size = struct.unpack('i', header)[0]
+        return size
+    
+    def add_record(self, record : list):
+        """
+        Agrega un nuevo registro al final del archivo de datos y actualiza el encabezado.
+        """
+        with open(self.data_file, 'r+b') as f:
+            # Leer el tamaño actual desde el encabezado
+            f.seek(0)
+            header = f.read(TAM_ENCABEZAD_DATA)
+            size = struct.unpack('i', header)[0]
+            # Calcular el offset para el nuevo registro
+            offset = TAM_ENCABEZAD_DATA + size * self.RT.size
+            f.seek(offset)
+            f.write(self.RT.to_bytes(record))
+            # Actualizar el encabezado con el nuevo tamaño
+            f.seek(0)
+            f.write(struct.pack('i', size + 1))
+            return size
+
+    def _read_record(self, pos : int):
+        """
+        Lee un registro desde el archivo de datos en la posición dada.
+        """
+        with open(self.data_file, 'rb') as f:
+            offset = TAM_ENCABEZAD_DATA + pos * self.RT.size
+            f.seek(offset)
+            data = f.read(self.RT.size)
+            return self.RT.from_bytes(data)
+
+
+
+        
 
 
 

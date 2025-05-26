@@ -8,22 +8,26 @@ from pathlib import Path
 
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
+num = [10000,50000,100000]
+x = 2
 KEYS = []
 PATH = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
 # PATH = "C:/Users/Equipo/Documents/2025-1/BD2/proyecto/Proyecto_BD2/Data_test"
 print("PATH", PATH)
 index_file = "BPtree_struct/index_file.bin"
 data_file = "BPtree_struct/data_file.bin"
-list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv"]
+test_data_full = f'/test_data_full{num[0]}.csv'
+list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv",test_data_full]
 
 format_tables = [{"codigo": "i", "nombre": "30s", "ciclo": "i"},
                  {"iata": "4s", "name": "20s", "city": "20s", "state": "2s", "country": "20s", "latitude": "d", "longitude": "d"},
-                 {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"}]
+                 {"zip_code": "i", "latitude": "d", "longitude": "d", "city": "20s", "state": "2s", "county": "20s"},
+                 {"timestamp": "24s", "random_int": "i", "name": "20s", "email": "50s", "date": "10s", "price": "d", "latitude": "d", "longitude": "d",  "is_active": "?", "category": "20s"}]
 
-name_keys = ["codigo", "iata", "zip_code"]
+name_keys = ["codigo", "iata", "zip_code", 'random_int']
 
 # numero aleatorio entre 1 y 3
-random_index = 2
+random_index = 3
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -39,7 +43,7 @@ print("name_key", name_key)
 
 ma = 1000 # orden del árbol B+
 
-N = 100 # cada cuántos registros se imprime una barra de progreso
+N = 1000 # cada cuántos registros se imprime una barra de progreso
 
 
 
@@ -74,7 +78,7 @@ def notest_insert_CSV(csv_path, index_file, data_file):
             # manejar errores de formato:
             arbol.add(row)
         print()
-        arbol.print_tree_by_levels()
+        # arbol.print_tree_by_levels()
 
 
     return arbol
@@ -121,7 +125,7 @@ def notest_search_range():
         superior = 'D'
     else:
         inferior = 100
-        superior = 123
+        superior = 1000
     print(f"\nBúsquedas por rango: {inferior} y {superior}:")
     print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {arbol.format_key}\n")
     

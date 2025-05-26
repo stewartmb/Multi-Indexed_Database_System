@@ -263,6 +263,9 @@ class BPTree:
                     temp = self._read_index_page(pos_children)
                 else:
                     break
+            for pos in results:
+                record_temp = self.HEAP.read(pos)
+                print(record_temp)
             return results
 
     def search_range(self, key1, key2):
@@ -296,8 +299,7 @@ class BPTree:
                     break
             for pos in results:
                 record_temp = self.HEAP.read(pos)
-                if record_temp is None:
-                    results.remove(pos)
+                print(record_temp)
             return results # Regresa la lista de registros encontrados
     
     
