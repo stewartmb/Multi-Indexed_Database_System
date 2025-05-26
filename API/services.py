@@ -136,40 +136,30 @@ def convert(query):
         print("error: accion no soportada")
         raise HTTPException(status_code=404, detail="Action not supported")
 
-
 def create_table(query):
     # crear tabla y añadir a metadata
+    start = time.time_ns()
 
     os.makedirs(os.path.dirname(table_filename(query["name"])), exist_ok=True)
     with open(table_filename(query["name"]), "w") as f:
         pass
-    create_meta(query["data"], query["name"])
     format = {}
     cols = query["data"]["columns"]
     for key in cols.keys():
         format[key] = to_struct(cols[key]["type"])
 
-    indexes_data = select_index_meta()
-    print(json.dumps(indexes_data, indent=4))
-
     # crear indices
     for key in cols.keys():
         index = cols[key]["index"]
+        params = cols[key].get("params", [])
         if index == None:
             pass
         elif index == "hash":
-            if indexes_data["hash"] is not None:
-                hash = Hash(format,
-                            key,
-                            index_filename(query["name"], key, "buckets"),
-                            index_filename(query["name"], key, "index"),
-                            table_filename(query["name"]), *indexes_data["hash"])
-            else:
-                hash = Hash(format,
-                            key,
-                            index_filename(query["name"], key, "buckets"),
-                            index_filename(query["name"], key, "index"),
-                            table_filename(query["name"]))
+            hash = Hash(format,
+                        key,
+                        index_filename(query["name"], key, "buckets"),
+                        index_filename(query["name"], key, "index"),
+                        table_filename(query["name"]), *params)
         elif index == "seq":
             seq = Sequential(format,
                              key,
@@ -177,26 +167,28 @@ def create_table(query):
                              table_filename(query["name"]))
 
         elif index == "bptree":
-            if indexes_data["bptree"] is not None:
+            if len(params) != 0:
                 bptree = Bptree(format,
                             key,
                             index_filename(query["name"], key, "index"),
                             table_filename(query["name"]),
-                            *indexes_data["bptree"])
+                            *params)
             else:
-                bptree = Bptree(format,
-                            key,
-                            index_filename(query["name"], key, "index"),
-                            table_filename(query["name"]),
-                            M)
+                print("not enough parameters")
+                raise HTTPException(status_code=404, detail="Not enough parameters.")
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
+    create_meta(query["data"], query["name"])
+    end = time.time_ns()
+    t_ms = end - start
+    
     return {
-        "message": f"CREATED TABLE {query["name"]}"
+        "message": f"CREATED TABLE {query["name"]} in {t_ms/1e6} ms"
     }
 
 def insert(query):
+    start = time.time_ns()
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
@@ -219,26 +211,18 @@ def insert(query):
 
     position = heap.insert(record)
 
-    indexes_data = select_index_meta()
-
     # insertar en cada indice si existe
     for key in data["columns"].keys():
         index = data["columns"][key]["index"]
+        params = data["columns"][key].get("params", [])
         if index == None:
             pass
         elif index == "hash":
-            if indexes_data["hash"] is not None:
-                hash = Hash(format,
-                            key,
-                            index_filename(nombre_tabla, key, "buckets"),
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla), *indexes_data["hash"])
-            else:
-                hash = Hash(format,
-                            key,
-                            index_filename(nombre_tabla, key, "buckets"),
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla))
+            hash = Hash(format,
+                        key,
+                        index_filename(nombre_tabla, key, "buckets"),
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla), *params)
             hash.insert(query["values"][1], position)
 
         elif index == "seq":
@@ -250,18 +234,14 @@ def insert(query):
             seq.add(pos_new_record=position)
 
         elif index == "bptree":
-            if indexes_data["bptree"] is not None:
+            if len(params) != 0:
                 bptree = Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
-                            *indexes_data["bptree"])
+                            *params)
             else:
-                bptree = Bptree(format,
-                            key,
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla),
-                            M)
+                raise HTTPException(status_code=404, detail="Not enough parameters.")
             bptree.add(pos_new_record=position)
 
         elif index == "isam":
@@ -280,12 +260,15 @@ def insert(query):
                       table_filename(nombre_tabla),
                       index_filename(nombre_tabla, *rtree_keys, "index"))
         rtree.insert(query["values"][1], position)
+    end = time.time_ns()
+    t_ms = end - start
 
     return {
-        "message": f"INSERTED VALUE ON TABLE {nombre_tabla}"
+        "message": f"INSERTED VALUE ON TABLE {nombre_tabla} in {t_ms/1e6} ms"
     }
 
 def create_index(query):
+    start = time.time_ns()
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
@@ -297,8 +280,6 @@ def create_index(query):
         data["columns"][key]["index"] = query["index"]
 
     create_meta(data, nombre_tabla)
-
-    indexes_data = select_index_meta()
 
     keys = query["attr"]
     
@@ -316,18 +297,11 @@ def create_index(query):
     if index == None:
         pass
     elif index == "hash":
-        if indexes_data["hash"] is not None:
-            hash = Hash(format,
-                        keys[0],
-                        index_filename(nombre_tabla, keys[0], "buckets"),
-                        index_filename(nombre_tabla, keys[0], "index"),
-                        table_filename(nombre_tabla), *indexes_data["hash"])
-        else:
-            hash = Hash(format,
-                        keys[0],
-                        index_filename(nombre_tabla, keys[0], "buckets"),
-                        index_filename(nombre_tabla, keys[0], "index"),
-                        table_filename(nombre_tabla))
+        hash = Hash(format,
+                    keys[0],
+                    index_filename(nombre_tabla, keys[0], "buckets"),
+                    index_filename(nombre_tabla, keys[0], "index"),
+                    table_filename(nombre_tabla), *query["params"])
 
     elif index == "seq":
         seq = Sequential(format,
@@ -353,18 +327,14 @@ def create_index(query):
                     table_filename(nombre_tabla))
 
     elif index == "bptree":
-        if indexes_data["bptree"] is None:
+        if len(query["params"]) != 0:
             bptree = Bptree(format,
                         keys[0],
                         index_filename(nombre_tabla, keys[0], "index"),
                         table_filename(nombre_tabla),
-                        M)
+                        *query["params"])
         else:
-            bptree = Bptree(format,
-                        keys[0],
-                        index_filename(nombre_tabla, keys[0], "index"),
-                        table_filename(nombre_tabla),
-                        *indexes_data["bptree"])
+            raise HTTPException(status_code=404, detail="Not enough parameters.")
 
     else:
         print("INDICE NO IMPLEMENTADO AUN")
@@ -383,9 +353,12 @@ def create_index(query):
             rtree.insert(record, pos)
         elif bptree is not None:
             bptree.add(pos_new_record=pos)
-    
+
+    end = time.time_ns()
+    t_ms = end - start
+
     return {
-        "message": f"CREATED INDEX {index} ON TABLE {nombre_tabla}"
+        "message": f"CREATED INDEX {index} ON TABLE {nombre_tabla} in {t_ms/1e6} ms"
     }
 
 def aux_select(query):
@@ -413,8 +386,6 @@ def aux_select(query):
     tree = parse_select(tokens)
     print("tree: ", tree)
     sets = []
-
-    indexes_data = select_index_meta()
 
     for condition in query["conditions"].keys():
         cond = query["conditions"][condition]
@@ -452,7 +423,7 @@ def aux_select(query):
 
         else:
             index = data["columns"][key]["index"]
-
+            params = data["columns"][key].get("params", [])
             left = None
             right = None
             val = None
@@ -489,18 +460,12 @@ def aux_select(query):
                     sets.append(set(heap.search(val, val)))
 
             elif index == "hash":
-                if indexes_data["hash"] is not None:
-                    hash = Hash(format,
-                                key,
-                                index_filename(nombre_tabla, key, "buckets"),
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla), *indexes_data["hash"])
-                else:
-                    hash = Hash(format,
-                                key,
-                                index_filename(nombre_tabla, key, "buckets"),
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla))
+                hash = Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla), *params)
+            
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
@@ -522,18 +487,14 @@ def aux_select(query):
                     sets.append(set(hash.search(val)))
 
             elif index == "bptree":
-                if indexes_data["bptree"] is not None:
+                if len(params) != 0:
                     bptree = Bptree(format,
                                 key,
                                 index_filename(nombre_tabla, key, "index"),
                                 table_filename(nombre_tabla),
-                                *indexes_data["bptree"])
+                                *params)
                 else:
-                    bptree = Bptree(format,
-                                key,
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla),
-                                M)
+                    raise HTTPException(status_code=404, detail="Not enough parameters.")
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
@@ -594,6 +555,7 @@ def aux_select(query):
 
                         sets.append(valid - invalid)
                 else:
+                    print(val)
                     sets.append(set(isam.search(val)))
 
 
@@ -656,13 +618,12 @@ def select(query):
 
 def copy(query):
     # print(json.dumps(query, indent=4))
-
+    start = time.time_ns()
     format = {}
     
     nombre_tabla = query["table"]
 
     data = select_meta(nombre_tabla)
-    indexes_data = select_index_meta()
 
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
@@ -677,41 +638,31 @@ def copy(query):
         format[key] = to_struct(data["columns"][key]["type"])
 
     for key in data["columns"].keys():
-        
         index = data["columns"][key]["index"]
+        params = data["columns"][key].get("params", [])
+
         if index == None:
             pass
         elif index == "hash":
-            if indexes_data["hash"] is not None:
-                hash.append(Hash(format,
-                            key,
-                            index_filename(nombre_tabla, key, "buckets"),
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla), *indexes_data["hash"]))
-            else:
-                hash.append(Hash(format,
-                            key,
-                            index_filename(nombre_tabla, key, "buckets"),
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla)))
+            hash.append(Hash(format,
+                        key,
+                        index_filename(nombre_tabla, key, "buckets"),
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla), *params))
         elif index == "seq":
             seq.append(Sequential(format,
                         key,
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla)))
         elif index == "bptree":
-            if indexes_data["bptree"] is not None:
+            if len(params) != 0:
                 bptree.append(Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
-                            *indexes_data["bptree"]))
+                            *params))
             else:
-                bptree.append(Bptree(format,
-                            key,
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla),
-                            M))
+                raise HTTPException(status_code=404, detail="Not enough parameters.")
         elif index == "isam":
             isam.append(Isam(format,
                              key,
@@ -750,12 +701,16 @@ def copy(query):
                 i.add(pos_new_record=pos)
             if rtree is not None:
                 rtree.insert(row, pos)
+    
+    end = time.time_ns()
+    t_ms = end - start
 
     return {
-        "message": f"COPIED {query["from"]} ON TABLE {nombre_tabla}"
+        "message": f"COPIED {query["from"]} ON TABLE {nombre_tabla} in {t_ms/1e6} ms"
     }
 
 def delete(query):
+    start = time.time_ns()
     ans_set = aux_select(query)
 
     nombre_tabla = query["table"]
@@ -776,43 +731,31 @@ def delete(query):
                 data["key"],
                 table_filename(nombre_tabla))
 
-    indexes_data = select_index_meta()
-
     for key in data["columns"].keys():
         index = data["columns"][key]["index"]
+        params = data["columns"][key].get("params", [])
         if index == None:
             pass
         elif index == "hash":
-            if indexes_data["hash"] is not None:
-                hash.append(Hash(format,
-                            key,
-                            index_filename(nombre_tabla, key, "buckets"),
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla), *indexes_data["hash"]))
-            else:
-                hash.append(Hash(format,
-                            key,
-                            index_filename(nombre_tabla, key, "buckets"),
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla)))
+            hash.append(Hash(format,
+                        key,
+                        index_filename(nombre_tabla, key, "buckets"),
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla), *params))
         elif index == "seq":
             seq.append(Sequential(format,
                         key,
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla)))
         elif index == "bptree":
-            if indexes_data["bptree"] is not None:
+            if len(params) != 0:
                 bptree.append(Bptree(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla),
-                            *indexes_data["bptree"]))
+                            *params))
             else:
-                bptree.append(Bptree(format,
-                            key,
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla),
-                            M))
+                raise HTTPException(status_code=404, detail="Not enough parameters.")
         elif index == "isam":
             isam.append(Isam(format,
                              key,
@@ -862,36 +805,25 @@ def delete(query):
             if index == None:
                 pass
             elif index == "hash":
-                if indexes_data["hash"] is not None:
-                    hash.append(Hash(format,
-                                key,
-                                index_filename(nombre_tabla, key, "buckets"),
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla), *indexes_data["hash"]))
-                else:
-                    hash.append(Hash(format,
-                                key,
-                                index_filename(nombre_tabla, key, "buckets"),
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla)))
+                hash.append(Hash(format,
+                            key,
+                            index_filename(nombre_tabla, key, "buckets"),
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla), *params))
             elif index == "seq":
                 seq.append(Sequential(format,
                             key,
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla)))
             elif index == "bptree":
-                if indexes_data["bptree"] is not None:
+                if len(params) != 0:
                     bptree.append(Bptree(format,
                                 key,
                                 index_filename(nombre_tabla, key, "index"),
                                 table_filename(nombre_tabla),
-                                *indexes_data["bptree"]))
+                                *params))
                 else:
-                    bptree.append(Bptree(format,
-                                key,
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla),
-                                M))
+                    raise HTTPException(status_code=404, detail="Not enough parameters.")
             elif index == "isam":
                 isam.append(Isam(format,
                                  key,
@@ -928,12 +860,16 @@ def delete(query):
                 s.add(pos_new_record=pos)
             if rtree is not None:
                 rtree.insert(r, pos)
+    
+    end = time.time_ns()
+    t_ms = end - start
 
     return {
-        "message": "DELETED"
+        "message": f"DELETED {len(ans_set)} RECORDS in {t_ms/1e6} ms"
     }
 
 def drop_index(query):
+    start = time.time_ns()
     nombre_tabla = query["table"]
     index_file = index_filename(nombre_tabla,
                                 *query["attr"],
@@ -955,11 +891,16 @@ def drop_index(query):
 
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
+
+    end = time.time_ns()
+    t_ms = end - start
+
     return {
-        "message": "DELETED INDEX SUCCESSFULLY"
+        "message": f"DELETED INDEX SUCCESSFULLY in {t_ms/1e6} ms"
     }
 
 def drop_table(query):
+    start = time.time_ns()
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
 
@@ -989,25 +930,10 @@ def drop_table(query):
         os.remove(data_file)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
-    return {
-        "message": "DELETED TABLE SUCCESSFULLY"
-    }
 
-def set_stmt(query):
-    index = query["index"]
-
-    try:
-        params = [int(x) for x in query["params"]]
-    except ValueError as e:
-        print("One of the items couldn't be converted:", e)
-
-    if index == "bptree" and len(params) != 1:
-        raise HTTPException(status_code=404, detail="Wrong amount of parameters")
-    elif index == "hash" and len(params) != 2:
-        raise HTTPException(status_code=404, detail="Wrong amount of parameters")
-
-    set_index_meta(index, params)
+    end = time.time_ns()
+    t_ms = end - start
 
     return {
-        "message": "SET INDEXES CORRECTLY"
+        "message": f"DELETED TABLE SUCCESSFULLY in {t_ms/1e6} ms"
     }
