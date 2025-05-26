@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import './Sidebar.css';
 import logoElefante from '../assets/elefante1.png';
+import emptyData from '../assets/emptydata.png';
+import logoTabla from '../assets/tabla.png';
 
 // Definimos las interfaces
 interface Table {
@@ -88,7 +90,9 @@ const Sidebar = () => {
                 </div>
             ) : structureData.length === 0 ? (
                 <div className="empty-state">
-                    No hay esquemas o tablas disponibles.
+                    <img src={emptyData} className="empty-logo"/>
+
+                    <br/>No hay esquemas o tablas disponibles.
                 </div>
             ) : (
                 <ul className="schema-list">
