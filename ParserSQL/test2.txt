@@ -10,3 +10,5 @@ create table destinos (
 create index on destinos using bptree(pais) params (2,3);
 
 create index on destinos using rtree(pais);
+
+create index on destinos using seq(pais) params (2);
