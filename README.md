@@ -1,17 +1,29 @@
-# Informe Técnico - Proyecto 1 Base de datos 2
+# 📘 Informe Técnico – Proyecto 1: Base de Datos 2
 
-En el presente informe, se presentará el contenido de la primera parte del proyecto del curso de base de datos 2. Se detallará en la implementación de las técnicas de indexación, asi como en los algoritmos propuestos para realizar las operaciones básicas como inserción, búsqueda y eliminación.
+Este informe presenta la **primera parte del proyecto** del curso **Base de Datos 2**, enfocándose en la implementación de técnicas de **indexación**, así como en los algoritmos desarrollados para operaciones fundamentales como:
 
-Se ha desarrollado un mini gestor de bases de datos que soporta la indexación eficiente de datos multidimensionales, así como la organización de arhivos físicos.
+- 📥 Inserción  
+- 🔍 Búsqueda  
+- ❌ Eliminación  
 
-Además, se ha implementado un Parser que estará conectado con una API para realizar consultas SQL, haciendo uso de los índices que se han creado en este repositorio. 
+Se ha desarrollado un **mini gestor de bases de datos** que:
 
-Por último, se creó un frontend donde se puede apreciar la funcionalidad del proyecto. 
+- Soporta indexación eficiente de datos **multidimensionales**
+- Administra la organización de **archivos físicos**
+- Incluye un **Parser SQL** conectado a una API
+- Presenta un **frontend interactivo** para demostrar la funcionalidad
 
-## ¿Por qué usar distintos tipos de índices?
-El proyecto busca recrear un gestor de bases de datos como PostgreSQL, el cual soporta distintos tipos de indexación. Como se conoce gracias a la teoría, cada técnica de indexación tiene ventajas respecto otras técnicas. Por ejemplo, si buscamos registros dentro de un rango, sería mejor utilizar un índice B+ a que un índice Hash (Hash no sorporta rangeSearch). Es por ello que, para asegurar la eficiencia en nuestro proyecto, se podrán usar distintos índices en la misma tabla. 
-Ejemplo:
-```bash
+---
+
+## ❓ ¿Por qué usar distintos tipos de índices?
+
+Inspirado en gestores como **PostgreSQL**, este proyecto implementa diversos tipos de índices, ya que **cada técnica tiene sus fortalezas** dependiendo del caso de uso.
+
+> 🔑 *Ejemplo*: Para búsquedas por rango, un índice **B+ Tree** es más eficiente que uno de tipo **Hash** (que no soporta `rangeSearch`).
+
+### 🧪 Ejemplo SQL
+
+```sql
 create table destinos (
     id int primary key index hash,
     name varchar[25] index seq,
@@ -22,61 +34,79 @@ create table destinos (
 );
 create index on destinos using rtree(latitud, longitud);
 ```
-En la tabla destinos, se han usado distintos tipos de índices: sequential, hash, btree y rtree. 
-Como en la tabla haya atributos de distintos tipos (ids, nombres, coordenadas), es conveniente que cada atributo tenga un índice que sea óptimo para dicho atributo.
+🔎 En este ejemplo se combinan:
+- `hash` para identificadores
+- `seq` para nombres
+- `btree` para textos ordenables
+- `rtree` para coordenadas espaciales
 
-## Resultados esperados
+Como la tabla tiene atributos de distintos tipos (IDs, nombres, coordenadas), se asigna a cada uno el índice más óptimo según su naturaleza.
+
+## 🎯 Resultados Esperados
 Se espera que, con la implementación de los índices, las operaciones fundamentales (búsqueda, inserción y eliminación) deberían de tomar menos tiempo computacional que realizando un Full Table Scan, es decir, no usar ningún índice.
 
-## Estructura del proyecto
-El proyecto tiene la siguiente estructura:
-- Backend: Base de datos, API, Índices, ParserSQL
-- Frontend: Interfaz
+## 🧱 Estructura del Proyecto
+El proyecto está estructurado en dos grandes partes:
+```
+📦 Proyecto_BD2/
+│
+├── 🔙 Backend
+│   ├── Base de datos
+│   ├── Índices (5 tipos)
+│   ├── ParserSQL
+│   └── API RESTful
+│
+├── 💻 Frontend
+│   └── Interfaz de usuario
+```
 
 Para almacenar todos los registros de una tabla, se decidió usar la estructura del [Heap file](https://github.com/stewartmb/Proyecto_BD2/blob/main/Heap_struct/Hepa.md). Sobre esta estructura es donde se aplicarán las técnicas de indexación.
 Aparte, se implementó una clase [Registro](https://github.com/stewartmb/Proyecto_BD2/blob/main/Utils/RegistroREADME.md) personalizada.
 
+## 📂 Índices Implementados
 En cuanto a los **índices**, se han implementado los siguientes:
-- Sequential File
-- ISAM-Sparse Index (con solo dos niveles)
-- Extendible Hashing
-- B+ Tree
-- Rtree
 
-Además, se implementó una API RESTful en Python que permite:
-- Gestionar las tablas creadas y los datos.
-- Ejecutar consultas personalizadas desde el ParserSQL.
-- Interactuar con el frontend.
+| Tipo de Índice         | Descripción                                         | Documentación                                                                              |
+| ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 📄 Sequential File     | Búsqueda ordenada secuencial                        | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Sequential_Struct/Sequential.md) |
+| 🗂 ISAM (Sparse Index) | Índice jerárquico con dos niveles                   | [Ver](https://github.com/stewartmb/Proyecto_BD2/tree/main/Isam_struct/ISAM.md)             |
+| #️⃣ Extendible Hashing | Hash dinámico para inserciones eficientes           | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Hash_struct/Hash.md)             |
+| 🌳 B+ Tree             | Árbol balanceado para búsquedas por rango           | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/BPtree_struct/BTree.md)          |
+| 🗺 R-Tree              | Índice espacial para coordenadas multidimensionales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/RTree_struct/Rtree.md)           |
 
-# Documentación de las técnicas implementadas (índices, parser y API)
-## Sequential File
-Ver documentación:
-[Sequential File](https://github.com/stewartmb/Proyecto_BD2/blob/main/Sequential_Struct/Sequential.md)
-## ISAM File
-Ver documentación:
-[ISAM](https://github.com/stewartmb/Proyecto_BD2/tree/main/Isam_struct/ISAM.md)
-## Hash File
-Ver documentación:
-[Extendible Hashing](https://github.com/stewartmb/Proyecto_BD2/blob/main/Hash_struct/Hash.md)
-## BTree File
-Ver documentación:
-[BTree File](https://github.com/stewartmb/Proyecto_BD2/blob/main/BPtree_struct/BTree.md)
-## RTree File
-Ver documentación:
-[Rtree](https://github.com/stewartmb/Proyecto_BD2/blob/main/RTree_struct/Rtree.md)
-## ParserSQL
-Ver documentación:
+
+## 🧠 Parser SQL
+Se ha desarrollado un componente ParserSQL que interpreta y ejecuta sentencias SQL básicas, utilizando los índices implementados.
 [ParserSQL](https://github.com/stewartmb/Proyecto_BD2/blob/main/ParserSQL/Parser.md)
-## API
-Ver documentación:
+
+## 🔌 API RESTful
+La API desarrollada en Python permite:
+
+- Crear y gestionar tablas
+
+- Insertar, buscar y eliminar datos
+
+- Ejecutar consultas a través del ParserSQL
+
+- Interactuar con el frontend
+
 [Documentación de la API](https://github.com/stewartmb/Proyecto_BD2/blob/main/API/README.md)
 
 
+## 🌐 Frontend
+Se ha creado una interfaz web sencilla e intuitiva para:
 
-## Autores
+- Visualizar las tablas y los datos almacenados
 
-Link de github de los autores del proyecto:
-- [@melanie1512](https://github.com/melanie1512)
-- [@stewartmb](https://github.com/stewartmb)
-- [@RodrigoLiC](https://github.com/RodrigoLiC)
-- [@JorgeL2005](https://github.com/JorgeL2005)
+- Ejecutar comandos SQL desde el navegador
+
+- Ver los resultados en tiempo real
+
+## 👥 Autores
+
+| Nombre  | GitHub                                         |
+| ------- | ---------------------------------------------- |
+| Melanie Cortez | [@melanie1512](https://github.com/melanie1512) |
+| Stewart Maquera | [@stewartmb](https://github.com/stewartmb)     |
+| Rodrigo Li | [@RodrigoLiC](https://github.com/RodrigoLiC)   |
+| Jorge Leon | [@JorgeL2005](https://github.com/JorgeL2005)   |
