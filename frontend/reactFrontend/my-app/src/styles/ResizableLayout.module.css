@@ -20,7 +20,7 @@
 
 .dragBar {
     height: 8px;
-    background-color: #1e293b;
+    background-color: #00040c;
     cursor: row-resize;
     display: flex;
     align-items: center;
@@ -30,7 +30,7 @@
 }
 
 .dragBar:hover {
-    background-color: #2d3748;
+    background-color: #001e42;
 }
 
 .dragBarInner {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import '../styles/Sidebar.css';
 import logoElefante from '../assets/elefante1.png';
 import emptyData from '../assets/emptydata.png';
@@ -28,9 +28,28 @@ const Sidebar = () => {
     const [tempUrl, setTempUrl] = useState('http://127.0.0.1:8000');
     const { queryUrl, setQueryUrl } = useQueryUrl();
 
+    const [linkWidth, setLinkWidth] = useState<number>(0);
+    const linkRef = useRef<HTMLDivElement>(null);
+
+   useEffect(() => {
+  const el = linkRef.current;
+  if (!el) return;
+
+  const observer = new ResizeObserver(([entry]) => {
+    const width = entry.contentRect.width;
+    setLinkWidth(Math.round(width));
+  });
+
+  observer.observe(el);
+
+  setLinkWidth(el.getBoundingClientRect().width);
+
+  return () => observer.disconnect();
+}, []);
+
     useEffect(() => {
         if (!queryUrl) {
-            setQueryUrl('http://127.0.0.1:8087');
+            setQueryUrl('http://127.0.0.1:8000');
         }
     }, []);
 
@@ -62,6 +81,7 @@ const Sidebar = () => {
         setError(null);
         setStructureData([]);
 
+
         if (!queryUrl) {
             setError('No URL configured. Please set a URL first.');
             setLoading(false);
@@ -91,135 +111,144 @@ const Sidebar = () => {
     };
 
     return (
-        <div className="sidebar-container">
-            <h2 className="sidebar-title">
-                <img src={logoElefante} className="sidebar-logo"/>
-                <a href="#" className="db-link">
-                    <span className="postgre">Postgre</span><span className="sql">SQL</span>
-                </a>
-            </h2>
-
-            {/* URL Form */}
-            <form onSubmit={handleUrlSubmit} className="url-form">
-                <input
-                    type="text"
-                    className="url-input"
-                    placeholder="http://127.0.0.1:8000"
-                    value={tempUrl}
-                    onChange={(e) => setTempUrl(e.target.value)}
-                />
-                <div className="button-group">
-                    <button
-                        type="submit"
-                        className="btn-set-url"
-                    >
-                        <svg className="inline-block w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 12h-8M3 12h8M12 3v18" />
-                        </svg>
-                        Set URL
-                    </button>
-                    <button
-                        type="button"
-                        className={`btn-refresh ${loading ? 'loading' : ''}`}
-                        onClick={refreshSidebar}
-                        disabled={loading}
-                    >
-                        <svg className="inline-block w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-4.4 3.6-8 8-8 3.4 0 6.3 2.1 7.4 5M22 12c0 4.4-3.6 8-8 8-3.4 0-6.3-2.1-7.4-5" />
-                        </svg>
-                        {loading ? 'Loading...' : 'Refresh'}
-                    </button>
+        <div className="sidebar-container" style={{ width: '100%' }}>
+            <div style={{ width: '90%', margin: '0 auto'}}>
+                <div className="sidebar-header">
+                    <div className="sidebar-title">
+                        <img src={logoElefante} className="sidebar-logo"/>
+                        <a className='db-link'>
+                            <span className="postgre">Postgre</span>
+                            <span className="sql">SQL</span>
+                        </a>
+                    </div>
                 </div>
-            </form>
-
-            {/* Mensaje de error */}
-            {error && (
-                <div className="error-message">
-                    {error}
-                </div>
-            )}
-
-            {/* Contenido principal */}
-            {loading && structureData.length === 0 ? (
-                <div className="loading-state">
-                    <div className="loading-spinner"></div>
-                    Cargando esquemas...
-                </div>
-            ) : structureData.length === 0 ? (
-                <div className="empty-state">
-                    <img src={emptyData} className="empty-logo"/>
-
-                    <br/>No hay esquemas o tablas disponibles.
-                </div>
-            ) : (
-                <ul className="schema-list">
-                    {structureData.map((db, idx) => (
-                        <li key={idx} className="schema-item">
-                            <div
-                                className="schema-name"
-                                onClick={() => toggleSchema(db.name)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                {db.name}
+                
+                <div className="sidebar-body-container">
+                    <div className="sidebar-body">
+                        {/* URL Form */}
+                        <form onSubmit={handleUrlSubmit} className="url-form">
+                            <input
+                                type="text"
+                                className="url-input"
+                                placeholder="http://127.0.0.1:8000"
+                                value={tempUrl}
+                                onChange={(e) => setTempUrl(e.target.value)}
+                            />
+                            <div className="button-group">
+                                <button
+                                    type="submit"
+                                    className="btn-set-url"
+                                >
+                                    <svg className="inline-block w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 12h-8M3 12h8M12 3v18" />
+                                    </svg>
+                                    Set URL
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`btn-refresh ${loading ? 'loading' : ''}`}
+                                    onClick={refreshSidebar}
+                                    disabled={loading}
+                                >
+                                    <svg className="inline-block w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-4.4 3.6-8 8-8 3.4 0 6.3 2.1 7.4 5M22 12c0 4.4-3.6 8-8 8-3.4 0-6.3-2.1-7.4-5" />
+                                    </svg>
+                                    {loading ? 'Loading...' : 'Refresh'}
+                                </button>
                             </div>
+                        </form>
 
-                            {openSchemas.includes(db.name) && (
-                                <ul className="table-list">
-                                    {db.tables.length === 0 ? (
-                                        <li className="no-tables-message">No hay tablas en este esquema</li>
-                                    ) : (
-                                        db.tables.map((table) => (
-                                            <div key={table.name} className="table">
-                                                <div
-                                                    className="table-header"
-                                                    onMouseEnter={() => setHoverTable(table.name)}
-                                                    onMouseLeave={() => setHoverTable(null)}
-                                                    onClick={() => toggleTable(table.name)}
-                                                >
-                                                    <img src={logoTabla} className="sidebar-logo"
-                                                    style={{width: "20px",
-                                                        opacity: "40%",
-                                                        marginRight: "5px",
-                                                        marginTop: "4px"
-                                                    }}/>
-                                                    <span style={{color : "#dddddd"}}>
-                                                            {table.name}</span>
-                                                    <span> &nbsp;&nbsp;({table.indices.length} atributos)</span>
-                                                </div>
+                        {/* Mensaje de error */}
+                        {error && (
+                            <div className="error-message">
+                                {error}
+                            </div>
+                        )}
 
-                                                <div className="table-indices">
-                                                    {table.indices.length > 0 ? (
-                                                        table.indices.map((idx, index) => {
-                                                            const [firstWord, ...rest] = idx.split(' ');
-                                                            return (
-                                                                <div key={index} className="flex justify-between py-1">
-                                                                    <span style={{ fontSize: '0.9rem' }}>{firstWord}</span>
-                                                                    <span
-                                                                        className="text-right text-gray-600"
-                                                                        style={{
-                                                                            fontSize: '0.7rem',
-                                                                            fontFamily: 'monospace',
-                                                                        }}
-                                                                    >
-                      {rest.join(' ')}
-                    </span>
-                                                                </div>
-                                                            );
-                                                        })
-                                                    ) : (
-                                                        <div>No indices</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </ul>
-                            )}
+                        {/* Contenido principal */}
+                        {loading && structureData.length === 0 ? (
+                            <div className="loading-state">
+                                <div className="loading-spinner"></div>
+                                Cargando esquemas...
+                            </div>
+                        ) : structureData.length === 0 ? (
+                            <div className="empty-state">
+                                <img src={emptyData} className="empty-logo"/>
 
-                        </li>
-                    ))}
-                </ul>
-            )}
+                                <br/>No hay esquemas o tablas disponibles.
+                            </div>
+                        ) : (
+                            <ul className="schema-list">
+                                {structureData.map((db, idx) => (
+                                    <li key={idx} className="schema-item">
+                                        <div
+                                            className="schema-name"
+                                            onClick={() => toggleSchema(db.name)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            {db.name}
+                                        </div>
+
+                                        {openSchemas.includes(db.name) && (
+                                            <ul className="table-list">
+                                                {db.tables.length === 0 ? (
+                                                    <li className="no-tables-message">No hay tablas en este esquema</li>
+                                                ) : (
+                                                    db.tables.map((table) => (
+                                                        <div key={table.name} className="table">
+                                                            <div
+                                                                className="table-header"
+                                                                onMouseEnter={() => setHoverTable(table.name)}
+                                                                onMouseLeave={() => setHoverTable(null)}
+                                                                onClick={() => toggleTable(table.name)}
+                                                            >
+                                                                <img src={logoTabla} className="sidebar-logo"
+                                                                style={{width: "20px",
+                                                                    opacity: "40%",
+                                                                    marginRight: "5px",
+                                                                    marginTop: "4px"
+                                                                }}/>
+                                                                <span style={{color : "#dddddd"}}>
+                                                                        {table.name}</span>
+                                                                <span> &nbsp;&nbsp;({table.indices.length} atributos)</span>
+                                                            </div>
+
+                                                            <div className="table-indices">
+                                                                {table.indices.length > 0 ? (
+                                                                    table.indices.map((idx, index) => {
+                                                                        const [firstWord, ...rest] = idx.split(' ');
+                                                                        return (
+                                                                            <div key={index} className="flex justify-between py-1">
+                                                                                <span style={{ fontSize: '0.9rem' }}>{firstWord}</span>
+                                                                                <span
+                                                                                    className="text-right text-gray-600"
+                                                                                    style={{
+                                                                                        fontSize: '0.7rem',
+                                                                                        fontFamily: 'monospace',
+                                                                                    }}
+                                                                                >
+                                {rest.join(' ')}
+                                </span>
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                ) : (
+                                                                    <div>No indices</div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </ul>
+                                        )}
+
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

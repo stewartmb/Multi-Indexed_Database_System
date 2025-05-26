@@ -1,46 +1,245 @@
 /* Sidebar.css */
 
 .sidebar-container {
-    width: 90%;
+    width: 100%;
     height: 100%;
     background: linear-gradient(145deg, #121212, #080808);
     color: #e2e8f0;
-    padding: 1rem;
     overflow-y: auto;
     user-select: none;
 }
 
-
-.sidebar-title {
-    font-size: 1.75rem;               /* Aumenta el tamaño de fuente */
-    font-weight: 800;                 /* Más negrita */
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 3px solid #3c3c3c; /* Azul brillante (más visible que el gris) */
-    display: flex;
-    font-size: 40px;
-    align-items: center;
-    gap: 0.75rem;
-    text-shadow: 1px 1px 4px rgba(0, 12, 14, 0.59); /* Sombra para destacar el texto */
-    letter-spacing: 0.5px;            /* Espaciado entre letras */
+.sidebar-header{
+    container-type: inline-size;
+    container-name: sidebar-title;
+    width: 100%;
 }
 
+.sidebar-title {
+  font-size: clamp(1.6rem, 12cqw, 2.8rem); /* Responsive */
+  font-weight: 800;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 3px solid #3c3c3c;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-shadow: 1px 1px 4px rgba(0, 12, 14, 0.59);
+  letter-spacing: 0.5px;
+  width: 100%;
+  height: 60px;
+
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.db-link {
+  display: flex;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
+}
 
 .postgre {
     color: #cdcdcd;
     font-weight: 340;
+    font-size: inherit;
+    display: inline-block;
 }
 
 .sql {
     color: rgb(47, 102, 145); /* Puedes cambiar estos valores */
+    font-size: inherit;
+    display: inline-block;
 }
 
+@container sidebar-title (max-width: 200px) {
+  /* El logo primero se desvanece */
+  .sidebar-logo {
+    animation: logoFadeOutIn 0.7s forwards;
+    opacity: 1;
+  }
+
+  /* El texto se desvanece y desaparece */
+  .postgre, .sql {
+    animation: textHide 0.7s forwards;
+  }
+}
+
+@keyframes logoFadeOutIn {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0; /* desaparece */
+  }
+  55% {
+    opacity: 0;
+    margin: 0 auto; /* centra el logo */
+  }
+  100% {
+    opacity: 1; /* reaparece */
+    margin: 0 auto; /* centra el logo */
+  }
+}
+
+@keyframes textHide {
+   0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0; /* desaparece */
+  }
+  51% {
+    opacity: 0;
+    display: none;
+  }
+  100% {
+    display: none;
+  }
+}
+
+
+@container sidebar-title (min-width: 190px) {
+  /* El logo primero se desvanece */
+  .sidebar-logo {
+    animation: logoFadeOutIn2 0.7s forwards;
+  }
+
+  /* El texto se desvanece y desaparece */
+  .postgre, .sql {
+    animation: textHide2 0.7s forwards;
+  }
+}
+
+@keyframes logoFadeOutIn2 {
+  0% {
+    opacity: 1;
+    margin: 0 auto; /* centra el logo */
+  }
+  10% {
+    opacity: 0;
+    margin: 0 auto;
+  }
+  20% {
+    opacity: 0; /* desaparece */
+  }
+  30% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1; 
+  }
+}
+
+@keyframes textHide2 {
+   0% {
+    opacity: 0;
+    display: none;
+  }
+  10% {
+    opacity: 0; /* desaparece */
+    display: none;
+  }
+  20% {
+    opacity: 0; /* desaparece */
+    display: none;
+  }
+  30% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 
 .sidebar-logo {
     width: 50px;
     height: 50px;
     object-fit: contain;
 }
+
+
+
+
+.sidebar-body-container{
+    container-type: inline-size;
+    container-name: sidebar-body-container;
+    width: 100%;
+}
+
+
+
+
+@container sidebar-body-container (max-width: 200px) {
+  .sidebar-body {
+    opacity: 0;
+    display: none;
+    animation: sbodyanim 0.35s forwards;
+  }
+}
+
+@container sidebar-body-container (max-width: 200px) {
+  .sidebar-body {
+    animation: sbodyanim 0.35s forwards;
+  }
+}
+
+@container sidebar-body-container (max-width: 150px) {
+  .sidebar-body {
+    animation: sbodyanim 0.01s forwards;
+  }
+}
+
+@container sidebar-body-container (min-width: 190px) {
+  .sidebar-body {
+    animation: sbodyanimINV 0.35s forwards;
+  }
+}
+
+@keyframes sbodyanim {
+   0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    display: none;
+  }
+}
+
+@keyframes sbodyanimINV {
+   0% {
+    opacity: 0;
+    display: none;
+  }
+  100% {
+    
+    opacity: 1;
+  }
+}
+
+.sidebar-body {
+    opacity: 1;
+    display: block;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .refresh-button {
     background: linear-gradient(135deg, #29578a 0%, #264c71 100%);
@@ -121,7 +320,7 @@
 }
 
 .empty-logo {
-    width : 70%;
+    width : 60%;
 }
 
 .schema-list {

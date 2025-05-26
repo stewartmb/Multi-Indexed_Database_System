@@ -26,7 +26,7 @@ export default function ResizableSidebarLayout({ Sidebar, MainContent }: Resizab
         const rect = containerRef.current.getBoundingClientRect();
         let newWidth = e.clientX - rect.left;
 
-        if (newWidth < 100) newWidth = 100;
+        if (newWidth < 55) newWidth = 55;
         if (newWidth > rect.width - 100) newWidth = rect.width - 100;
 
         setSidebarWidth(newWidth);
@@ -42,9 +42,9 @@ export default function ResizableSidebarLayout({ Sidebar, MainContent }: Resizab
     }, []);
 
     return (
-        <div ref={containerRef} className="flex h-screen w-screen select-none">
+        <div ref={containerRef} className="flex h-screen w-screen select-none ">
         {/* Sidebar */}
-            <div style={{width: sidebarWidth}} className="sidebar-container">
+            <div style={{width: sidebarWidth}} className="h-full w-full bg-gray-200 overflow-auto">
                 {Sidebar}
             </div>
 
@@ -55,18 +55,18 @@ export default function ResizableSidebarLayout({ Sidebar, MainContent }: Resizab
                 title="Drag to resize"
                 style={{ 
                     userSelect: 'none', 
-                    width: '12px',
-                    background: 'linear-gradient(145deg, #0f172a, #1e293b)',
+                    width: '10px',
+                    background: 'linear-gradient(145deg, #0f172a,rgb(14, 18, 26))',
                     position: 'relative',
                     transition: 'all 0.2s ease',
                     borderLeft: '1px solid #374151',
                     borderRight: '1px solid #374151',
                 }}
                 onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(145deg, #1e293b, #2d3748)';
+                    e.currentTarget.style.background = 'linear-gradient(145deg,rgb(8, 21, 41),rgb(8, 36, 85))';
                 }}
                 onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(145deg, #0f172a, #1e293b)';
+                    e.currentTarget.style.background = 'linear-gradient(145deg,rgb(4, 12, 31),rgb(0, 0, 0))';
                 }}
             >
                 {/* Visual indicator for drag handle */}
