@@ -47,14 +47,20 @@ def parse_sql_query(input: QueryInput):
         print("ERROR:", e)
         return JSONResponse(
             content={"error": "Error parsing input", "details": str(e)},
+            status_code=500
+        )
+    try:
+        for line in result:
+            if isinstance(line, list):
+                response = convert(line[0])
+            else:
+                response = convert(line)
+    except Exception as e:
+        print("ERROR:", e)
+        return JSONResponse(
+            content={"error": "Error processing parsed result", "details": str(e)},
             status_code=400
         )
-    for line in result:
-        if isinstance(line, list):
-            response = convert(line[0])
-        else:
-            response = convert(line)
-
     print(response)
     return response
 
