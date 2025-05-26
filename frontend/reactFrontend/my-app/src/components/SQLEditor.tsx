@@ -120,7 +120,6 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
                                 lineHeight: '1.6',
                             }}
                 />
-
             </div>
         </div>
     );

@@ -3,32 +3,47 @@
 .sidebar-container {
     width: 90%;
     height: 100%;
-    background: linear-gradient(145deg, #1a1a2e, #16213e);
+    background: linear-gradient(145deg, #121212, #080808);
     color: #e2e8f0;
     padding: 1rem;
     overflow-y: auto;
     user-select: none;
 }
 
+
 .sidebar-title {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.75rem;               /* Aumenta el tamaño de fuente */
+    font-weight: 800;                 /* Más negrita */
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #4a5568;
-    color: #f7fafc;
+    border-bottom: 3px solid #3c3c3c; /* Azul brillante (más visible que el gris) */
     display: flex;
+    font-size: 40px;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    text-shadow: 1px 1px 4px rgba(0, 12, 14, 0.59); /* Sombra para destacar el texto */
+    letter-spacing: 0.5px;            /* Espaciado entre letras */
 }
 
-.sidebar-title::before {
-    content: '🐘';
-    font-size: 1.25rem;
+
+.postgre {
+    color: #cdcdcd;
+    font-weight: 340;
+}
+
+.sql {
+    color: rgb(47, 102, 145); /* Puedes cambiar estos valores */
+}
+
+
+.sidebar-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
 }
 
 .refresh-button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #29578a 0%, #264c71 100%);
     color: white;
     padding: 0.75rem 1rem;
     border: none;
@@ -45,7 +60,7 @@
 
 .refresh-button:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 6px 20px rgb(39, 78, 115);
 }
 
 .refresh-button:active {
@@ -167,16 +182,27 @@
 
 .table {
     width: 100%;
+    margin-left: 5px;
 }
 
 .table-header {
     font-size: 1rem;
     color: #a0aec0;
     font-weight: 500;
-    margin-bottom: 0.5rem;
     padding-left: 0.5rem;
-    border-left: 2px solid #4a5568;
-    width: 100%;
+    padding-top: 2px;
+    border-left: 4px solid #667eea;
+    width: 90%;
+    height: 40px;
+    border-radius: 8px;
+    background: rgb(22, 24, 28);
+    margin-bottom: 0.2rem;
+}
+
+.table-header:hover {
+    background: rgba(102, 126, 234, 0.2);
+    cursor: pointer;
+    transform: translateX(2px);
 }
 
 .table-header:hover + .table-indices {
@@ -192,11 +218,9 @@
     opacity: 0;
     overflow: hidden;
     transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
-    background: #2a2a2a;
-    border-left: 2px solid #4a5568;
     margin-left: 0.5rem;
     padding: 0;
-    width: 100%;
+    width: 90%;
 }
 
 .table-indices div {
@@ -209,14 +233,6 @@
 
 
 
-.table-header {
-    font-size: 1rem;
-    color: #d8dee4;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    padding-left: 0.5rem;
-    border-left: 2px solid #4a5568;
-}
 
 .table-header:hover .table-indices {
     max-height: 200px;
