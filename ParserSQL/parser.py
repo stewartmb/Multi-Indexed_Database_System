@@ -250,10 +250,10 @@ class SQLTransformer(Transformer):
         return tok.value
 
     def TYPE(self, tok):
-        return tok.value
+        return tok.value.lower()
 
     def INDEX(self, tok):
-        return tok.value
+        return tok.value.lower()
 
     def VALUE(self, tok):
         return tok.value.strip('"')  # remove quotes if present

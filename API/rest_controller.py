@@ -73,7 +73,7 @@ consultas = ["", "", "", "", "", ""]
 # consultas[3]= "API/consultas/select_datos.txt"
 # consultas[4] = "API/consultas/prueba2.txt"
 # consultas[5]= "API/consultas/copy.txt"
-# consultas[5]= "ParserSQL/test2.txt"
+consultas[5]= "ParserSQL/test2.txt"
 # consultas[5]= "API/consultas/aaa.txt"
 
 # eliminar todo lo de la  carpeta Schema

@@ -140,11 +140,22 @@ def create_table(query):
     # crear tabla y añadir a metadata
     start = time.time_ns()
 
+    pk = query["data"].get("key", None)
+
+    if pk is None:
+        raise HTTPException(404, "No primary key provided.")
+    else:
+        if query["data"]["columns"][pk]["index"] is None:
+            query["data"]["columns"][pk]["index"] = "bptree"
+            query["data"]["columns"][pk]["params"] = [50]
+
     os.makedirs(os.path.dirname(table_filename(query["name"])), exist_ok=True)
     with open(table_filename(query["name"]), "w") as f:
         pass
+
     format = {}
     cols = query["data"]["columns"]
+    
     for key in cols.keys():
         format[key] = to_struct(cols[key]["type"])
 
@@ -179,6 +190,8 @@ def create_table(query):
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
+
+    print(json.dumps(query["data"], indent=4))
     create_meta(query["data"], query["name"])
     end = time.time_ns()
     t_ms = end - start
