@@ -11,7 +11,7 @@ const QueryUrlContext = createContext<QueryUrlContextType | null>(null);
 
 // Provider con tipado de props
 export const QueryUrlProvider = ({ children }: { children: ReactNode }) => {
-    const [queryUrl, setQueryUrl] = useState('http://127.0.0.1:8085/query');
+    const [queryUrl, setQueryUrl] = useState('http://127.0.0.1:8000');
 
     return (
         <QueryUrlContext.Provider value={{ queryUrl, setQueryUrl }}>

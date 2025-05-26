@@ -51,11 +51,37 @@ export default function ResizableSidebarLayout({ Sidebar, MainContent }: Resizab
             {/* Barra divisora */}
             <div
                 onMouseDown={onMouseDown}
-            className="w-4 cursor-col-resize bg-gray-600 hover:bg-gray-800"
-            title="Arrastra para redimensionar"
-            style={{ userSelect: 'none', width: '10px', backgroundColor: '#41506f'}}
-        >
-        </div>
+                className="cursor-col-resize"
+                title="Drag to resize"
+                style={{ 
+                    userSelect: 'none', 
+                    width: '12px',
+                    background: 'linear-gradient(145deg, #0f172a, #1e293b)',
+                    position: 'relative',
+                    transition: 'all 0.2s ease',
+                    borderLeft: '1px solid #374151',
+                    borderRight: '1px solid #374151',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(145deg, #1e293b, #2d3748)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(145deg, #0f172a, #1e293b)';
+                }}
+            >
+                {/* Visual indicator for drag handle */}
+                <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    height: '40px',
+                    width: '3px',
+                    background: 'linear-gradient(180deg, #374151, #4b5563, #374151)',
+                    borderRadius: '2px',
+                    opacity: 0.5
+                }} />
+            </div>
 
         {/* Main content */}
         <div style={{ flex: 1 }} className="h-full bg-gray-100 overflow-hidden">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/Sidebar.css';
 import logoElefante from '../assets/elefante1.png';
 import emptyData from '../assets/emptydata.png';
@@ -24,10 +24,23 @@ const Sidebar = () => {
     const [structureData, setStructureData] = useState<Schema[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [openSchemas, setOpenSchemas] = useState([]);
+    const [openSchemas, setOpenSchemas] = useState<string[]>([]);
+    const [tempUrl, setTempUrl] = useState('http://127.0.0.1:8000');
+    const { queryUrl, setQueryUrl } = useQueryUrl();
 
+    useEffect(() => {
+        if (!queryUrl) {
+            setQueryUrl('http://127.0.0.1:8000');
+        }
+    }, []);
 
-    const { queryUrl } = useQueryUrl();
+    const handleUrlSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (tempUrl.trim()) {
+            setQueryUrl(tempUrl.trim());
+            refreshSidebar();
+        }
+    };
 
     const toggleTable = (tableName: string) => {
         setOpenTables((prev) => ({
@@ -36,7 +49,7 @@ const Sidebar = () => {
         }));
     };
 
-    const toggleSchema = (name) => {
+    const toggleSchema = (name: string) => {
         setOpenSchemas((prev) =>
             prev.includes(name)
                 ? prev.filter((n) => n !== name)
@@ -44,29 +57,33 @@ const Sidebar = () => {
         );
     };
 
-    // Función para refrescar el sidebar y obtener los datos desde el servidor
     const refreshSidebar = async () => {
         setLoading(true);
         setError(null);
         setStructureData([]);
 
-        try { // TODO: CAMBIAR A 8000 el puerto
+        if (!queryUrl) {
+            setError('No URL configured. Please set a URL first.');
+            setLoading(false);
+            return;
+        }
+
+        try {
             const response = await fetch(`${queryUrl}/info`);
 
             if (!response.ok) {
-                throw new Error('Failed to fetch data');
+                throw new Error(`Failed to fetch data: ${response.statusText}`);
             }
 
             const data = await response.json();
 
-            // Aseguramos que `data.info` esté presente y sea un arreglo
             if (Array.isArray(data.info)) {
                 setStructureData(data.info);
             } else {
-                setError('Datos no válidos recibidos del servidor');
+                setError('Invalid data received from server');
             }
         } catch (err) {
-            setError('Error al obtener los datos');
+            setError(`Error: ${err instanceof Error ? err.message : 'Failed to connect to server'}`);
         } finally {
             setLoading(false);
         }
@@ -81,14 +98,38 @@ const Sidebar = () => {
                 </a>
             </h2>
 
-            {/* Botón de refresh */}
-            <button
-                className={`refresh-button ${loading ? 'loading' : ''}`}
-                onClick={refreshSidebar}
-                disabled={loading}
-            >
-                {loading ? 'Cargando...' : 'Refresh'}
-            </button>
+            {/* URL Form */}
+            <form onSubmit={handleUrlSubmit} className="url-form">
+                <input
+                    type="text"
+                    className="url-input"
+                    placeholder="http://127.0.0.1:8000"
+                    value={tempUrl}
+                    onChange={(e) => setTempUrl(e.target.value)}
+                />
+                <div className="button-group">
+                    <button
+                        type="submit"
+                        className="btn-set-url"
+                    >
+                        <svg className="inline-block w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 12h-8M3 12h8M12 3v18" />
+                        </svg>
+                        Set URL
+                    </button>
+                    <button
+                        type="button"
+                        className={`btn-refresh ${loading ? 'loading' : ''}`}
+                        onClick={refreshSidebar}
+                        disabled={loading}
+                    >
+                        <svg className="inline-block w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-4.4 3.6-8 8-8 3.4 0 6.3 2.1 7.4 5M22 12c0 4.4-3.6 8-8 8-3.4 0-6.3-2.1-7.4-5" />
+                        </svg>
+                        {loading ? 'Loading...' : 'Refresh'}
+                    </button>
+                </div>
+            </form>
 
             {/* Mensaje de error */}
             {error && (

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { EditorView } from '@codemirror/view';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { useQueryUrl } from '../contexts/QueryUrlContext.tsx';
 
 interface Props {
@@ -11,19 +13,61 @@ interface Props {
     isLoading?: boolean;
 }
 
+// Define custom syntax highlighting
+const myHighlightStyle = HighlightStyle.define([
+    { tag: tags.keyword, color: "#60a5fa" },           // SELECT, FROM, WHERE
+    { tag: tags.operator, color: "#94a3b8" },          // =, <, >
+    { tag: tags.number, color: "#f87171" },            // Numbers
+    { tag: tags.string, color: "#4ade80" },            // String literals
+    { tag: tags.comment, color: "#64748b", fontStyle: "italic" }, // Comments
+    { tag: tags.variableName, color: "#e879f9" },      // Column names
+    { tag: tags.definition, color: "#38bdf8" },        // Table names
+    { tag: tags.punctuation, color: "#cbd5e1" },       // Punctuation
+    { tag: tags.propertyName, color: "#a78bfa" },      // Properties
+    { tag: tags.function(tags.variableName), color: "#c084fc" }, // Functions
+    { tag: tags.special(tags.variableName), color: "#f472b6" }, // Special variables
+]);
+
+// Define custom theme
+const myTheme = EditorView.theme({
+    "&": {
+        backgroundColor: "#1e1e1e",
+        color: "#e2e8f0",
+        height: "100%"
+    },
+    ".cm-content": {
+        fontFamily: "'JetBrains Mono', monospace",
+        padding: "0.5rem 0"
+    },
+    ".cm-line": {
+        padding: "0 1rem"
+    },
+    ".cm-gutters": {
+        backgroundColor: "#1e1e1e",
+        border: "none",
+        borderRight: "1px solid #2d3748",
+        color: "#4a5568"
+    },
+    ".cm-activeLineGutter, .cm-activeLine": {
+        backgroundColor: "rgba(30, 41, 59, 0.5)"
+    },
+    ".cm-selectionBackground": {
+        backgroundColor: "rgba(147, 51, 234, 0.35) !important"
+    },
+    ".cm-cursor": {
+        borderLeft: "2px solid #94a3b8"
+    },
+    "&.cm-focused .cm-selectionBackground": {
+        backgroundColor: "rgba(147, 51, 234, 0.45) !important"
+    },
+    "&.cm-focused .cm-cursor": {
+        borderLeftColor: "#e2e8f0"
+    }
+});
+
 const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoading = false }) => {
     const [localQuery, setLocalQuery] = useState(query);
-    const [tempUrl, setTempUrl] = useState('');
-    const { queryUrl, setQueryUrl } = useQueryUrl();
-
-    const updateQueryUrl = (url) => {
-        setQueryUrl(url);
-    };
-
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setQueryUrl(tempUrl);
-    };
+    const { queryUrl } = useQueryUrl();
 
     // Update local query when external query changes (from history selection)
     useEffect(() => {
@@ -46,193 +90,162 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
 
     return (
         <div className="sql-editor-container h-full flex flex-col">
-            <div className="sql-editor-header p-3" style={{
-                background: 'linear-gradient(145deg, #121212, #1a1a1a)',
-                borderBottom: '2px solid #3c3c3c',
-                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+            <div className="sql-editor-header" style={{
+                padding: '0.5rem',
+                background: '#1e1e1e',
+                borderBottom: '1px solid #2d3748'
             }}>
-                <div className="sql-editor-toolbar flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <button
+                        className="editor-btn"
+                        onClick={() => onRun(localQuery)}
+                        disabled={isLoading || !localQuery.trim()}
+                        title={isLoading ? 'Query in progress...' : !localQuery.trim() ? 'Enter a query to run' : 'Run query'}
+                    >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            {isLoading ? (
+                                <path d="M6 12h12M12 6v12" />
+                            ) : (
+                                <path d="M5 3l14 9-14 9V3z" />
+                            )}
+                        </svg>
+                    </button>
 
-                    {/* Botones a la izquierda */}
-                    <div className="flex gap-3">
-                        <button
-                            className={`btn-run ${isLoading ? 'btn-run-disabled' : ''}`}
-                            onClick={() => onRun(localQuery)}
-                            disabled={isLoading || !localQuery.trim()}
-                            title={isLoading ? 'Query in progress...' : !localQuery.trim() ? 'Enter a query to run' : 'Run query'}
-                        >
-                            <span className="mr-2">{isLoading ? '⏳' : '▶'}</span>
-                            {isLoading ? 'Running...' : 'Run Query'}
-                        </button>
-
-                        <button
-                            className={`btn-clear ${isLoading ? 'btn-clear-disabled' : ''}`}
-                            onClick={handleClear}
-                            disabled={isLoading}
-                            title={isLoading ? 'Cannot clear while query is running' : 'Clear editor'}
-                        >
-                            <span className="mr-2">🗑</span> Clear
-                        </button>
-                    </div>
-
-                    {/* Campo URL a la derecha */}
-                    <form onSubmit={handleSubmit} className="flex items-center gap-3">
-                        <input
-                            type="text"
-                            className="url-input"
-                            placeholder="http://127.0.0.1:8085/query"
-                            value={tempUrl}
-                            onChange={(e) => setTempUrl(e.target.value)}
-                        />
-                        <button
-                            type="submit"
-                            className="btn-set-url"
-                        >
-                            Set URL
-                        </button>
-                    </form>
-
+                    <button
+                        className="editor-btn"
+                        onClick={handleClear}
+                        disabled={isLoading}
+                        title="Clear editor"
+                    >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3-3h6M9 3v3M15 3v3M4 6h16" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <div
-                className="sql-editor-body flex-1 overflow-auto"
-                style={{
-                    background: 'linear-gradient(145deg, #0f172a, #1e293b)',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                }}
-            >
+            <div className="sql-editor-body flex-1" style={{ background: '#1e1e1e' }}>
                 <style>
                     {`
-                    .sql-editor-body::-webkit-scrollbar {
-                        width: 8px;
-                    }
-                    .sql-editor-body::-webkit-scrollbar-track {
-                        background: rgba(45, 55, 72, 0.3);
-                        border-radius: 4px;
-                    }
-                    .sql-editor-body::-webkit-scrollbar-thumb {
-                        background: linear-gradient(145deg, #374151, #4b5563);
-                        border-radius: 4px;
-                    }
-                    .sql-editor-body::-webkit-scrollbar-thumb:hover {
-                        background: linear-gradient(145deg, #4b5563, #6b7280);
-                    }
-                    
-                    .btn-run, .btn-clear, .btn-set-url {
-                        padding: 0.75rem 1.5rem;
+                    .editor-btn {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 2rem;
+                        height: 2rem;
+                        padding: 0.4rem;
                         border: none;
-                        border-radius: 0.5rem;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        position: relative;
-                        overflow: hidden;
-                        font-size: 0.875rem;
+                        border-radius: 0.25rem;
+                        background: transparent;
+                        color: #94a3b8;
+                        transition: all 0.15s ease;
                     }
                     
-                    .btn-run, .btn-clear, .btn-set-url {
-                        background: linear-gradient(145deg, #374151, #4b5563);
+                    .editor-btn:hover:not(:disabled) {
+                        background: #2d3748;
                         color: #e2e8f0;
-                        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                     }
                     
-                    .btn-run {
-                        background: linear-gradient(145deg, #1e40af, #2563eb);
-                    }
-                    
-                    .btn-run:hover:not(:disabled) {
-                        background: linear-gradient(145deg, #2563eb, #3b82f6);
-                        transform: translateY(-2px);
-                        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
-                    }
-                    
-                    .btn-run:disabled {
-                        background: linear-gradient(145deg, #4b5563, #6b7280);
+                    .editor-btn:disabled {
+                        opacity: 0.5;
                         cursor: not-allowed;
-                        opacity: 0.6;
-                        transform: none;
                     }
-                    
-                    .btn-clear:hover:not(:disabled) {
-                        background: linear-gradient(145deg, #4b5563, #6b7280);
-                        transform: translateY(-2px);
-                        box-shadow: 0 6px 20px rgba(75, 85, 99, 0.3);
+
+                    .editor-btn svg {
+                        transition: transform 0.15s ease;
                     }
-                    
-                    .btn-clear:disabled {
-                        background: linear-gradient(145deg, #4b5563, #6b7280);
-                        cursor: not-allowed;
-                        opacity: 0.6;
-                        transform: none;
+
+                    .editor-btn:hover:not(:disabled) svg {
+                        transform: scale(1.1);
                     }
-                    
-                    .btn-set-url:hover {
-                        background: linear-gradient(145deg, #059669, #10b981);
-                        transform: translateY(-2px);
-                        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+
+                    /* SQL Editor Styles */
+                    .cm-editor {
+                        background: #1e1e1e !important;
+                        color: #e2e8f0 !important;
                     }
-                    
-                    .btn-set-url {
-                        background: linear-gradient(145deg, #047857, #059669);
+
+                    .cm-editor .cm-content {
+                        font-family: 'JetBrains Mono', monospace;
+                        padding: 0.5rem 0;
                     }
-                    
-                    .url-input {
-                        background: linear-gradient(145deg, #374151, #4b5563);
-                        color: #e2e8f0;
-                        border: 1px solid #6b7280;
-                        border-radius: 0.5rem;
-                        padding: 0.75rem 1rem;
-                        width: 280px;
-                        font-size: 0.875rem;
-                        transition: all 0.3s ease;
+
+                    .cm-editor .cm-line {
+                        padding: 0 1rem;
                     }
-                    
-                    .url-input:focus {
-                        outline: none;
-                        border-color: #3b82f6;
-                        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-                        background: linear-gradient(145deg, #4b5563, #6b7280);
+
+                    .cm-editor .cm-gutters {
+                        background: #1e1e1e !important;
+                        border-right: 1px solid #2d3748;
+                        color: #4a5568;
                     }
-                    
-                    .url-input::placeholder {
-                        color: #9ca3af;
+
+                    .cm-editor .cm-activeLineGutter,
+                    .cm-editor .cm-activeLine {
+                        background: rgba(30, 41, 59, 0.5) !important;
                     }
-                    
-                    /* Hover effects with shimmer */
-                    .btn-run::before, .btn-clear::before, .btn-set-url::before {
-                        content: '';
-                        position: absolute;
-                        top: 0;
-                        left: -100%;
-                        width: 100%;
-                        height: 100%;
-                        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-                        transition: left 0.5s;
+
+                    .cm-editor .cm-cursor {
+                        border-left: 2px solid #94a3b8;
                     }
-                    
-                    .btn-run:hover::before, .btn-clear:hover::before, .btn-set-url:hover::before {
-                        left: 100%;
+
+                    .cm-editor .cm-selectionBackground {
+                        background: rgba(147, 51, 234, 0.35) !important;
+                    }
+
+                    /* SQL Syntax Highlighting */
+                    .cm-editor .cm-keyword {
+                        color: #60a5fa !important; /* SELECT, FROM, WHERE */
+                    }
+
+                    .cm-editor .cm-operator {
+                        color: #94a3b8 !important; /* =, <, > */
+                    }
+
+                    .cm-editor .cm-number {
+                        color: #f87171 !important; /* Numbers */
+                    }
+
+                    .cm-editor .cm-string {
+                        color: #4ade80 !important; /* String literals */
+                    }
+
+                    .cm-editor .cm-comment {
+                        color: #64748b !important;
+                        font-style: italic;
+                    }
+
+                    .cm-editor .cm-def {
+                        color: #38bdf8 !important; /* Table names */
+                    }
+
+                    .cm-editor .cm-variable {
+                        color: #e879f9 !important; /* Column names */
+                    }
+
+                    .cm-editor .cm-punctuation {
+                        color: #cbd5e1 !important;
+                    }
+
+                    .cm-editor .cm-property {
+                        color: #a78bfa !important;
                     }
                     `}
                 </style>
 
                 <CodeMirror 
-                    className="sql-editor-body"
                     value={localQuery}
-                    extensions={[sql()]}
+                    height="100%"
+                    extensions={[
+                        sql(),
+                        syntaxHighlighting(myHighlightStyle),
+                        myTheme
+                    ]}
                     onChange={handleQueryChange}
-                    theme={oneDark}
                     placeholder="Write your SQL query here..."
-                    basicSetup={{lineNumbers: true}}
                     style={{
-                        height: '100%',
-                        maxHeight: '100%',
-                        overflow: 'scroll',
-                        fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                        fontSize: '16px',
-                        lineHeight: '1.6',
+                        fontSize: '14px',
+                        height: '100%'
                     }}
                 />
             </div>

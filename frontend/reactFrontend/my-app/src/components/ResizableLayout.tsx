@@ -66,20 +66,20 @@ const ResizableLayout: React.FC<Props> = ({ top, bottom }) => {
                 onMouseDown={onMouseDown}
                 style={{
                     height: '12px',
-                    background: 'linear-gradient(145deg, #374151, #4b5563)',
+                    background: 'linear-gradient(145deg, #0f172a, #1e293b)',
                     cursor: 'row-resize',
                     alignSelf: 'stretch',
                     position: 'relative',
                     transition: 'all 0.2s ease',
-                    borderTop: '1px solid #6b7280',
-                    borderBottom: '1px solid #6b7280',
+                    borderTop: '1px solid #374151',
+                    borderBottom: '1px solid #374151',
                 }}
                 title="Drag to resize"
                 onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(145deg, #4b5563, #6b7280)';
+                    e.currentTarget.style.background = 'linear-gradient(145deg, #1e293b, #2d3748)';
                 }}
                 onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(145deg, #374151, #4b5563)';
+                    e.currentTarget.style.background = 'linear-gradient(145deg, #0f172a, #1e293b)';
                 }}
             >
                 {/* Visual indicator for drag handle */}
@@ -90,9 +90,9 @@ const ResizableLayout: React.FC<Props> = ({ top, bottom }) => {
                     transform: 'translate(-50%, -50%)',
                     width: '40px',
                     height: '3px',
-                    background: 'linear-gradient(90deg, #9ca3af, #d1d5db, #9ca3af)',
+                    background: 'linear-gradient(90deg, #374151, #4b5563, #374151)',
                     borderRadius: '2px',
-                    opacity: 0.7
+                    opacity: 0.5
                 }} />
             </div>
 
