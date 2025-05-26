@@ -66,7 +66,7 @@ Ver documentación:
 [Rtree](https://github.com/stewartmb/Proyecto_BD2/blob/main/RTree_struct/Rtree.md)
 ## ParserSQL
 Ver documentación:
-[ParserSQL](https://github.com/stewartmb/Proyecto_BD2/blob/main/ParserSQL/README.md)
+[ParserSQL](https://github.com/stewartmb/Proyecto_BD2/blob/main/ParserSQL/Parser.md)
 ## API
 Ver documentación:
 [Documentación de la API](https://github.com/stewartmb/Proyecto_BD2/blob/main/API/README.md)
