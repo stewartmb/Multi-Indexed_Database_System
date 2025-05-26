@@ -276,12 +276,13 @@ def create_index(query):
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
 
+    print(query["attr"])
     for key in query["attr"]:
-        if data["columns"][key]["index"] is not None:
+        print(data["columns"][key]["index"])
+        if data["columns"][key]["index"] is None:
             data["columns"][key]["index"] = query["index"]
         else:
             raise HTTPException(404, f"Index already created on attribute {key}")
-    create_meta(data, nombre_tabla)
 
     keys = query["attr"]
     
@@ -343,7 +344,6 @@ def create_index(query):
 
     records = heap._select_all()
     positions = heap.get_all()
-    create_meta(data, nombre_tabla)
 
     # añadir los registros ya en la tabla al indice creado
     for record, pos in zip(records, positions):
@@ -358,6 +358,8 @@ def create_index(query):
 
     end = time.time_ns()
     t_ms = end - start
+    
+    create_meta(data, nombre_tabla)
 
     return {
         "message": f"CREATED INDEX {index} ON TABLE {nombre_tabla} in {t_ms/1e6} ms"

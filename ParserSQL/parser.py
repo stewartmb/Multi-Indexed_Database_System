@@ -20,8 +20,8 @@ copy_stmt: "copy"i NAME "from"i VALUE
 create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] ("," NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] )*
 select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr]
 attr_list: NAME ("," NAME)*
-drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on" NAME
-drop_table_stmt: "drop"i "table" NAME
+drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on"i NAME
+drop_table_stmt: "drop"i "table"i NAME
 set_stmt: "set"i INDEX "params"i "(" value_list ")"
 
 index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")" [ "params"i "(" value_list ")" ]
@@ -38,10 +38,10 @@ delete_stmt: "delete"i "from"i NAME "where"i expr
      | condition
 
 condition: NAME OP VALUE
-         | NAME BETWEEN VALUE "and" VALUE
+         | NAME BETWEEN VALUE "and"i VALUE
          | attr_list OP  "[" value_list "]"
          | attr_list BETWEEN  "[" value_list "]" "and" "[" value_list "]"
-         | attr_list "in" "(" value_list ")" CLOSEST VALUE
+         | attr_list "in"i "(" value_list ")" CLOSEST VALUE
 
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
@@ -150,6 +150,8 @@ class SQLTransformer(Transformer):
         dict =  {"action": "index", "table": str(items[0]), "index": items[1], "attr": items[2]}
         if items[3] is not None:
             dict["params"] = [int(x) for x in items[3]]
+        else:
+            dict["params"] = []
         return dict
 
     def copy_stmt(self, items):

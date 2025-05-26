@@ -1,9 +1,1 @@
-create table destinos (
-    id int primary key ,
-    name varchar[25] ,
-    latitud double,
-    longitud double,
-    ciudad varchar[20],
-    pais varchar[20]
-);
-copy destinos from "Data_test/destinos.csv";
+create index on destinos using seq(name) params(3);
