@@ -294,10 +294,6 @@ class BPTree:
                     temp = self._read_index_page(pos_children)
                 else:
                     break
-            for pos in results:
-                record_temp = self.HEAP.read(pos)
-                if record_temp is None:
-                    results.remove(pos)
             return results # Regresa la lista de registros encontrados
     
     

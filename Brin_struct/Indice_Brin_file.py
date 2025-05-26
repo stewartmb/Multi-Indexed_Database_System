@@ -9,7 +9,7 @@ from Heap_struct.Heap import Heap
 
 # Constantes generales
 TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de paginas)
-TAM_ENCABEZAD_BRIN = 4  # Tamaño del encabezado en bytes (cantidad de pages)
+TAM_ENCABEZAD_BRIN = 5  # Tamaño del encabezado en bytes (cantidad de pages)
 TAM_ENCABEZAD_DATA = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 
 
@@ -17,64 +17,62 @@ def get_index_format(M, format_key): # Se hizo con la finalidad que al variar M,
     """
     Genera el formato del índice dinámicamente basado en M.
     """
-    format = f'b{(M) * format_key}{M * "i"}ii'
+    format = f'b{(M) * format_key}{M * "i"}{format_key * 2}i?i'
     return format
 
 class Index_Page():
     def __init__(self, M=None):
         self.keys = [None] * (M)                # Lista de claves, inicialmente todas son None
         self.childrens = [-1] * M               # Lista de posiciones, inicialmente todas son -1 (no hay hijos)
+        self.range_values = [None, None]        # Valores mínimo y máximo de la página
         self.key_count = 0                      # Contador de claves
+        self.is_order = True                    # Indica si la página está ordenada
+        self.father_brin = -1                   # Posición del padre, inicialmente -1 (sin padre)
         self.M = M                              # Número máximo de claves por página
 
     def to_bytes(self, format_key, indexp_format):
         # Prepare keys for packing
         packed_keys = []
-        for key in self.keys:
-            if key is None:
-                # For None values, use a sentinel value that fits the format
-                if format_key == 'i':  # Entero
-                    packed_keys.append(-2147483648)  # -2³¹ (fuera del rango normal)
-                elif format_key == 'f':  # Float
-                    packed_keys.append(float('nan'))  # NaN representa None
-                elif format_key == 'b' or format_key == '?':  # Boolean
-                    packed_keys.append(-128)  # Special value for None
-                elif 's' in format_key:  # String (ej: '3s')
-                    packed_keys.append(b'\x00' * int(format_key[:-1]))  # Bytes nulos
+
+        def binary_format(list):
+            packed_keys = []
+            for key in list:
+                if key is None:
+                    # For None values, use a sentinel value that fits the format
+                    if format_key == 'i':  # Entero
+                        packed_keys.append(-2147483648)  # -2³¹ (fuera del rango normal)
+                    elif format_key == 'f':  # Float
+                        packed_keys.append(float('nan'))  # NaN representa None
+                    elif format_key == 'b' or format_key == '?':  # Boolean
+                        packed_keys.append(-128)  # Special value for None
+                    elif 's' in format_key:  # String (ej: '3s')
+                        packed_keys.append(b'\x00' * int(format_key[:-1]))  # Bytes nulos
+                    else:
+                        packed_keys.append(0)  # Default fallback
                 else:
-                    packed_keys.append(0)  # Default fallback
-            else:
-                # Convertir a bytes si es string
-                if 's' in format_key and isinstance(key, str):
-                    max_length = int(format_key[:-1])  # Elimina la 's' y convierte a entero
-                    truncated_key = key[:max_length]
-                    packed_keys.append(truncated_key.encode('utf-8'))
-                # Asegurar tipo correcto
-                elif format_key == 'i' or format_key == 'q' or format_key == 'Q':
-                    packed_keys.append(int(key))
-                elif format_key == 'f' or format_key == 'd':
-                    packed_keys.append(float(key))
-                elif format_key == 'b' or format_key == '?':
-                    packed_keys.append(bool(key))
-                else:
-                    packed_keys.append(key)
+                    # Convertir a bytes si es string
+                    if 's' in format_key and isinstance(key, str):
+                        max_length = int(format_key[:-1])  # Elimina la 's' y convierte a entero
+                        truncated_key = key[:max_length]
+                        packed_keys.append(truncated_key.encode('utf-8'))
+                    # Asegurar tipo correcto
+                    elif format_key == 'i' or format_key == 'q' or format_key == 'Q':
+                        packed_keys.append(int(key))
+                    elif format_key == 'f' or format_key == 'd':
+                        packed_keys.append(float(key))
+                    elif format_key == 'b' or format_key == '?':
+                        packed_keys.append(bool(key))
+                    else:
+                        packed_keys.append(key)
+            return packed_keys
+        
+        # Empaquetar claves
+        packed_keys1 = binary_format(self.keys)
+        packed_keys2 = binary_format(self.range_values)
 
         # Prepare all arguments for packing
-        pack_args = packed_keys + self.childrens + [self.key_count]
+        pack_args = packed_keys1 + self.childrens + packed_keys2 + [self.key_count, self.is_order , self.father_brin]
         return struct.pack(indexp_format, *pack_args)
-    
-
-    def order_page(self):
-        """
-        Ordena las claves y sus hijos en una página de índice.
-        """
-        # Combina claves y hijos en una lista de tuplas
-        keys_children = list(zip(self.keys[:self.key_count], self.childrens[:self.key_count]))
-        # Ordena la lista por claves
-        keys_children.sort(key=lambda x: x[0])
-        # Desempaqueta las claves y los hijos ordenados
-        self.keys[:self.key_count] = [k for k, _ in keys_children]
-        self.childrens[:self.key_count] = [c for _, c in keys_children]
 
 
     @classmethod
@@ -88,7 +86,7 @@ class Index_Page():
         unpacked = list(struct.unpack(indexp_format, data))
 
         # Create instance
-        instance = cls(leaf=bool(unpacked[0]), M=M)
+        instance = cls(M=M)
 
         # Handle keys
         for i in range(M):
@@ -105,19 +103,34 @@ class Index_Page():
                 instance.keys[i] = key_value
 
         # Handle children and metadata
-        children_start = M
-        instance.childrens = list(unpacked[children_start:children_start + M])
-        instance.key_count = unpacked[-1]
+        instance.childrens = list(unpacked [M: M + M])
+        instance.key_count = unpacked[-3]
+        instance.is_order = unpacked[-2]
+        instance.father_brin = unpacked[-1]
 
         return instance
-    
+
+    def binary_find_index(self, key):
+        """
+        Encuentra el índice donde se debe descender por biseccion.
+        """
+        low = 0
+        high = self.key_count - 1
+        while low <= high:
+            mid = (low + high) // 2
+            if self.keys[mid] < key:
+                low = mid + 1
+            else:
+                high = mid - 1
+        return low
 
 class Indice_Brin():
     def __init__(self, K):
         self.range_values = [None,None]                      # Valor mínimo y máximo de la página (formato: formato_key)
         self.pages = [-1] * K                                # Lista de posiciones de las páginas, inicialmente todas son -1 (no hay páginas)
         self.page_count = 0                                  # Contador de páginas
-        self.K = K                                            # Número máximo de páginas por índice BRIN
+        self.is_order = True                                 # Indica si el índice BRIN está ordenado
+        self.K = K                                           # Número máximo de páginas por índice BRIN
 
     def to_bytes(self , format_key, format_index):        
         # Prepare keys for packing
@@ -152,7 +165,7 @@ class Indice_Brin():
                     packed_keys.append(key)
 
         # Prepare all arguments for packing
-        pack_args = packed_keys + self.pages + [self.page_count]
+        pack_args = packed_keys + self.pages + [self.page_count, self.is_order]
         return struct.pack(format_index, *pack_args)
     
 
@@ -185,11 +198,11 @@ class Indice_Brin():
 
         # Handle children and metadata
         instance.pages = unpacked[2:2+K]
-        instance.page_count = unpacked[-1]
+        instance.page_count = unpacked[-2]
+        instance.is_order = unpacked[-1]
 
         return instance
-        
-
+    
 
 class BRIN:
     def __init__(self, table_format: dict , name_key: str ,
@@ -212,7 +225,9 @@ class BRIN:
         self.K = max_num_pages                                       # Número máximo de páginas por índice BRIN
 
         self.format_page = get_index_format(self.M, self.format_key)  # Formato de una pagina
-        self.format_index = f'{self.format_key*2}{'i' * self.K}i'   # Formato del índice BRIN
+        self.tam_page = struct.calcsize(self.format_page)              # Tamaño de una página
+        self.format_index = f'{self.format_key*2}{'i' * self.K}i?'   # Formato del índice BRIN
+        self.tam_index = struct.calcsize(self.format_index)              # Tamaño del índice BRIN
 
         self._initialize_files()                                     # Inicializa los archivos de índice y página
         self.HEAP = Heap(name_data_file, table_format, name_key, force_create=force_create)
@@ -227,7 +242,7 @@ class BRIN:
                 f.write(struct.pack('i', 0)) 
         if not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
-                f.write(struct.pack('i', 0))
+                f.write(struct.pack('i?', 0, True))
         if not os.path.exists(self.page_file):
             with open(self.page_file, 'wb') as f:
                 f.write(struct.pack('i', 0))
@@ -260,82 +275,265 @@ class BRIN:
         """
         with open(self.index_file, 'rb') as f:
             header = f.read(TAM_ENCABEZAD_BRIN)
-            if not header:
-                return 0
-            return struct.unpack('i', header)[0]
-        
-    def _write_header_index(self, num_indexes):
+            num_brins, is_order = struct.unpack('i?', header)
+            return num_brins, is_order
+
+    def _write_header_index(self, num_indexes , is_order):
         """
         Escribe el encabezado del archivo de índice BRIN.
         """
         with open(self.index_file, 'r+b') as f:
             f.seek(0)
-            f.write(struct.pack('i', num_indexes))
+            f.write(struct.pack('i?', num_indexes , is_order))
     
-    ## Encabezado de archivo para datos ##
-    def _read_header_data(self):
+    def _update_order(self, is_order):
         """
-        Lee el encabezado del archivo de datos.
+        Actualiza el orden del índice BRIN en el encabezado.
         """
-        with open(self.data_file, 'rb') as f:
-            header = f.read(TAM_ENCABEZAD_DATA)
-            if not header:
-                return 0
-            return struct.unpack('i', header)[0]
+        num_brins, _ = self._read_header_index()
+        self._write_header_index(num_brins, is_order)
+
+    ### MANEJO DE PÁGINAS DE ÍNDICE ###
+
+    def _read_page(self, page_number):
+        """
+        Lee una página del archivo de páginas.
+        """
+        with open(self.page_file, 'rb') as f:
+            f.seek(TAM_ENCABEZAD_PAGE + page_number * self.tam_page)
+            data = f.read(self.tam_page)
+            return Index_Page.from_bytes(data, self.M, self.format_key, self.format_page)
+        
+    def _write_page(self, page_number, page : Index_Page):
+        """
+        Escribe una página en el archivo de páginas.
+        """
+        with open(self.page_file, 'r+b') as f:
+            f.seek(TAM_ENCABEZAD_PAGE + page_number * self.tam_page)
+            f.write(page.to_bytes(self.format_key, self.format_page))
     
-    def _write_header_data(self, num_records):
+    def _add_page(self, page):
         """
-        Escribe el encabezado del archivo de datos.
+        Agrega una nueva página al archivo de páginas.
         """
-        with open(self.data_file, 'r+b') as f:
-            f.seek(0)
-            f.write(struct.pack('i', num_records))
-
-    ### MANEJO DE DATOS (CASE INDEPENT) ###
-
-    def _read_data_header(self):
-        """
-        Lee el encabezado del archivo de datos.
-        """
-        with open(self.data_file, 'rb') as f:
-            f.seek(0)
-            header = f.read(TAM_ENCABEZAD_DATA)
-            size = struct.unpack('i', header)[0]
-        return size
+        num_pages = self._read_header_page()
+        self._write_page(num_pages, page)
+        self._write_header_page(num_pages + 1)
+        return num_pages
     
-    def add_record(self, record : list):
+    ### MANEJO DE INDICES BRIN ###
+    def _read_brin(self, index_number):
         """
-        Agrega un nuevo registro al final del archivo de datos y actualiza el encabezado.
+        Lee un índice BRIN del archivo de índice.
         """
-        with open(self.data_file, 'r+b') as f:
-            # Leer el tamaño actual desde el encabezado
-            f.seek(0)
-            header = f.read(TAM_ENCABEZAD_DATA)
-            size = struct.unpack('i', header)[0]
-            # Calcular el offset para el nuevo registro
-            offset = TAM_ENCABEZAD_DATA + size * self.RT.size
-            f.seek(offset)
-            f.write(self.RT.to_bytes(record))
-            # Actualizar el encabezado con el nuevo tamaño
-            f.seek(0)
-            f.write(struct.pack('i', size + 1))
-            return size
+        with open(self.index_file, 'rb') as f:
+            f.seek(TAM_ENCABEZAD_BRIN + index_number * self.tam_index)
+            data = f.read(self.tam_index)
+            return Indice_Brin.from_bytes(data, self.K, self.format_key, self.format_index)
+        
+    def _write_brin(self, index_number, brin : Indice_Brin):
+        """
+        Escribe un índice BRIN en el archivo de índice.
+        """
+        with open(self.index_file, 'r+b') as f:
+            f.seek(TAM_ENCABEZAD_BRIN + index_number * self.tam_index)
+            f.write(brin.to_bytes(self.format_key, self.format_index))
+    
+    def _add_brin(self , key , pos_new_record):
+        """
+        Agrega un nuevo índice BRIN al archivo de índice.
+        """
+        num_brins, is_order = self._read_header_index()
 
-    def _read_record(self, pos : int):
+        brin = Indice_Brin(self.K)
+        brin.range_values[0] = key
+        brin.range_values[1] = key
+        
+        # Generar la pagina 
+        page = Index_Page(self.M)
+        page.keys[0] = key
+        page.childrens[0] = pos_new_record
+        page.key_count = 1
+        page.range_values[0] = key
+        page.range_values[1] = key
+        page.father_brin = num_brins
+        
+        # Agrega la página al índice BRIN
+        pos_page = self._add_page(page)
+        brin.pages[0] = pos_page
+        brin.page_count = 1
+
+        if num_brins -1 >= 0:
+            # Actualizar order
+            prev_brin = self._read_brin(num_brins - 1)
+            if prev_brin.range_values[1] > key:
+                self._update_order(False)  # Si el nuevo índice no está ordenado, actualizar el encabezado
+        
+        self._write_brin(num_brins, brin)
+        self._write_header_index(num_brins + 1, is_order)
+        return num_brins , pos_page
+    
+    def _update_ranges(self, pos_page : Index_Page, key):
         """
-        Lee un registro desde el archivo de datos en la posición dada.
+        Actualiza los valores de rango de una página.
         """
-        with open(self.data_file, 'rb') as f:
-            offset = TAM_ENCABEZAD_DATA + pos * self.RT.size
-            f.seek(offset)
-            data = f.read(self.RT.size)
-            return self.RT.from_bytes(data)
+        page = self._read_page(pos_page)
+
+        if key >= page.range_values[1]:
+            page.range_values[1] = key
+        else:
+            page.is_order = False  # Si se actualiza el valor mínimo, la página ya no está ordenada
+        if key <= page.range_values[0]:
+            page.range_values[0] = key
+        
+        father_brin = self._read_brin(page.father_brin)
+        if key >= father_brin.range_values[1]:
+            father_brin.range_values[1] = key
+            father_brin.is_order = False  # Si se actualiza el valor mínimo, el índice BRIN ya no está ordenado
+        else:
+            father_brin.is_order = False
+        
+        if key <= father_brin.range_values[0]:
+            father_brin.range_values[0] = key
+
+        prev_brin = self._read_brin(page.father_brin - 1) if page.father_brin > 0 else None
+
+        if prev_brin and key < prev_brin.range_values[0]:
+            self._update_order(False)
+
+        self._write_brin(page.father_brin, father_brin)  # Actualiza el índice BRIN del padre
+        self._write_page(pos_page, page)  # Actualiza la página en el archivo de páginas
+
+    def binary_search_all(self, key):
+        """
+        Encuentra el índice donde se debe evaluar el brin.
+        """
+        # Leer todas los brins del archivo de índice
+        low = 0
+        high = self._read_header_index()[0] - 1
+        while low <= high:
+            mid = (low + high) // 2
+            min_value = self._read_brin(mid).range_values[0]
+            if min_value < key:
+                low = mid + 1
+            else:
+                high = mid - 1
+        return low
+
+    def binary_find_index(self, brin : Indice_Brin, key):
+        """
+        Encuentra el índice donde se debe descender por biseccion.
+        """
+        low = 0
+        high = brin.page_count - 1
+        while low <= high:
+            mid = (low + high) // 2
+            pos_page = brin.pages[mid]
+            page = self._read_page(pos_page)  # Leer la página correspondiente
+            if page.range_values[0] < key:
+                low = mid + 1
+            else:
+                high = mid - 1
+        return low
 
 
+    ### FUNCIONES ###
+
+    def add(self, record: list = None, pos_new_record :int = None):
+        """
+        Inserta un registro en el árbol B+.
+        """
+        # Le el encabezado del archivo de índice
+        if record is not None and pos_new_record is not None:
+            return "Error: Debe ingresar solo uno de los dos argumentos (record o pos_new_record)"
+        elif record is None and pos_new_record is None:
+            return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
+        elif record is not None:
+            pos_new_record = self.HEAP.insert(record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
+
+        else:
+            record = self.HEAP.read(pos_new_record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
+
+        num_brins, is_order = self._read_header_index()
+        
+        if num_brins == 0:
+            # Si no hay índices BRIN, crea uno nuevo
+            return self._add_brin(key, pos_new_record)
+        
+        else:
+            # Lee el último índice BRIN
+            pos_brin = num_brins - 1
+            brin = self._read_brin(pos_brin)
+
+            # Lee la última página del índice BRIN
+            pos_last_page = self._read_header_page() - 1
+            last_page = self._read_page(pos_last_page)
+
+            # Verifica si hay espacio en su ultima pagina
+            if last_page.key_count < self.M:
+                # Si hay espacio, agrega el registro a la última página
+                last_page.keys[last_page.key_count] = key
+                last_page.childrens[last_page.key_count] = pos_new_record
+                last_page.key_count += 1
+                self._update_ranges(pos_last_page, key)
+                
+            else:
+                # Si no hay espacio, verifica si se puede crear una nueva pagina al índice BRIN
+                if brin.page_count < self.K:
+                    # Si hay espacio en el índice BRIN, crea una nueva página
+                    new_page = Index_Page(self.M)
+                    new_page.keys[0] = key
+                    new_page.childrens[0] = pos_new_record
+                    new_page.key_count = 1
+                    new_page.range_values[0] = key
+                    new_page.range_values[1] = key
+                    new_page.father_brin = pos_brin
+
+                    # Agrega la nueva página al índice BRIN
+                    pos_new_page = self._add_page(new_page)
+
+                    brin.pages[brin.page_count] = pos_new_page
+                    brin.page_count += 1
+                    self._write_brin(pos_brin, brin)
+
+                else:
+                    # Si no hay espacio en el índice BRIN, crea un nuevo índice BRIN
+                    self._add_brin(key, pos_new_record)
+    
+    def search(self, key):
+        """
+        Busca un registro específico en el índice BRIN.
+        """
+        num_brins, is_order = self._read_header_index()
+        results = []
+        if num_brins == 0:
+            return results
+        
+        # Buscar brins que contengan el rango del key
+        list_brin = []
+        if is_order:
+            # Si el índice BRIN está ordenado, realiza una búsqueda binaria
+            pos_brin = self.binary_search_all(key)
+            for i in range(pos_brin, num_brins):
+                brin = self._read_brin(i)
+                if brin.range_values[0] <= key <= brin.range_values[1]:
+                    list_brin.append(brin)
+                elif brin.range_values[0] > key:
+                    break
+        else:
+            # Si el índice BRIN no está ordenado, busca secuencialmente
+            for i in range(num_brins):
+                brin = self._read_brin(i)
+                if brin.range_values[0] <= key <= brin.range_values[1]:
+                    list_brin.append(brin)
+        
+        # Buscar en las páginas de los brins encontrados (FALTA)
+        for brin in list_brin:
+            if brin.is_order:
+                pos_page = self.binary_find_index(brin, key)
 
         
-
-
-
 
 

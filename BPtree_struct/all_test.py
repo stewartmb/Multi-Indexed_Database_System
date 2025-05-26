@@ -9,14 +9,14 @@ from pathlib import Path
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
 num = [10000,50000,100000]
-x = 2
+x = 0
 KEYS = []
 PATH = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
 # PATH = "C:/Users/Equipo/Documents/2025-1/BD2/proyecto/Proyecto_BD2/Data_test"
 print("PATH", PATH)
 index_file = "BPtree_struct/index_file.bin"
 data_file = "BPtree_struct/data_file.bin"
-test_data_full = f'/test_data_full{num[0]}.csv'
+test_data_full = f'/test_data_full{num[x]}.csv'
 list_csv= ["/BPTree.csv","/airports.csv","/zipcodes.csv",test_data_full]
 
 format_tables = [{"codigo": "i", "nombre": "30s", "ciclo": "i"},
@@ -88,8 +88,8 @@ def notest_onesearch(key):
     arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
     print("\nBúsqueda de un registro específico:")
     resultado = arbol.search(key)
-    for registro in resultado:
-        print(registro)
+    # for registro in resultado:
+    #     print(registro)
     
     print()
     print("Búsqueda unica de prueba finalizada.")
@@ -175,9 +175,9 @@ if __name__ == "__main__":
  
 
 
-    # eliminar archivos existentes
-    try:
-        os.remove(index_file)
-        os.remove(data_file)
-    except FileNotFoundError:
-        pass
+    # # eliminar archivos existentes
+    # try:
+    #     os.remove(index_file)
+    #     os.remove(data_file)
+    # except FileNotFoundError:
+    #     pass
