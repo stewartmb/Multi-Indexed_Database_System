@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import SQLEditor from './SQLEditor';
-import Results from './Results';
+import Results from './results/Results.tsx';
 import ResizableLayout from './ResizableLayout';
+import { useQueryUrl } from '../contexts/QueryUrlContext';
+
 
 export default function ResizablePanel() {
     const [data, setData] = useState<any[] | null>(null);
@@ -11,6 +13,8 @@ export default function ResizablePanel() {
     const [columns, setColumns] = useState<string[]>([]);
     const [currentQuery, setCurrentQuery] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+
+    const { queryUrl } = useQueryUrl();
 
     const runQuery = async (query: string) => {
         // Prevent execution if already loading
@@ -31,7 +35,7 @@ export default function ResizablePanel() {
         // TODO: CAMBIAR EL PUERTO A 8000
         try {
             console.log('Running query:', query);
-            const response = await fetch('http://127.0.0.1:8084/query', {
+            const response = await fetch(`${queryUrl}/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query }),

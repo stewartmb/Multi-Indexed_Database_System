@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ResizableSidebarLayout from './components/ResizableSidebar.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import ResizablePanel from './components/ResizablePanel.tsx';
+import { QueryUrlProvider } from './contexts/QueryUrlContext.tsx';
 
 
 function App() {
@@ -30,10 +31,12 @@ function App() {
     };
 
     return (
-        <ResizableSidebarLayout
-            Sidebar={<Sidebar />}
-            MainContent={<ResizablePanel />}
-        />
+        <QueryUrlProvider>
+            <ResizableSidebarLayout
+                Sidebar={<Sidebar />}
+                MainContent={<ResizablePanel />}
+            />
+        </QueryUrlProvider>
     );
 }
 

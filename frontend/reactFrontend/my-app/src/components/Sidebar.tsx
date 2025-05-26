@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import './Sidebar.css';
+import '../styles/Sidebar.css';
 import logoElefante from '../assets/elefante1.png';
 import emptyData from '../assets/emptydata.png';
 import logoTabla from '../assets/tabla.png';
+import { useQueryUrl } from '../contexts/QueryUrlContext';
+
+
 
 // Definimos las interfaces
 interface Table {
@@ -22,6 +25,9 @@ const Sidebar = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [openSchemas, setOpenSchemas] = useState([]);
+
+
+    const { queryUrl } = useQueryUrl();
 
     const toggleTable = (tableName: string) => {
         setOpenTables((prev) => ({
@@ -45,7 +51,7 @@ const Sidebar = () => {
         setStructureData([]);
 
         try { // TODO: CAMBIAR A 8000 el puerto
-            const response = await fetch('http://127.0.0.1:8084/info');
+            const response = await fetch(`${queryUrl}/info`);
 
             if (!response.ok) {
                 throw new Error('Failed to fetch data');
@@ -136,7 +142,7 @@ const Sidebar = () => {
                                                     }}/>
                                                     <span style={{color : "#dddddd"}}>
                                                             {table.name}</span>
-                                                    <span> ({table.indices.length} atributos)</span>
+                                                    <span> &nbsp;&nbsp;({table.indices.length} atributos)</span>
                                                 </div>
 
                                                 <div className="table-indices">

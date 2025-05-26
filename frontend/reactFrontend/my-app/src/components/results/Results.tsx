@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styles from './Results.module.css'; // Importar los estilos CSS
+import styles from '../../styles/Results.module.css'; // Importar los estilos CSS
 
 interface Props {
     data: any[] | null;
