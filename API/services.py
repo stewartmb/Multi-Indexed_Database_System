@@ -606,18 +606,20 @@ def aux_select(query):
 def select(query):
     #cronometrar
     start = time.time_ns()
-    print(json.dumps(query, indent=4))
-
-    ans_set = aux_select(query)
-
-    # print(ans_set)
-
-    result = []
 
     data = select_meta(query["table"])
     format = {}
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
+
+    if not query["attr"] == "*":
+        for col in query["attr"]:
+            if col not in format:
+                raise HTTPException(status_code=404, detail=f"Column {col} does not exist in table {query['table']}")
+
+    ans_set = aux_select(query)
+
+    result = []
 
     for i in ans_set:
         heap = Heap(format,

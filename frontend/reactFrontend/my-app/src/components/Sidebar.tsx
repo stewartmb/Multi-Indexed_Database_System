@@ -30,7 +30,7 @@ const Sidebar = () => {
 
     useEffect(() => {
         if (!queryUrl) {
-            setQueryUrl('http://127.0.0.1:8000');
+            setQueryUrl('http://127.0.0.1:8087');
         }
     }, []);
 
@@ -69,6 +69,7 @@ const Sidebar = () => {
         }
 
         try {
+            console.log("debug4", queryUrl)
             const response = await fetch(`${queryUrl}/info`);
 
             if (!response.ok) {

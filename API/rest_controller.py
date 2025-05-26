@@ -53,6 +53,7 @@ def parse_sql_query(input: QueryInput):
         details += "detalles:\n\n"
         details += e.get_context(sql_code)
 
+        print({"error": "Unexpected token in input", "details": details + str(e)})
         return JSONResponse(
             content={"error": "Unexpected token in input", "details": details + str(e)},
             status_code=400

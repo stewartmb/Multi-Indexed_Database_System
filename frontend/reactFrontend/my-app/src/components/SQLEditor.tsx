@@ -69,7 +69,17 @@ const myTheme = EditorView.theme({
 
 const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoading = false }) => {
     const [localQuery, setLocalQuery] = useState(query);
-    const { queryUrl } = useQueryUrl();
+    const [tempUrl, setTempUrl] = useState('');
+    const { queryUrl, setQueryUrl } = useQueryUrl();
+
+    const updateQueryUrl = (url) => {
+        setQueryUrl(url);
+    };
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setQueryUrl(tempUrl);
+    };
 
     // Update local query when external query changes (from history selection)
     useEffect(() => {
