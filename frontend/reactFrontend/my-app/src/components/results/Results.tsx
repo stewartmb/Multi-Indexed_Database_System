@@ -130,7 +130,7 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                                 <span>Executing query...</span>
                             </div>
                         ) : error ? (
-                            <div className={styles.errorMessage}>Error: {error}</div>
+                            <div className={styles.errorMessage}>{"Error: \n" + error}</div>
                         ) : message ? (
                             <div className={styles.infoMessage}>{message}</div>
                         ) : (

@@ -2,7 +2,7 @@ import traceback
 from fastapi import FastAPI
 import os
 import sys
-from lark import Lark
+from lark import Lark, UnexpectedToken, UnexpectedEOF, UnexpectedCharacters
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,10 +42,26 @@ def parse_sql_query(input: QueryInput):
     sql_code = input.query
     try:
         result = parser.parse(sql_code)
+
+    except UnexpectedToken as e:
+        details = ""
+        if e.token.type == "$END":
+            details += "fin de entrada inesperado\n"
+        else:
+            details += f"token inesperado '{e.token}' \n"
+        details += "se esperaba alguno de las siguientes opciones: [" + ', '.join(list(e.expected)) + "]" + "\n"
+        details += "detalles:\n\n"
+        details += e.get_context(sql_code)
+
+        return JSONResponse(
+            content={"error": "Unexpected token in input", "details": details + str(e)},
+            status_code=400
+        )
+
     except Exception as e:
         print("ERROR:", e)
         return JSONResponse(
-            content={"error": "Error parsing input", "details": str(e)},
+            content={"error": "Error parsing input", "details": ''.join(traceback.format_exception(type(e), e, e.__traceback__))},
             status_code=500
         )
     try:
@@ -58,7 +74,7 @@ def parse_sql_query(input: QueryInput):
         print("ERROR:", e)
         traceback.print_exception(type(e), e, e.__traceback__)
         return JSONResponse(
-            content={"error": "Error processing parsed result", "details": str(e)},
+            content={"error": "Error processing parsed result", "details": ''.join(traceback.format_exception(type(e), e, e.__traceback__))},
             status_code=400
         )
     return response
