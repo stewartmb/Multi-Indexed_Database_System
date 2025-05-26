@@ -22,6 +22,17 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
     const paginatedData = data ? data.slice(startIdx, startIdx + rowsPerPage) : [];
     const totalPages = data ? Math.ceil(data.length / rowsPerPage) : 1;
 
+    // Debug logging
+    React.useEffect(() => {
+        console.log('Results component received:', {
+            data,
+            columns,
+            paginatedData,
+            currentPage,
+            totalPages
+        });
+    }, [data, columns, paginatedData, currentPage, totalPages]);
+
     const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
 
     const handleHistoryClick = (query: string) => {
@@ -33,6 +44,35 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
             onSelectHistory(query);
         }
     };
+
+    // Function to safely render cell content
+    const renderCellContent = (row: any, column: string) => {
+        console.log('Rendering cell:', { column, rowData: row, value: row[column] });
+        const value = row[column];
+        
+        if (value === null || value === undefined) {
+            return 'NULL';
+        }
+        if (typeof value === 'object') {
+            return JSON.stringify(value);
+        }
+        return String(value);
+    };
+
+    // Debug logging for data changes
+    React.useEffect(() => {
+        if (data && data.length > 0) {
+            console.log('Sample data row:', data[0]);
+            console.log('Available columns:', columns);
+            console.log('Column values in first row:', 
+                columns.map(col => ({ 
+                    column: col, 
+                    value: data[0][col],
+                    type: typeof data[0][col]
+                }))
+            );
+        }
+    }, [data, columns]);
 
     return (
         <div className={styles.general}>
@@ -62,24 +102,31 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                             </div>
                         ) : error ? (
                             <div className={styles.errorMessage}>Error: {error}</div>
-                        ) : data ? (
+                        ) : data && data.length > 0 ? (
                             <div className={styles.tableContainer}>
                                 <table className={styles.table}>
                                     <thead>
                                     <tr>
-                                        {columns.map((columns) => (
-                                            <th key={columns}>{columns}</th>
+                                        {columns.map((column, index) => (
+                                            <th key={`${column}-${index}`} title={column}>
+                                                {column}
+                                            </th>
                                         ))}
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {paginatedData.map((row, idx) => (
-                                        <tr key={idx}>
-                                            {headers.map((header) => (
-                                                <td key={header}>{row[header]}</td>
-                                            ))}
-                                        </tr>
-                                    ))}
+                                    {paginatedData.map((row, rowIdx) => {
+                                        console.log(`Row ${rowIdx} data:`, row);
+                                        return (
+                                            <tr key={rowIdx}>
+                                                {columns.map((column, colIdx) => (
+                                                    <td key={`${rowIdx}-${colIdx}`} title={String(row[column])}>
+                                                        {renderCellContent(row, column)}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        );
+                                    })}
                                     </tbody>
                                 </table>
                                 <div className={styles.pagination}>
@@ -117,7 +164,9 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                                 </div>
                             </div>
                         ) : (
-                            <div className={styles.noResults}>No results</div>
+                            <div className={styles.noResults}>
+                                {data === null ? 'Run a query to see results' : 'No results to display'}
+                            </div>
                         )}
                     </>
                 )}
@@ -130,7 +179,7 @@ const Results: React.FC<Props> = ({ data, columns, message, error, history, onSe
                                 <span>Executing query...</span>
                             </div>
                         ) : error ? (
-                            <div className={styles.errorMessage}>Error: {error}</div>
+                            <div className={styles.errorMessage}>{"Error: \n" + error}</div>
                         ) : message ? (
                             <div className={styles.infoMessage}>{message}</div>
                         ) : (

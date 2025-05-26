@@ -353,3 +353,96 @@
     animation: spin 1s linear infinite;
     margin-right: 0.5rem;
 }
+
+.url-form {
+    margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.url-input {
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #374151;
+    border-radius: 0.25rem;
+    padding: 0.4rem 0.75rem;
+    width: 100%;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    letter-spacing: 0.025em;
+    height: 2rem;
+    box-sizing: border-box;
+    line-height: 1;
+}
+
+.url-input:focus {
+    outline: none;
+    border-color: #4b5563;
+    background: #2d3748;
+}
+
+.url-input::placeholder {
+    color: #6b7280;
+}
+
+.button-group {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.btn-set-url, .btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #374151;
+    border-radius: 0.25rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+    background: #1e293b;
+    color: #e2e8f0;
+    letter-spacing: 0.025em;
+    height: 2rem;
+    flex: 1;
+}
+
+.btn-set-url:hover:not(:disabled),
+.btn-refresh:hover:not(:disabled) {
+    background: #2d3748;
+    border-color: #4b5563;
+}
+
+.btn-set-url:disabled,
+.btn-refresh:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #1e293b;
+}
+
+.btn-set-url svg,
+.btn-refresh svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-right: 0.375rem;
+    transition: transform 0.2s ease;
+}
+
+.btn-set-url:hover:not(:disabled) svg,
+.btn-refresh:hover:not(:disabled) svg {
+    transform: scale(1.1);
+}
+
+.btn-refresh.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

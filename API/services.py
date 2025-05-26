@@ -112,8 +112,11 @@ def cast(value, type):
         print("ERROR: tipo no soportado")
         return None
 
-def convert(query):
-    # print(json.dumps(query, indent=2))
+def execute_parsed_query(query):
+    '''
+    funcion principal del service.
+    Recibe un query parseado y ejecuta la accion correspondiente
+    '''
     if query["action"] == "create_table":
         return create_table(query)
     elif query["action"] == "insert":
@@ -130,8 +133,6 @@ def convert(query):
         return drop_index(query)
     elif query["action"] == "drop table":
         return drop_table(query)
-    elif query["action"] == "set":
-        return set_stmt(query)
     else:
         print("error: accion no soportada")
         raise HTTPException(status_code=404, detail="Action not supported")
@@ -140,11 +141,22 @@ def create_table(query):
     # crear tabla y añadir a metadata
     start = time.time_ns()
 
+    pk = query["data"].get("key", None)
+
+    if pk is None:
+        raise HTTPException(404, "No primary key provided.")
+    else:
+        if query["data"]["columns"][pk]["index"] is None:
+            query["data"]["columns"][pk]["index"] = "bptree"
+            query["data"]["columns"][pk]["params"] = [50]
+
     os.makedirs(os.path.dirname(table_filename(query["name"])), exist_ok=True)
     with open(table_filename(query["name"]), "w") as f:
         pass
+
     format = {}
     cols = query["data"]["columns"]
+    
     for key in cols.keys():
         format[key] = to_struct(cols[key]["type"])
 
@@ -179,11 +191,21 @@ def create_table(query):
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
+
+    print(json.dumps(query["data"], indent=4))
     create_meta(query["data"], query["name"])
     end = time.time_ns()
     t_ms = end - start
-    
+
+    lista = []
+    for key in query["data"]["columns"].keys():
+        column = query["data"]["columns"][key]
+        lista.append([key, column["type"], column["index"]])
+
+
     return {
+        "columns": ["column", "type", "index"],
+        "data": lista,
         "message": f"CREATED TABLE {query["name"]} in {t_ms/1e6} ms"
     }
 
@@ -282,7 +304,7 @@ def create_index(query):
         if data["columns"][key]["index"] is None:
             data["columns"][key]["index"] = query["index"]
         else:
-            raise HTTPException(404, f"Index already created on attribute {key}")
+            raise HTTPException(status_code=404, detail=f"Index already created on attribute {key}")
 
     keys = query["attr"]
     
@@ -297,6 +319,7 @@ def create_index(query):
                 table_filename(nombre_tabla))
 
     index = query["index"]
+    data["key"]["params"] = query["params"]
     if index == None:
         pass
     elif index == "hash":
@@ -583,18 +606,20 @@ def aux_select(query):
 def select(query):
     #cronometrar
     start = time.time_ns()
-    print(json.dumps(query, indent=4))
-
-    ans_set = aux_select(query)
-
-    # print(ans_set)
-
-    result = []
 
     data = select_meta(query["table"])
     format = {}
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
+
+    if not query["attr"] == "*":
+        for col in query["attr"]:
+            if col not in format:
+                raise HTTPException(status_code=404, detail=f"Column {col} does not exist in table {query['table']}")
+
+    ans_set = aux_select(query)
+
+    result = []
 
     for i in ans_set:
         heap = Heap(format,
@@ -614,6 +639,7 @@ def select(query):
 
     end = time.time_ns()
     t_ms = end - start
+    print("RESULT_DATA:",result)
     return {
         "columns": columns_names,
         "data": result,
