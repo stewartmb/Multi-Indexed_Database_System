@@ -72,7 +72,7 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
     const [tempUrl, setTempUrl] = useState('');
     const { queryUrl, setQueryUrl } = useQueryUrl();
 
-    const updateQueryUrl = (url) => {
+    const updateQueryUrl = (url: string) => {
         setQueryUrl(url);
     };
 
@@ -143,19 +143,26 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
                         display: inline-flex;
                         align-items: center;
                         justify-content: center;
-                        width: 2rem;
-                        height: 2rem;
-                        padding: 0.4rem;
-                        border: none;
-                        border-radius: 0.25rem;
-                        background: transparent;
+                        width: 32px;
+                        height: 32px;
+                        min-width: 32px;
+                        min-height: 32px;
+                        padding: 6px;
+                        border: 1px solid transparent;
+                        border-radius: 4px;
+                        background-color: transparent;
                         color: #94a3b8;
                         transition: all 0.15s ease;
+                        -webkit-appearance: none;
+                        appearance: none;
+                        position: relative;
+                        cursor: pointer;
                     }
                     
                     .editor-btn:hover:not(:disabled) {
-                        background: #2d3748;
+                        background-color: #2d3748;
                         color: #e2e8f0;
+                        border-color: #4a5568;
                     }
                     
                     .editor-btn:disabled {
@@ -164,11 +171,17 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
                     }
 
                     .editor-btn svg {
+                        width: 16px;
+                        height: 16px;
                         transition: transform 0.15s ease;
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
                     }
 
                     .editor-btn:hover:not(:disabled) svg {
-                        transform: scale(1.1);
+                        transform: translate(-50%, -50%) scale(1.1);
                     }
 
                     /* SQL Editor Styles */
