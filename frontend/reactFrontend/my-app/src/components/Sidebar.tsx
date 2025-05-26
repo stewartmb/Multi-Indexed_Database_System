@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import TableButton from './TableButton';
+import './Sidebar.css';
 
 // Definimos las interfaces
 interface Table {
@@ -14,9 +14,10 @@ interface Schema {
 
 const Sidebar = () => {
     const [openTables, setOpenTables] = useState<Record<string, boolean>>({});
-    const [structureData, setStructureData] = useState<Schema[]>([]);  // Inicializamos con un arreglo vacío
-    const [loading, setLoading] = useState<boolean>(false);  // Para gestionar el estado de carga
-    const [error, setError] = useState<string | null>(null);  // Para gestionar posibles errores
+    const [hoverTable, setHoverTable] = useState<string | null>(null);
+    const [structureData, setStructureData] = useState<Schema[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     const toggleTable = (tableName: string) => {
         setOpenTables((prev) => ({
@@ -27,84 +28,110 @@ const Sidebar = () => {
 
     // Función para refrescar el sidebar y obtener los datos desde el servidor
     const refreshSidebar = async () => {
-        setLoading(true);  // Iniciamos el estado de carga
-        setError(null);  // Limpiamos el error previo
-        setStructureData([]);  // Limpiamos los datos previos
+        setLoading(true);
+        setError(null);
+        setStructureData([]);
 
         try { // TODO: CAMBIAR A 8000 el puerto
-            const response = await fetch('http://127.0.0.1:8000/info');  // Hacemos la solicitud GET al backend
+            const response = await fetch('http://127.0.0.1:8084/info');
 
             if (!response.ok) {
                 throw new Error('Failed to fetch data');
             }
 
-            const data = await response.json();  // Parseamos la respuesta JSON
+            const data = await response.json();
 
             // Aseguramos que `data.info` esté presente y sea un arreglo
             if (Array.isArray(data.info)) {
-                setStructureData(data.info);  // Asignamos los datos si son válidos
+                setStructureData(data.info);
             } else {
                 setError('Datos no válidos recibidos del servidor');
             }
         } catch (err) {
-            setError('Error al obtener los datos');  // Capturamos el error si ocurre
+            setError('Error al obtener los datos');
         } finally {
-            setLoading(false);  // Terminamos el estado de carga
+            setLoading(false);
         }
     };
 
     return (
-        <div className="w-64 h-full bg-gray-900 text-gray-200 p-4 overflow-auto select-none sidebar-container">
-            <h2 className="text-xl font-bold mb-6 border-b border-gray-700 pb-2">PostgreSQL</h2>
+        <div className="sidebar-container">
+            <h2 className="sidebar-title">
+                PostgreSQL
+            </h2>
 
             {/* Botón de refresh */}
             <button
-                className="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded mb-4 w-full"
+                className={`refresh-button ${loading ? 'loading' : ''}`}
                 onClick={refreshSidebar}
-                disabled={loading}  // Deshabilitamos el botón mientras cargamos
+                disabled={loading}
             >
                 {loading ? 'Cargando...' : 'Refresh'}
             </button>
 
-            {error && <div className="text-red-500 mb-4">{error}</div>}  {/* Mostramos el error si ocurre */}
+            {/* Mensaje de error */}
+            {error && (
+                <div className="error-message">
+                    {error}
+                </div>
+            )}
 
-            {/* Verificamos si structureData está vacío */}
-            {structureData.length === 0 ? (
-                <div className="text-gray-500">No hay esquemas o tablas disponibles.</div>
+            {/* Contenido principal */}
+            {loading && structureData.length === 0 ? (
+                <div className="loading-state">
+                    <div className="loading-spinner"></div>
+                    Cargando esquemas...
+                </div>
+            ) : structureData.length === 0 ? (
+                <div className="empty-state">
+                    No hay esquemas o tablas disponibles.
+                </div>
             ) : (
-                <ul className="list-none">
+                <ul className="schema-list">
                     {structureData.map((db, idx) => (
-                        <li key={idx} className="mb-4">
-                            <div className="text-lg font-semibold">{db.name}</div>
-                            <ul className="mt-2 list-none">
+                        <li key={idx} className="schema-item">
+                            <div className="schema-name">
+                                {db.name}
+                            </div>
+                            <ul className="table-list">
                                 {db.tables.length === 0 ? (
-                                    <li className="text-sm text-gray-500">No hay tablas en este esquema</li>
+                                    <li className="no-tables-message">
+                                        No hay tablas en este esquema
+                                    </li>
                                 ) : (
                                     db.tables.map((table) => (
-                                        <li key={table.name} className="mb-1">
-                                            <TableButton
-                                                tableName={table.name}
-                                                isOpen={!!openTables[table.name]}
-                                                onToggle={() => toggleTable(table.name)}
-                                            />
-                                            {openTables[table.name] && (
-                                                <ul className="mt-1 ml-4 border-l border-gray-700 pl-3 text-sm text-gray-400 list-none">
-                                                    {table.indices.length > 0 ? (
-                                                        table.indices.map((idx) => (
-                                                            <li
-                                                                key={idx}
-                                                                className="py-0.5 hover:text-gray-200 cursor-pointer"
-                                                                title={`Índice: ${idx}`}
-                                                            >
-                                                                {idx}
-                                                            </li>
-                                                        ))
-                                                    ) : (
-                                                        <li className="py-0.5 italic text-gray-500">No indices</li>
-                                                    )}
-                                                </ul>
-                                            )}
-                                        </li>
+                                        <div className="table">
+                                            <div className="table-header"
+                                                onMouseEnter={() => setHoverTable(table.name)}
+                                                onMouseLeave={() => setHoverTable(null)}
+                                                onClick={() => toggleTable(table.name)}
+                                            >
+                                                {table.name}
+                                                <span> ({table.indices.length} atributos)</span>
+                                            </div>
+
+                                            <div className="table-indices">
+                                                {table.indices.length > 0 ? (
+                                                    table.indices.map((idx, index) => {
+                                                        const [firstWord, ...rest] = idx.split(' ');
+                                                        return (
+                                                            <div key={index}
+                                                                 className="flex justify-between py-1">
+                                                                <span className="text-white-600" style={
+                                                                    { fontSize : '0.9rem' }
+                                                                }>{firstWord}</span>
+                                                                <span
+                                                                    className="text-right text-gray-600" style={
+                                                                    { fontSize : '0.7rem', fontFamily : 'monospace'}
+                                                                }>{rest.join(' ')}</span>
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <div>No indices</div>
+                                                )}
+                                            </div>
+                                        </div>
                                     ))
                                 )}
                             </ul>

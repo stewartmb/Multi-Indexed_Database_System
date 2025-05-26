@@ -193,106 +193,6 @@ html, body, #root {
 
 
 
-/* Estilos generales del sidebar */
-.sidebar-container {
-  background-color: #1f2937; /* Fondo oscuro */
-  color: #e5e7eb; /* Texto claro */
-  padding: 1rem;
-  overflow-y: auto;
-  box-sizing: border-box;
-  position: relative;
-  font-family: "JetBrains Mono Thin", monospace;
-  font-weight: 800;
-}
-
-/* Estilo del título */
-.sidebar-container h2 {
-  font-size: 1.25rem;
-  font-weight: bold;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #4b5563;
-  padding-bottom: 0.5rem;
-}
-
-/* Estilos para el botón de refresh */
-.sidebar-container button {
-  background-color: #3b82f6;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: bold;
-  text-align: center;
-  transition: background-color 0.3s ease;
-}
-
-/* Hover del botón de refresh */
-.sidebar-container button:hover {
-  background-color: #2563eb;
-}
-
-/* Estilos para las tablas y los botones */
-.sidebar-container .text-lg {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.sidebar-container .list-none {
-  list-style: none;
-  padding-left: 0;
-}
-
-.sidebar-container .ml-4 {
-  margin-left: 1rem;
-}
-
-/* Estilos para las listas de índices */
-.sidebar-container .border-l {
-  border-left-width: 2px;
-  border-left-color: #4b5563;
-}
-
-.sidebar-container .text-sm {
-  font-size: 0.875rem;
-}
-
-.sidebar-container .hover\:text-gray-200:hover {
-  color: #e5e7eb;
-}
-
-.sidebar-container .cursor-pointer {
-  cursor: pointer;
-}
-
-/* Estilo del botón de tabla */
-.sidebar-container .text-gray-200 {
-  color: #e5e7eb;
-}
-
-.sidebar-container .py-0\.5 {
-  padding-top: 0.125rem;
-  padding-bottom: 0.125rem;
-}
-
-/* Estilos de las tablas con índices */
-.sidebar-container .italic {
-  font-style: italic;
-}
-
-.sidebar-container .text-gray-500 {
-  color: #6b7280;
-}
-
-
-.sidebar-container {
-  overflow-x: hidden;  /* Evita desplazamiento horizontal */
-  overflow-y: scroll;  /* Permite desplazamiento vertical */
-  -webkit-overflow-scrolling: touch;  /* Mejora la experiencia en dispositivos móviles */
-}
-
-/* Ocultar la barra de desplazamiento en WebKit (Chrome, Safari, etc.) */
-.sidebar-container::-webkit-scrollbar {
-  display: none;
-}
-
 
 
 
@@ -316,4 +216,30 @@ html, body, #root {
   scrollbar-width: none;  /* Firefox */
 }
 
+
+
+
+
+
+
+
+/* Estilos del área de edición SQL */
+.sidebar-container {
+  overflow-x: auto;            /* Evita desplazamiento horizontal */
+  overflow-y: auto;              /* Permite desplazamiento vertical si es necesario */
+  -webkit-overflow-scrolling: touch;  /* Scroll suave en iOS */
+  background-color: #282c34;     /* Fondo tipo VSCode */
+  height: 100%;                  /* Ocupa todo el alto disponible */
+  position: relative;            /* Requerido para hijos con height full */
+}
+
+/* Ocultar barra de scroll en navegadores basados en WebKit (Chrome, Safari, Edge Chromium) */
+.sidebar-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ocultar barra de scroll en Firefox */
+.sidebar-container {
+  scrollbar-width: none;  /* Firefox */
+}
 

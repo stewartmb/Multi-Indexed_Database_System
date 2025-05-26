@@ -44,13 +44,13 @@ export default function ResizableSidebarLayout({ Sidebar, MainContent }: Resizab
     return (
         <div ref={containerRef} className="flex h-screen w-screen select-none">
         {/* Sidebar */}
-        <div style={{ width: sidebarWidth }} className="h-full bg-gray-800 text-white overflow-auto">
-            {Sidebar}
-        </div>
+            <div style={{width: sidebarWidth}} className="sidebar-container">
+                {Sidebar}
+            </div>
 
-        {/* Barra divisora */}
-        <div
-            onMouseDown={onMouseDown}
+            {/* Barra divisora */}
+            <div
+                onMouseDown={onMouseDown}
             className="w-4 cursor-col-resize bg-gray-600 hover:bg-gray-800"
             title="Arrastra para redimensionar"
             style={{ userSelect: 'none', width: '10px', backgroundColor: '#41506f'}}
