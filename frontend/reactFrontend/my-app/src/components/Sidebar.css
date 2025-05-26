@@ -130,6 +130,8 @@
     margin: 0;
 }
 
+
+
 .schema-item {
     margin-bottom: 1.5rem;
     animation: fadeIn 0.5s ease-out;
@@ -147,12 +149,16 @@
 }
 
 .schema-name {
-    font-size: 1.125rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: #cbd5e0;
     margin-bottom: 0.75rem;
     padding: 0.5rem;
     border-left: 4px solid #2f6690;
+}
+
+.schema-name:hover {
+    background-color: #242424;
 }
 
 .table-list {

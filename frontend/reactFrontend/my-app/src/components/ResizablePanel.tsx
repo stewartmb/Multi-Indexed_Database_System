@@ -31,7 +31,7 @@ export default function ResizablePanel() {
         // TODO: CAMBIAR EL PUERTO A 8000
         try {
             console.log('Running query:', query);
-            const response = await fetch('http://127.0.0.1:8000/query', {
+            const response = await fetch('http://127.0.0.1:8084/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query }),

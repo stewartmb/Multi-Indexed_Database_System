@@ -21,12 +21,21 @@ const Sidebar = () => {
     const [structureData, setStructureData] = useState<Schema[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [openSchemas, setOpenSchemas] = useState([]);
 
     const toggleTable = (tableName: string) => {
         setOpenTables((prev) => ({
             ...prev,
             [tableName]: !prev[tableName],
         }));
+    };
+
+    const toggleSchema = (name) => {
+        setOpenSchemas((prev) =>
+            prev.includes(name)
+                ? prev.filter((n) => n !== name)
+                : [...prev, name]
+        );
     };
 
     // Función para refrescar el sidebar y obtener los datos desde el servidor
@@ -98,51 +107,67 @@ const Sidebar = () => {
                 <ul className="schema-list">
                     {structureData.map((db, idx) => (
                         <li key={idx} className="schema-item">
-                            <div className="schema-name">
+                            <div
+                                className="schema-name"
+                                onClick={() => toggleSchema(db.name)}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 {db.name}
                             </div>
-                            <ul className="table-list">
-                                {db.tables.length === 0 ? (
-                                    <li className="no-tables-message">
-                                        No hay tablas en este esquema
-                                    </li>
-                                ) : (
-                                    db.tables.map((table) => (
-                                        <div className="table">
-                                            <div className="table-header"
-                                                 onMouseEnter={() => setHoverTable(table.name)}
-                                                 onMouseLeave={() => setHoverTable(null)}
-                                                 onClick={() => toggleTable(table.name)}
-                                            >
-                                                {table.name}
-                                                <span> ({table.indices.length} atributos)</span>
-                                            </div>
 
-                                            <div className="table-indices">
-                                                {table.indices.length > 0 ? (
-                                                    table.indices.map((idx, index) => {
-                                                        const [firstWord, ...rest] = idx.split(' ');
-                                                        return (
-                                                            <div key={index}
-                                                                 className="flex justify-between py-1">
-                                                                <span className="text-white-600" style={
-                                                                    {fontSize: '0.9rem'}
-                                                                }>{firstWord}</span>
-                                                                <span
-                                                                    className="text-right text-gray-600" style={
-                                                                    {fontSize: '0.7rem', fontFamily: 'monospace'}
-                                                                }>{rest.join(' ')}</span>
-                                                            </div>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <div>No indices</div>
-                                                )}
+                            {openSchemas.includes(db.name) && (
+                                <ul className="table-list">
+                                    {db.tables.length === 0 ? (
+                                        <li className="no-tables-message">No hay tablas en este esquema</li>
+                                    ) : (
+                                        db.tables.map((table) => (
+                                            <div key={table.name} className="table">
+                                                <div
+                                                    className="table-header"
+                                                    onMouseEnter={() => setHoverTable(table.name)}
+                                                    onMouseLeave={() => setHoverTable(null)}
+                                                    onClick={() => toggleTable(table.name)}
+                                                >
+                                                    <img src={logoTabla} className="sidebar-logo"
+                                                    style={{width: "20px",
+                                                        opacity: "40%",
+                                                        marginRight: "5px",
+                                                        marginTop: "4px"
+                                                    }}/>
+                                                    <span style={{color : "#dddddd"}}>
+                                                            {table.name}</span>
+                                                    <span> ({table.indices.length} atributos)</span>
+                                                </div>
+
+                                                <div className="table-indices">
+                                                    {table.indices.length > 0 ? (
+                                                        table.indices.map((idx, index) => {
+                                                            const [firstWord, ...rest] = idx.split(' ');
+                                                            return (
+                                                                <div key={index} className="flex justify-between py-1">
+                                                                    <span style={{ fontSize: '0.9rem' }}>{firstWord}</span>
+                                                                    <span
+                                                                        className="text-right text-gray-600"
+                                                                        style={{
+                                                                            fontSize: '0.7rem',
+                                                                            fontFamily: 'monospace',
+                                                                        }}
+                                                                    >
+                      {rest.join(' ')}
+                    </span>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <div>No indices</div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))
-                                )}
-                            </ul>
+                                        ))
+                                    )}
+                                </ul>
+                            )}
+
                         </li>
                     ))}
                 </ul>
