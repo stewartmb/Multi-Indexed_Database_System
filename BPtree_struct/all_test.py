@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-import Indice_BPTree_file as archivo
+import Independ_BPTree_file as archivo
 import random
 import sys
 import csv
@@ -37,7 +37,7 @@ print("csv_path", csv_path)
 name_key = name_keys[random_index]
 print("name_key", name_key)
 
-ma = 15 # orden del árbol B+
+ma = 1000 # orden del árbol B+
 
 N = 100 # cada cuántos registros se imprime una barra de progreso
 
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # Prueba de busqueda de un registro específico
     notest_onesearch(KEYS[0])
 
-    notest_eliminar()
+    # notest_eliminar()
  
 
 
