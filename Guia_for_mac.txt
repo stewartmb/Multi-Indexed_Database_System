@@ -1,0 +1,10 @@
+terminal python:
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn API.rest_controller:app --reload
+
+terminal frontend:
+cd frontend/reactFrontend/my-app 
+npm install
+npm run dev
