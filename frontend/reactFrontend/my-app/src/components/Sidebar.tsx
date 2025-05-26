@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Sidebar.css';
+import logoElefante from '../assets/elefante1.png';
 
 // Definimos las interfaces
 interface Table {
@@ -57,7 +58,10 @@ const Sidebar = () => {
     return (
         <div className="sidebar-container">
             <h2 className="sidebar-title">
-                PostgreSQL
+                <img src={logoElefante} className="sidebar-logo"/>
+                <a href="#" className="db-link">
+                    <span className="postgre">Postgre</span><span className="sql">SQL</span>
+                </a>
             </h2>
 
             {/* Botón de refresh */}
@@ -102,9 +106,9 @@ const Sidebar = () => {
                                     db.tables.map((table) => (
                                         <div className="table">
                                             <div className="table-header"
-                                                onMouseEnter={() => setHoverTable(table.name)}
-                                                onMouseLeave={() => setHoverTable(null)}
-                                                onClick={() => toggleTable(table.name)}
+                                                 onMouseEnter={() => setHoverTable(table.name)}
+                                                 onMouseLeave={() => setHoverTable(null)}
+                                                 onClick={() => toggleTable(table.name)}
                                             >
                                                 {table.name}
                                                 <span> ({table.indices.length} atributos)</span>
@@ -118,11 +122,11 @@ const Sidebar = () => {
                                                             <div key={index}
                                                                  className="flex justify-between py-1">
                                                                 <span className="text-white-600" style={
-                                                                    { fontSize : '0.9rem' }
+                                                                    {fontSize: '0.9rem'}
                                                                 }>{firstWord}</span>
                                                                 <span
                                                                     className="text-right text-gray-600" style={
-                                                                    { fontSize : '0.7rem', fontFamily : 'monospace'}
+                                                                    {fontSize: '0.7rem', fontFamily: 'monospace'}
                                                                 }>{rest.join(' ')}</span>
                                                             </div>
                                                         );
