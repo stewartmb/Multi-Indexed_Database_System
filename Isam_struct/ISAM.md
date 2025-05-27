@@ -42,7 +42,11 @@ Para realizar la construcción, debemos tener los datos ordenados (Se puede real
 
 En el siguiente link, se puede apreciar como se hace la construcción: https://youtu.be/-GyqvYHVEWo?si=FTJ_mkv8zXiCJFnH
 
-
+## Observación importante
+Para la construcción de la parte estática, se optó por realizarlo de la siguiente manera:
+-  Dividimos el archivo original en varios bloques ordenados y los guardamos en archivos temporales separados (index_temp).
+-  Una vez cada uno de estos bloques estan internamente ordenados, los mezclamos usando un heap.
+-  Ya teniendo todo el archivo de indices ordenado, podemos construirlo siguiendo el bottom-up approach.
 
 ## Estructura del índice
 
