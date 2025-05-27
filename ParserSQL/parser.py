@@ -42,6 +42,7 @@ condition: NAME OP VALUE
          | attr_list OP  "[" value_list "]"
          | attr_list BETWEEN  "[" value_list "]" "and" "[" value_list "]"
          | attr_list "in"i "(" value_list ")" CLOSEST VALUE
+         | attr_list "in"i "(" value_list ")" RADIUS VALUE
 
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
@@ -50,6 +51,7 @@ INDEX: "rtree"i | "bptree"i | "seq"i | "isam"i | "hash"i | "brin"i
 KEY: "primary key"i
 BETWEEN: "between"i
 CLOSEST: "closest"i
+RADIUS: "radius"i
 ALL: "*"
 
 TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "bool"i | "timestamp"i
@@ -169,6 +171,8 @@ class SQLTransformer(Transformer):
     def condition(self, items):
         if (str(items[2]) == "closest"):
             return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}
+        if (str(items[2]) == "radius"):
+            return {"field": items[0], "range_search": False, "point": items[1], "radius": items[3]}
         if str(items[1]) == "between":
                 return {"field": items[0], "range_search": True, "op": "between", "range_start": items[2], "range_end": items[3]}
         elif str(items[1]) == "==":
@@ -257,6 +261,18 @@ class SQLTransformer(Transformer):
 
     def VALUE(self, tok):
         return tok.value.strip('"')  # remove quotes if present
+
+    def RADIUS(self, tok):
+        return tok.value.lower()
+
+    def CLOSEST(self, tok):
+        return tok.value.lower()
+
+    def BETWEEN(self, tok):
+        return tok.value.lower()
+
+    def KEY(self, tok):
+        return tok.value.lower()
 
     def ALL(self, tok):
         return str(tok)
