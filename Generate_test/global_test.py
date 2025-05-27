@@ -61,13 +61,9 @@ def destroy_archivos():
             os.remove(file)
             print (f"Archivo {file} eliminado.")
 
-# 50k
-# (32 ,20)
-# 100k
-# (32 ,20)
 
 class MEGA_SUPER_HIPER_MASTER_INDICE:
-    def __init__(self, name_key, table_format , x , num = num):
+    def __init__(self, name_key, table_format , x , num = num , test_global = False):
         self.name_key = name_key
         self.table_format = table_format
         self.x = x
@@ -77,7 +73,10 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
         self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[self.x]}.bin', name_data_file = data_file , max_num_child = 500)
         self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[self.x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[self.x]}.bin',data_file_name =data_file, global_depth = 10 ,max_records_per_bucket = 30)
         self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[self.x]}.bin',name_data_file = data_file , num_aux =200)
-        self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[self.x]}.bin', name_data_file = self.data_file)
+        if test_global:
+            self.isam = None
+        else:
+            self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[self.x]}.bin', name_data_file = self.data_file)
         self.brin = BRIN.BRIN(table_format, name_key , name_index_file = f'Generate_test/brin_1_index{num[self.x]}.bin', name_page_file =  f'Generate_test/brin_2_index{num[self.x]}.bin',name_data_file = data_file , max_num_pages = 20, max_num_keys = 20)
         self.rtree = RTREE.RTreeFile(table_format = table_format, p_key = name_key ,keys = ["latitude", "longitude"] , data_filename = data_file, index_filename = f'Generate_test/rtree_1_index{num[self.x]}.bin')
 
@@ -212,13 +211,6 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             return end_time - start_time
 
     def test_search(self, total_path ,Indices_struct, csv_time_search ,):
-        # se lee los keys del archivo CSV
-        # keys_for_search = pd.read_csv(total_path, usecols=[self.name_key]).iloc[:, 0].tolist()
-        # list_latitude_longitude = pd.read_csv(total_path, usecols=["latitude", "longitude"]).values.tolist()
-        # keys_for_search = [str(key) for key in keys_for_search]
-        # # solo 100
-        # keys_for_search = keys_for_search[:100]
-        # list_latitude_longitude = list_latitude_longitude[:100]
         df = pd.read_csv(total_path)
         random_sample = df.sample(n=100, random_state=42)  # random_state para reproducibilidad
         
@@ -247,13 +239,65 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
         else:
             df.to_csv(csv_time_search, index=False)
 
-    
-for x in range(len(num)):
-    print (f"Generando datos de prueba para {num[x]} registros...")
-    EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
-    csv_time_search = f'csv_time_search{num[x]}.csv'
-    # EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
-    EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
+    def insert(self, key , index_type ,key_rtree , pos):
+        """
+        Realiza una búsqueda de los keys especificados y guarda los tiempos en un CSV.
+        """
+        if  index_type == "heap":
+            pos = self.heap._read_header()
+            KEYS.append(pos)
+            start_time = time.time()
+            self.heap.insert(key)
+            end_time = time.time()
+            return end_time - start_time 
+        elif index_type == "bptree":
+            start_time = time.time()
+            self.bptree.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "hash":
+            start_time = time.time()
+            record = self.heap.read(i)
+            self.hash.insert(record = record , data_position = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "sequential":
+            start_time = time.time()
+            self.sequential.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "isam":
+            start_time = time.time()
+            self.isam.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "brin":
+            start_time = time.time()
+            self.brin.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "rtree":
+            start_time = time.time()
+            record = self.heap.read(i)
+            self.rtree.insert(record = record, record_pos = i)
+            end_time = time.time()
+            return end_time - start_time
+
+
+
+
+def Test_global():
+    for x in range(len(num)):
+        csv_times = f'csv_times{num[x]}.csv'
+        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct, Test_global = True)
+
+def Test_search():
+    for x in range(len(num)):
+        print (f"Generando datos de prueba para {num[x]} registros...")
+        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+        csv_time_search = f'csv_time_search{num[x]}.csv'
+        EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
 
 # exacta

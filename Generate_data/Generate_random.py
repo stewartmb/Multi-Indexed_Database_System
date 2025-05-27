@@ -60,7 +60,12 @@ def generate_random_data(output_file, num_records , start_date):
 NUM_RECORDS = [10000, 50000, 100000]
 START_DATE = datetime(2020, 1, 1)
 
-for num in NUM_RECORDS:
-    output_file = f'Data_test/test_data_full{num}.csv'
-    generate_random_data(output_file, num, START_DATE)
-    print(f"Archivo {output_file} generado con {num} registros.")
+# for num in NUM_RECORDS:
+#     output_file = f'Data_test/test_data_full{num}.csv'
+#     generate_random_data(output_file, num, START_DATE)
+#     print(f"Archivo {output_file} generado con {num} registros.")
+
+num = 1000
+output_file = f'Data_test/test_data_full{num}.csv'
+generate_random_data(output_file, num, START_DATE)
+print(f"Archivo {output_file} generado con {num} registros.")
