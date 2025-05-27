@@ -424,4 +424,3 @@ def Test_insert():
         csv_time_search = f'csv_time_insert{num[x]}.csv'
         EL_indice.test_insert(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
-Test_insert()
