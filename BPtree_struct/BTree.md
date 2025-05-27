@@ -12,6 +12,11 @@ El árbol B+ es una variación de la estructura de datos del árbol B+. En un á
 - **Compatible con caché**: los árboles B+ están diseñados para ser compatibles con caché, lo que significa que pueden aprovechar los mecanismos de almacenamiento en caché en las arquitecturas informáticas modernas para mejorar el rendimiento.
 - **Orientado a disco**: los árboles B+ se utilizan a menudo para sistemas de almacenamiento basados ​​en disco porque son eficientes para almacenar y recuperar datos del disco.
 
+## Observación importante
+En esta implementación de B+ Tree, se ha decidido que las operaciones que se han hecho no serán recursivas, sino que serán de manera "iterativa".
+Para lograr esto, cada IndexPage tendrá un puntero a su padre, lo que nos da un acceso directo al padre sin necesidad de tener que realizar una recursión.
+
+
 ## Estructura del índice
 
 El índice está estructurado de la siguiente manera:
@@ -46,6 +51,7 @@ No contienen datos reales
 - childrens: Punteros a registros en el archivo de datos
 
 Enlazados secuencialmente (último childrens apunta al siguiente nodo hoja)
+
 
 ## Algorimtmos
 A continuación, se presenta los algoritmos de las operaciones:
