@@ -39,7 +39,6 @@ csv_time_search = f'csv_time_search{num[x]}.csv'
 table_format = {"timestamp": "24s", "random_int": "i", "name": "20s", "email": "50s", "date": "10s", "price": "d", "latitude": "d", "longitude": "d",  "is_active": "?", "category": "20s"}
 
 Indices_struct = ["heap" , "bptree", "hash", "sequential", "isam", "brin" ,"rtree"]
-
 def destroy_archivos():
     """
     Elimina los archivos de datos y de índices generados.
@@ -60,7 +59,6 @@ def destroy_archivos():
         if os.path.exists(file):
             os.remove(file)
             print (f"Archivo {file} eliminado.")
-
 
 class MEGA_SUPER_HIPER_MASTER_INDICE:
     def __init__(self, name_key, table_format , x , num = num , test_global = False):
@@ -159,7 +157,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             destroy_archivos() 
             diccionario_tiempos = {}
             for struct in Indices_struct:
-                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x , test_global = True)
                 time = temp.generate_index(struct, csv_path=path)
                 diccionario_tiempos[struct] = time
                 print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
@@ -289,8 +287,8 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
 def Test_global():
     for x in range(len(num)):
         csv_times = f'csv_times{num[x]}.csv'
-        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
-        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct, Test_global = True)
+        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x ,test_global = True)
+        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
 
 def Test_search():
     for x in range(len(num)):
@@ -299,6 +297,10 @@ def Test_search():
         csv_time_search = f'csv_time_search{num[x]}.csv'
         EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
+x=0 
+csv_times = f'csv_times{num[x]}.csv'
+EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x ,test_global = True)
+EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
 
 # exacta
 # por rango ( 2 points)
