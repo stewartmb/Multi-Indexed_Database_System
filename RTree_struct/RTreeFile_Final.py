@@ -551,6 +551,7 @@ class RTreeFile:
         with open(self.data_filename, "ab") as f:
             pos = f.tell()
             f.write(self.RT.to_bytes(record))
+            contador.contar_write()
             return int(pos/self.RT.size)
 
     def write_header(self, root, size, bf, mf, dimf, point_f, mbr_f, rect_f):
@@ -572,6 +573,7 @@ class RTreeFile:
                     rect_f.encode(),
                 )
             )
+            contador.contar_write()
 
     def get_header(self):
         """
@@ -583,6 +585,7 @@ class RTreeFile:
             root, size, bf, mf, df, point_f, mbr_f, rect_f = struct.unpack(
                 header_format, f.read(header_size)
             )
+            contador.contar_read()
             return (
                 root,
                 size,
@@ -605,6 +608,7 @@ class RTreeFile:
             total_size = struct.calcsize(rect_format) + (b + 1) * point_size + mbr_size
             f.seek(header_size + pos * total_size)
             f.write(rec.to_binary())
+            contador.contar_write()
 
     def get_rec_at(self, pos):
         """
@@ -617,6 +621,7 @@ class RTreeFile:
             mbr_size = struct.calcsize(mbr_format)
             total_size = rect_format_size + (b + 1) * point_size + mbr_size
             f.seek(header_size + pos * total_size)
+            contador.contar_read()
             return self.Rectangle.from_binary(self, f.read(total_size))
     
     def get_key_at(self, pos):
@@ -625,6 +630,7 @@ class RTreeFile:
         """
         with open(self.data_filename, "r+b") as f:
             f.seek(pos * self.RT.size + 4)
+            contador.contar_read()
             record = self.RT.from_bytes(f.read(self.RT.size))
             return self.RT.get_key(record)
 

@@ -250,12 +250,15 @@ class BRIN:
         if not os.path.exists(self.data_file):
             with open(self.data_file, 'wb') as f:
                 f.write(struct.pack('i', 0)) 
+                contador.contar_write()
         if not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
                 f.write(struct.pack('i?', 0, True))
+                contador.contar_write()
         if not os.path.exists(self.page_file):
             with open(self.page_file, 'wb') as f:
                 f.write(struct.pack('i', 0))
+                contador.contar_write()
 
     ### MANEJO DE ENCABEZADOS ###
 
@@ -266,6 +269,7 @@ class BRIN:
         """
         with open(self.page_file, 'rb') as f:
             header = f.read(TAM_ENCABEZAD_PAGE)
+            contador.contar_read()
             if not header:
                 return 0
             return struct.unpack('i', header)[0]
@@ -277,6 +281,7 @@ class BRIN:
         with open(self.page_file, 'r+b') as f:
             f.seek(0)
             f.write(struct.pack('i', num_pages))
+            contador.contar_write()
     
     ## Encabezado de archivo para indice BRIN ##
     def _read_header_index(self):
@@ -285,6 +290,7 @@ class BRIN:
         """
         with open(self.index_file, 'rb') as f:
             header = f.read(TAM_ENCABEZAD_BRIN)
+            contador.contar_read()
             num_brins, is_order = struct.unpack('i?', header)
             return num_brins, is_order
 
@@ -295,6 +301,7 @@ class BRIN:
         with open(self.index_file, 'r+b') as f:
             f.seek(0)
             f.write(struct.pack('i?', num_indexes , is_order))
+            contador.contar_write()
     
     def _update_order(self, is_order):
         """
@@ -312,6 +319,7 @@ class BRIN:
         with open(self.page_file, 'rb') as f:
             f.seek(TAM_ENCABEZAD_PAGE + page_number * self.tam_page)
             data = f.read(self.tam_page)
+            contador.contar_read()
             return Index_Page.from_bytes(data, self.M, self.format_key, self.format_page)
         
     def _write_page(self, page_number, page : Index_Page):
@@ -321,6 +329,7 @@ class BRIN:
         with open(self.page_file, 'r+b') as f:
             f.seek(TAM_ENCABEZAD_PAGE + page_number * self.tam_page)
             f.write(page.to_bytes(self.format_key, self.format_page))
+            contador.contar_write()
     
     def _add_page(self, page):
         """
@@ -339,6 +348,7 @@ class BRIN:
         with open(self.index_file, 'rb') as f:
             f.seek(TAM_ENCABEZAD_BRIN + index_number * self.tam_index)
             data = f.read(self.tam_index)
+            contador.contar_read()
             return Indice_Brin.from_bytes(data, self.K, self.format_key, self.format_index)
         
     def _write_brin(self, index_number, brin : Indice_Brin):
@@ -348,6 +358,7 @@ class BRIN:
         with open(self.index_file, 'r+b') as f:
             f.seek(TAM_ENCABEZAD_BRIN + index_number * self.tam_index)
             f.write(brin.to_bytes(self.format_key, self.format_index))
+            contador.contar_write()
     
     def _add_brin(self , key , pos_new_record):
         """
