@@ -713,6 +713,88 @@ class BRIN:
                                 if key1 <= page.keys[j] <= key2:
                                     results.append(page.childrens[j])
         return results
+    
+
+    def delete(self, key):
+        """
+        Elimina un registro específico del índice BRIN.
+        """
+        results = self.search(key)
+        if not results:
+            return "No se encontró el registro con la clave especificada."
+
+        num_brins, is_order = self._read_header_index()
+        results = []
+        if num_brins == 0:
+            return results
+        
+        # Buscar brins que contengan el rango del key
+        list_pos_brin = []
+        if is_order:
+            # Si el índice BRIN está ordenado, realiza una búsqueda binaria
+            pos_brin = self.binary_search_all(key)
+            for i in range(pos_brin, num_brins):
+                brin = self._read_brin(i)
+                if brin.range_values[0] <= key <= brin.range_values[1]:
+                    list_pos_brin.append(i)
+                elif brin.range_values[0] > key:
+                    break
+        else:
+            # Si el índice BRIN no está ordenado, busca secuencialmente
+            for i in range(num_brins):
+                brin = self._read_brin(i)
+                if brin.range_values[0] <= key <= brin.range_values[1]:
+                    list_pos_brin.append(i)
+        
+
+        # Buscar en las páginas de los brins encontrados 
+        for pos_brin in list_pos_brin:
+            brin = self._read_brin(pos_brin)
+            pos_page = self.binary_find_index(brin, key)
+            # Si el brin está ordenado, busca en la página correspondiente
+            if brin.is_order:
+                for i in range(pos_page, brin.page_count):
+                    pos_page = brin.pages[i]
+                    page = self._read_page(pos_page)
+                    if page.range_values[0] <= key <= page.range_values[1]:
+                        
+                        # Si la página contiene el key, busca en las claves
+                        if page.is_order:
+                            # Si la página está ordenada, busca el índice del key
+                            index = page.binary_find_index(key)
+                            for j in range(index, page.key_count):
+                                if page.keys[j] == key:
+                                    page.keys[j] =  float('nan')  # Marca la clave como eliminada
+                                elif page.keys[j] > key:
+                                    break
+                        else:
+                            # Si la página no está ordenada, busca secuencialmente
+                            for j in range(page.key_count):
+                                if page.keys[j] == key:
+                                    page.keys[j] =  float('nan')  # Marca la clave como eliminada
+
+                    elif page.range_values[0] > key:
+                        break
+                            
+            else:
+                # Si el brin no está ordenado, busca en todas las páginas
+                for i in range(brin.page_count):
+                    pos_page = brin.pages[i]
+                    page = self._read_page(pos_page)
+                    if page.range_values[0] <= key <= page.range_values[1]:
+                        if page.is_order:
+                            # Si la página está ordenada, busca el índice del key
+                            index = page.binary_find_index(key)
+                            for j in range(index, page.key_count):
+                                if page.keys[j] == key:
+                                    page.keys[j] =  float('nan')  # Marca la clave como eliminada
+                                elif page.keys[j] > key:
+                                    break
+                        else:
+                            # Si la página no está ordenada, busca secuencialmente
+                            for j in range(page.key_count):
+                                if page.keys[j] == key:
+                                    page.keys[j] =  float('nan')  # Marca la clave como eliminada
 
 
 
