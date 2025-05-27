@@ -68,7 +68,7 @@ Los experimentos se realizaron un total de 10 veces. Se sacó el tiempo máximo 
 
 ![Grafico1](100k_creacion.png)
 
-**Análisis de los resultados**
+**Análisis de los resultados:**
 
 bla bla bla
 
@@ -98,7 +98,7 @@ Estadísticas de búsqueda para 10k datos:
 
 **Gráfico 1:**
 
-
+![Grafico1](10k_search.png)
 
 
 ### Para 50k datos
@@ -118,6 +118,8 @@ Estadísticas de búsqueda para 50k datos:
 
 **Gráfico 2:**
 
+![Grafico1](50k_search.png)
+
 ### Para 100k datos
 
 **Cuadro 3:**
@@ -135,3 +137,8 @@ Estadísticas de búsqueda para 100k datos:
 
 
 **Gráfico 3:**
+
+![Grafico1](100k_search.png)
+
+
+**Análisis de los resultados:**
