@@ -58,7 +58,7 @@ EL index file se compone de dos partes:
 - **Header**: Contiene la metadata.
    - Número de páginas de datos (nivel hoja)
    - Número de páginas de overflow
-   - Orden del árbol (M)
+   - Orden del árbol (M) Nota: Para calcular el M indicado para cualquier dataset, se ha implementado una función en el código.
    - Posición de la página raíz
      
 - **Index Page**:
@@ -83,6 +83,8 @@ A continucación, se presentará los algoritmos para las operaciones dadas:
 ### Inserción
 
 Algoritmo de la inserción:
+
+Primero, se valida que se proporcione solo el registro a insertar o su posición en el Heap, luego obtiene su clave. Busca la página hoja adecuada en el índice ISAM mediante una función de búsqueda (buscar_hoja). Si la página hoja principal tiene espacio (key_count < M-1), inserta allí la nueva entrada; si está llena, busca la última página de overflow asociada a esa hoja. Si hay espacio en la página de overflow, inserta allí; si no, se crea una nueva página de overflow, enlazándola a la cadena existente.
 
 ```
 FUNCIÓN add(record, pos_new_record):
@@ -161,6 +163,8 @@ FUNCIÓN encontrar_ultima_overflow(pagina_inicial):
 ### Búsqueda 
 
 Algoritmo de búsqueda:
+ 
+Se comienza obteniendo la raíz del índice y descendiendo a través de los nodos internos (mediante buscar_hoja) hasta llegar a la página hoja que debería contener la clave buscada. Una vez en la hoja, se recorre sus entradas ordenadas, agregando coincidencias exactas (key == clave_en_pagina) a los resultados y deteniéndose si encuentra una clave mayor (optimización por orden). Si la clave no está en la hoja principal, se busca en las páginas de overflow asociadas (mediante buscar_en_overflow), donde verifica cada entrada hasta superar el rango válido. 
 
 ```
 FUNCIÓN search(key):
@@ -269,6 +273,8 @@ FUNCIÓN buscar_en_overflow(pagina_hoja, key1, key2):
 
 Algoritmo de búsqueda por rango:
 
+Primero, se valida y ajusta los límites del rango (key1, key2) si es necesario. Luego, se localiza la hoja inicial que podría contener el límite inferior del rango (key1) mediante la función buscar_hoja, que desciende por el árbol de índice desde la raíz. Una vez ubicada la hoja inicial, se recorre secuencialmente las páginas de hojas y sus respectivas páginas de overflow, examinando cada entrada para identificar aquellas claves que caigan dentro del rango especificado. A medida que avanza, se agrega los registros válidos (no eliminados) a los resultados y detiene la búsqueda cuando encuentra una clave mayor al límite superior (key2) o cuando ha examinado todas las páginas relevantes. 
+
 ```
 FUNCIÓN search_range(key1, key2):
     // Validar rango
@@ -348,6 +354,8 @@ FUNCIÓN delete(key):
 Funciones auxiliares:
 
 Algoritmo para eliminar un registro en una hoja:
+
+Se comienza localizando la hoja donde debería estar la clave mediante buscar_hoja, verificando previamente su existencia. Para cada hoja relevante, se procesa tanto la página principal como su cadena de overflow asociada: se reconstruye cada página excluyendo las entradas con la clave objetivo, conservando el orden y los punteros restantes. Cuando una página de overflow queda vacía tras la eliminación, se elimina de la cadena actualizando el puntero next de la página anterior. El proceso se detiene al encontrar una clave mayor que la buscada (optimización por orden) o al recorrer todas las hojas potenciales.
 
 ```
 FUNCIÓN eliminar_en_hoja(pos_hoja, key, detener):
