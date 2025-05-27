@@ -509,7 +509,6 @@ class ISAM():
         """
         size = self.HEAP._read_header()
         format_temp = f'{self.format_key}i'  # Formato (key, offset)
-        print(format_temp)
         record_size = struct.calcsize(format_temp)
         order_file = 'temp.bin'
         # 1. Escribir datos (key, offset) en temp.bin
@@ -521,14 +520,11 @@ class ISAM():
                     offset = i
                     record_temp = Index_temp(key, offset)
                     f.write(record_temp.to_bytes(self.format_key))
-                    print(key, offset, self.HEAP.read(offset))
-        print("temp.bin creado")
 
         # 2. Ordenar usando merge sort externo
         self.external_merge_sort_multi_temp(order_file, record_size, format_temp)
 
         # 3. Verificación
-        print("Leyendo temp.bin ordenado:")
         file_size = os.path.getsize(order_file)
         total_records = file_size // record_size
         HOLA = []
@@ -539,12 +535,10 @@ class ISAM():
                 key = record_temp.key
                 offset = record_temp.pos
                 HOLA.append(key)
-                print(key, offset, self.HEAP.read(offset))
-        print (HOLA)
+
         # 3. Calcula M y lista de posiciones
         size = os.path.getsize(order_file)
         num_records = size // record_size
-        print(f"Total de registros: {num_records}")
         self.M ,posiciones= Calculate_M(num_records)
         self.indexp_format = get_index_format(self.M, self.format_key)
         self.tam_indexp = struct.calcsize(self.indexp_format)
@@ -553,13 +547,11 @@ class ISAM():
         num_pages, num_over , _ ,  pos_root = self._read_header()
         self._write_header(num_pages, num_over, self.M,pos_root)  # Inicializa el encabezado del índice
 
-        print(f"Valor de M calculado: {self.M}")
         lista = posiciones.copy()
-        print("Lista de posiciones:", lista)
         # 4. Generar paginas (HOJAS) de data ordenada
-        print(f"Generando paginas de indice con M={self.M} ")
-        print()
-        print("=== Generando hojas ===")
+        # print(f"Generando paginas de indice con M={self.M} ")
+        # print()
+        # print("=== Generando hojas ===")
         with open(order_file, 'rb') as f:
             limit = lista.pop(0)
             limit = lista.pop(0) 
@@ -585,14 +577,13 @@ class ISAM():
                 page.childrens[page.key_count] = pos
                 page.key_count += 1
 
-        print("Leyendo index_file generado:")
         num_pages_data, num_over , max_num_child ,  pos_root = self._read_header()
         for i in range(num_pages_data):
             page = self._read_index_page(i)
-            print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+            # print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
         
         # 5. Generar indices de primer nivel 
-        print("=== Generando indices de primer nivel ===")
+        # print("=== Generando indices de primer nivel ===")
         lista = posiciones.copy()
         with open(order_file, 'rb') as f:
             i = 1
@@ -641,20 +632,19 @@ class ISAM():
         num_pages, num_over ,_ , _= self._read_header()
         for i in range(num_pages_data, num_pages-1):
             page = self._read_index_page(i)
-            print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+        #     print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
         
-        print("=== Generando root ===")
+        # print("=== Generando root ===")
         page = self._read_index_page(num_pages-1)
-        print(f"Página {num_pages-1}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+        # print(f"Página {num_pages-1}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
 
-        print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
-        print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")
-        print ("leyendo indice de primer nivel")
+        # print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
+        # print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")
+        # print ("leyendo indice de primer nivel")
 
         # eliminar archivo temporal
         if os.path.exists(order_file):
             os.remove(order_file)
-            print(f"Archivo temporal {order_file} eliminado.")
 
     ### FUNCIONES DEL ISAM ###
 
@@ -752,9 +742,6 @@ class ISAM():
                         break
                 else:
                     break
-
-            for i in results:
-                print (self.HEAP.read(i))
             return results        
         
     ## INSERTION ##
@@ -852,7 +839,6 @@ class ISAM():
             #conseguir la posicion de todos los nodos de overflow
             page_replace = Index_Page(leaf=True, M=self.M)
             for i in range(page_leaf.key_count):
-                print (page_leaf.keys , key , page_leaf.key_count)
                 if page_leaf.keys[i] > key:
                     detener = True
                 elif page_leaf.keys[i] != key:
@@ -866,7 +852,6 @@ class ISAM():
             while page_leaf.next != -1:
                 page_leaf = self._read_index_page(page_leaf.next)
                 overflow_pos.append(page_leaf.next)
-            print ("lista de overflows",overflow_pos)
             prev_pos = first_pos_leaf
             for j in range (len(overflow_pos)):
                 if overflow_pos[j] == -1:
@@ -874,7 +859,6 @@ class ISAM():
                 page_overflow = self._read_index_page(overflow_pos[j])
                 overflow_replace = Index_Page(leaf=True, M=self.M)
                 for i in range(page_overflow.key_count):
-                    print (page_overflow.keys , key , page_overflow.key_count)
                     if page_overflow.keys[i] > key:
                         detener = True
                     elif page_overflow.keys[i] != key:
