@@ -34,7 +34,7 @@ def generate_random_data(output_file, num_records , start_date):
             date = (start_date + timedelta(days=random.randint(0, 1095))).date()  # 3 años de rango
             
             record = {
-                'timestamp': (start_date + timedelta(minutes=i)).isoformat(),
+                'timestamp': (start_date + timedelta(seconds=i)).isoformat(),
                 'random_int': random.randint(1, 100000),
                 'name': name,
                 'email': email,

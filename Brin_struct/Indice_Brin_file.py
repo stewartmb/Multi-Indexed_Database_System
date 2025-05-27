@@ -451,7 +451,6 @@ class BRIN:
             pos_page = brin.pages[mid]
             page = self._read_page(pos_page)  # Leer la página correspondiente
             min_value = page.range_values[0]
-            print (mid)
             if min_value == key:
                 first_occurrence = mid
                 high = mid - 1

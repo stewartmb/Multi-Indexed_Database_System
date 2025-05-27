@@ -172,7 +172,7 @@ class Index_temp:
         if key_to_pack is None:
             if format_key in ('i', 'q', 'Q'):
                 key_to_pack = -2147483648
-            elif format_key == 'f':
+            elif format_key in ('f', 'd'):
                 key_to_pack = float('nan')
             elif format_key in ('b', '?'):
                 key_to_pack = -128
