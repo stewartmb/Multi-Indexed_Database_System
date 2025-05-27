@@ -1,0 +1,235 @@
+
+import pandas as pd
+import os
+import sys
+import os
+
+# Importar las estructuras de índices
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+from Utils.Registro import *
+import BPtree_struct.Indice_BPTree_file as BPTREE
+import Hash_struct.Hash as HASH
+import Sequential_Struct.Indice_Sequential_file as SEQUENTIAL
+import Isam_struct.Indice_Isam_file as ISAM 
+import Brin_struct.Indice_Brin_file as BRIN
+import RTree_struct.RTreeFile_Final as RTREE
+import Heap_struct.Heap as HEAP
+import time
+import Utils.contador as contador
+N = 1000
+import csv
+KEYS = []
+# Lista fija de códigos a usar
+# generar todos los códigos aleatorios entre 1 y 100
+num = [100,0,0]
+x=0
+#path = f'/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test'
+path = "C:/Users/Equipo/Documents/2025-1/BD2/proyecto/Proyecto_BD2/Utils/tests"
+data_file = f'Generate_test/data_file{num[x]}.bin'
+
+btree_file1 = f'Generate_test/btree_file1{num[x]}.bin'
+
+test_data_full = f'test_data_full{num[x]}.csv'
+
+total_path = os.path.join(path, test_data_full)
+
+csv_times = f'csv_times{num[x]}.csv'
+
+csv_time_search = f'csv_time_search{num[x]}.csv'
+
+table_format = {"timestamp": "24s", "random_int": "i", "name": "20s", "email": "50s", "date": "10s", "price": "d", "latitude": "d", "longitude": "d",  "is_active": "?", "category": "20s"}
+
+Indices_struct = ["heap" , "bptree", "hash", "sequential", "isam", "brin" ,"rtree"]
+Indices_struct = ["heap" , "bptree", "hash"]
+
+def destroy_archivos():
+    """
+    Elimina los archivos de datos y de índices generados.
+    """
+    files_to_remove = [
+        f'Generate_test/btree_1_index{num[x]}.bin',
+        f'Generate_test/hash_1_index{num[x]}.bin',
+        f'Generate_test/hash_2_index{num[x]}.bin',
+        f'Generate_test/sequential_1_index{num[x]}.bin',
+        f'Generate_test/isam_1_index{num[x]}.bin',
+        f'Generate_test/brin_1_index{num[x]}.bin',
+        f'Generate_test/brin_2_index{num[x]}.bin',
+        f'Generate_test/rtree_1_index{num[x]}.bin',
+        f'Generate_test/data_file{num[x]}.bin',
+    ]
+    
+    for file in files_to_remove:
+        if os.path.exists(file):
+            os.remove(file)
+            print (f"Archivo {file} eliminado.")
+
+class MEGA_SUPER_HIPER_MASTER_INDICE:
+    def __init__(self, name_key, table_format , x , num = num):
+        self.name_key = name_key
+        self.table_format = table_format
+        self.x = x
+        self.data_file = f'Generate_test/data_file{num[x]}.bin'
+        self.Registro = RegistroType(table_format, name_key)
+        self.heap = HEAP.Heap(table_format, key = name_key, data_file_name = self.data_file , force_create = False)
+        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[x]}.bin', name_data_file = data_file , max_num_child = 500)
+        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[x]}.bin',data_file_name =data_file, global_depth = 16 ,max_records_per_bucket = 20)
+        self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[x]}.bin',name_data_file = data_file , num_aux =200)
+        self.isam = None
+        self.brin = BRIN.BRIN(table_format, name_key , name_index_file = f'Generate_test/brin_1_index{num[x]}.bin', name_page_file =  f'Generate_test/brin_2_index{num[x]}.bin',name_data_file = data_file , max_num_pages = 20, max_num_keys = 20)
+        self.rtree = RTREE.RTreeFile(table_format = table_format, p_key = name_key ,keys = ["latitude", "longitude"] , data_filename = data_file, index_filename = f'Generate_test/rtree_1_index{num[x]}.bin')
+
+    def insert_csv(self, csv_path):
+        """
+        Inserta registros en el ORDEN EXACTO de CODIGOS_A_USAR.
+        """
+        with open(csv_path, mode='r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            next(reader)
+            registros = list(reader)
+            i = 0         
+            for row in registros:
+                i += 1
+                if i % N == 0:
+                    print("|", end="")
+                key = self.Registro.get_key(row)
+                KEYS = []
+                KEYS.append(key)
+                # manejar errores de formato:
+                row = self.Registro.correct_format(row)
+                self.heap.insert(row)
+            print()
+    
+    def generate_index(self, index_type ,csv_path ):
+        """
+        Genera el índice del tipo especificado.
+        """
+        if  index_type == "heap":
+            start_time = time.time()
+            self.insert_csv(csv_path)
+            end_time = time.time()
+            return end_time - start_time 
+        elif index_type == "bptree":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.bptree.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "hash":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                record = self.heap.read(i)
+                self.hash.insert(record = record , data_position = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "sequential":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.sequential.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "isam":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[x]}.bin', name_data_file = self.data_file)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "brin":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.brin.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "rtree":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                record = self.heap.read(i)
+                self.rtree.insert(record = record, record_pos = i)
+            end_time = time.time()
+            return end_time - start_time
+    
+    def generate_test_data(self, path, csv_times, Indices_struct):
+        """
+        Genera un archivo CSV con datos de prueba.
+        Si el archivo ya existe, añade una nueva fila.
+        """
+        for j in range(1):
+            print (f"Generando datos de prueba {j+1}/8...")
+            destroy_archivos() 
+            diccionario_tiempos = {}
+            for struct in Indices_struct:
+                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+                time = temp.generate_index(struct, csv_path=path)
+                diccionario_tiempos[struct] = time
+                print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
+            df = pd.DataFrame(diccionario_tiempos, index=[0])
+            # Si el archivo existe, añade la fila sin encabezado
+            if os.path.exists(csv_times):
+                df.to_csv(csv_times, mode='a', header=False, index=False)
+            else:
+                df.to_csv(csv_times, index=False)
+    
+    def search(self, key, csv_time_seach , key_type):
+        """
+        Realiza una búsqueda de los keys especificados y guarda los tiempos en un CSV.
+        """
+        if key_type == "heap":
+            start_time = time.time()
+            self.heap.search(key)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "bptree":
+            start_time = time.time()
+            self.bptree.search(key)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "hash":
+            start_time = time.time()
+            self.hash.search(key)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "sequential":
+            start_time = time.time()
+            self.sequential.search(key)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "isam":
+            start_time = time.time()
+            self.isam.search(key)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "brin":
+            start_time = time.time()
+            self.brin.search(key)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "rtree":
+            start_time = time.time()
+            self.rtree.search(key)
+            end_time = time.time()
+            return end_time - start_time
+            tiempos[key] = end_time - start_time
+        
+        df = pd.DataFrame(tiempos, index=[0])
+        df.to_csv(csv_time_seach, mode='a', header=False, index=False)
+
+    def test_search(self, total_path ,Indices_struct, csv_time_seach ,):
+        # se lee los keys del archivo CSV
+        keys_for_search = pd.read_csv(total_path, usecols=[self.name_key]).iloc[:, 0].tolist()
+        list_latitude_longitude = pd.read_csv(total_path, usecols=["latitude", "longitude"]).values.tolist()
+        # se crea un diccionario para almacenar los tiempos de búsqueda
+        tiempos = {}
+        for struct in Indices_struct:
+            print(f"Probando búsqueda en {struct}...")
+            temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+            time = temp.search(keys_for_search, csv_time_seach, key_type=struct)
+            tiempos[struct] = time
+            print(f"Tiempo de búsqueda en {struct}: {time:.2f} segundos")
+
+
+print(contador.get_counts())
+
+EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
+
+
+print(contador.get_counts())

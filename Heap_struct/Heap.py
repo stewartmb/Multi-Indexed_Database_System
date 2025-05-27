@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
+import Utils.contador as contador
 
 class Heap:
     HEADER_FORMAT = 'ii'

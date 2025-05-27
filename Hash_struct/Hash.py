@@ -4,6 +4,9 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 from Heap_struct.Heap import *
+from Utils.contador import contar_read, contar_write
+
+
 
 def get_bits(dato: any, nbits: int) -> str:
     """

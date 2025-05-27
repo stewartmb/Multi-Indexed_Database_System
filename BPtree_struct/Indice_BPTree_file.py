@@ -6,6 +6,7 @@ from collections import deque
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 from Heap_struct.Heap import Heap
+import Utils.contador as contador
 
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 8  # Tamaño del encabezado en bytes (cantidad de registros y puntero al root)
@@ -51,10 +52,12 @@ class BPTree:
         if not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
                 f.write(struct.pack('ii', 0, -2)) # Inicializa el encabezado del archivo de índice (0 datos, -2 indica que recien inicia)
+                contador.contar_write()
         os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
         if not os.path.exists(self.data_file):
             with open(self.data_file, 'wb') as f:
                 f.write(struct.pack('i', 0)) # Inicializa el encabezado del archivo de datos
+                contador.contar_write()
 
     ### IMPRIMIT ARBOL ###
 
@@ -102,6 +105,7 @@ class BPTree:
         """
         with open(self.index_file, 'rb') as f:
             data = f.read(TAM_ENCABEZAD_IND)
+            contador.contar_read()
             if len(data) != TAM_ENCABEZAD_IND:
                 raise ValueError("Tamaño incorrecto al leer encabezado de índice")
             return struct.unpack('ii', data)  # (cantidad de registros, puntero al root)
@@ -113,13 +117,15 @@ class BPTree:
         with open(self.index_file, 'r+b') as f:
             f.seek(0)  # Mueve el puntero al inicio del archivo
             f.write(struct.pack('ii', num_pages, root_position))  # Escribe el encabezado (cantidad de registros, puntero al root)
-            
+            contador.contar_write()
+
     def _read_header_data(self):
         """
         Lee el encabezado del archivo de datos.
         """
         with open(self.data_file, 'rb') as f:
             data = f.read(TAM_ENCABEZAD_DAT)
+            contador.contar_read()
             if len(data) != TAM_ENCABEZAD_DAT:
                 raise ValueError("Tamaño incorrecto al leer encabezado de datos")
             return struct.unpack('i', data)[0]  # (cantidad de registros)
@@ -131,6 +137,7 @@ class BPTree:
         with open(self.data_file, 'r+b') as f:
             f.seek(0)  # Mueve el puntero al inicio del archivo
             f.write(struct.pack('i', num_records))  # Escribe el encabezado (cantidad de registros)
+            contador.contar_write()
 
     ### MANEJO DE PÁGINAS DE ÍNDICE (nodos del arbol)###
 
@@ -143,6 +150,7 @@ class BPTree:
             offset = TAM_ENCABEZAD_IND + page_number * self.tam_indexp
             f.seek(offset)
             data = f.read(self.tam_indexp)
+            contador.contar_read()
             if len(data) != self.tam_indexp:
                 raise ValueError("Tamaño incorrecto al leer página de índice")
             return IndexPage.from_bytes(data, self.M, self.format_key, self.indexp_format)    
@@ -155,6 +163,7 @@ class BPTree:
             offset = TAM_ENCABEZAD_IND + page_number * self.tam_indexp
             f.seek(offset)
             f.write(page.to_bytes(self.format_key, self.indexp_format))  # Escribe la página en la posición especificada
+            contador.contar_write()
 
     def _add_index_page(self, page):
         """
@@ -181,6 +190,7 @@ class BPTree:
             offset = TAM_ENCABEZAD_DAT + position * self.tam_registro
             f.seek(offset)
             data = f.read(self.tam_registro)
+            contador.contar_read()
             if len(data) != self.tam_registro:
                 raise ValueError("Tamaño incorrecto al leer registro")
             return self.RT.from_bytes(data)
@@ -193,6 +203,7 @@ class BPTree:
             offset = TAM_ENCABEZAD_DAT + position * self.tam_registro
             f.seek(offset)
             f.write(self.RT.to_bytes(record))  # Escribe el registro en la posición especificada
+            contador.contar_write()
             
     def _add_record(self, record):
         """

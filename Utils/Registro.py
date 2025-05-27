@@ -1,4 +1,5 @@
 import struct
+import Utils.contador as contador
 
 class RegistroType:
     """
