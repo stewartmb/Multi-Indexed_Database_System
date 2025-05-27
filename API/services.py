@@ -989,6 +989,24 @@ def delete(query):
 def drop_index(query):
     start = time.time_ns()
     nombre_tabla = query["table"]
+
+    if query["index"] == "rtree":
+
+        for key in query["attr"]:
+            data["columns"][str(key)]["index"] = None
+
+        create_meta(data, nombre_tabla)
+
+        rtree_keys = data.get("indexes", {}).get("rtree")
+        if rtree_keys is not None:
+            os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
+        end = time.time_ns()
+        t_ms = end - start
+
+        return {
+            "message": f"DELETED INDEX SUCCESSFULLY in {t_ms/1e6} ms"
+        }
+
     index_file = index_filename(nombre_tabla,
                                 *query["attr"],
                                 "index")

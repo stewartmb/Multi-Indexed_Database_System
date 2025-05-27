@@ -1,0 +1,40 @@
+prueba create
+create table zipcodes (
+   zip_code int primary key,
+   latitude double,
+   longitude double,
+   city varchar[20],
+   state varchar[2],
+   county varchar[20]
+);
+
+prueba  copy
+copy zipcodes from "Data_test/zipcodes.csv";
+
+prueba select y por columnas
+select * from zipcodes;
+
+select zip_code, city from zipcodes;
+
+prueba sin indices
+select * from zipcodes where city == "Norwalk";
+
+
+prueba hash
+create index on zipcodes using hash(city) params (32, 20);
+
+select * from zipcodes where city == "Norwalk";
+
+drop index hash on values city on zipcodes;
+
+prueba isam
+create index on zipcodes using isam(city);
+
+select * from zipcodes where city == "Norwalk";
+
+prueba bptree
+select * from zipcodes where zip_code between 45000 and 50000;
+
+consulta de varios indices
+select * from zipcodes where zip_code > 68000 and city == "Nome";
+
