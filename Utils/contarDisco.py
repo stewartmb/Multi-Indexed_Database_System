@@ -21,7 +21,7 @@ import csv
 KEYS = []
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
-num = [10000,0,0]
+num = [100,0,0]
 x=0
 
 
@@ -315,9 +315,11 @@ def Test_search():
 
 
 
+csv_times = f'csv_times{num[x]}.csv'
+EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x, test_global = True)
+EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
+
 
 EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
 csv_time_search = f'csv_time_search{num[x]}.csv'
 EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
-
-

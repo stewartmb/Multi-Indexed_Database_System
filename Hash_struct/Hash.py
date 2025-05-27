@@ -187,7 +187,6 @@ class Hash:
         """
         buckets_file.seek(bucket_position * self.BT.size)
         bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-        contador.contar_read()
 
         # Si el bucket no está lleno, simplemente insertamos
         if bucket['fullness'] < self.max_records:
@@ -195,7 +194,6 @@ class Hash:
             bucket['fullness'] += 1
             buckets_file.seek(bucket_position * self.BT.size)
             buckets_file.write(self.BT.to_bytes(bucket))
-            contador.contar_write()
             return True
 
         # Si el bucket está lleno pero su profundidad es menor que la global → split
@@ -207,27 +205,25 @@ class Hash:
         self.Header.write(index_file, new_bucket_pos + 1, 2)
 
         new_bucket = {
-            'records': [-1] * self.max_records,
-            'fullness': 1,
+            'records': bucket['records'][:],  # Copiamos los registros del bucket original
+            'fullness': self.max_records,
             'local_depth': self.global_depth,
             'overflow_position': bucket['overflow_position']  # encadena al antiguo primer overflow
         }
-        new_bucket['records'][0] = data_position
-
+        bucket['records'] = [-1] * self.max_records  # Limpiamos los registros del bucket original
+        bucket['records'][0] = data_position
+        bucket['fullness'] = 0
         # El bucket base apunta ahora al nuevo overflow (nuevo "head" de la cadena)
         bucket['overflow_position'] = new_bucket_pos
 
         # Escribimos ambos buckets
         buckets_file.seek(bucket_position * self.BT.size)
         buckets_file.write(self.BT.to_bytes(bucket))
-        contador.contar_write()
 
         buckets_file.seek(new_bucket_pos * self.BT.size)
         buckets_file.write(self.BT.to_bytes(new_bucket))
-        contador.contar_write()
 
         return True
-
 
 
     def _add_to_hash(self, buckets_file, index_file, data_position, index_hash):
@@ -344,9 +340,7 @@ class Hash:
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 contador.contar_read()
-                print("WHAT")
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                print(bucket)
                 self._find_in_bucket(bucket, key, matches)
                 overflow_position = bucket['overflow_position']
             return matches
