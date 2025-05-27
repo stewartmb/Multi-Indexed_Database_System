@@ -116,11 +116,11 @@ Los tamaños de los dataset son de: 10k, 50k y 100k.
 
 ## Cuadros Comparativos de Desempeño
 
-Ver aquí:
+[Ver aquí](https://github.com/stewartmb/Proyecto_BD2/blob/main/cuadros/Cuadros.md)
 
-### Gráficos
+## Gráficos
 
-Ver aquí:
+[Ver aquí](https://github.com/stewartmb/Proyecto_BD2/blob/main/graficos/Graficos.md)
 
 
 ## 👥 Autores
