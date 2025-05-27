@@ -320,7 +320,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
         else:
             df.to_csv(csv_time_search, index=False)
 
-    def insert(self, key , index_type ,key_rtree , pos):
+    def insert(self, record , index_type):
         """
         Realiza una búsqueda de los keys especificados y guarda los tiempos en un CSV.
         """
@@ -329,43 +329,63 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             pos = self.heap._read_header()
             KEYS.append(pos)
             start_time = time.time()
-            self.heap.insert(key)
+            self.heap.insert(record)
             end_time = time.time()
             return end_time - start_time 
         elif index_type == "bptree":
             start_time = time.time()
-            self.bptree.add(pos_new_record = i)
+            self.bptree.add(record = record)
             end_time = time.time()
             return end_time - start_time
         elif index_type == "hash":
             start_time = time.time()
             record = self.heap.read(i)
-            self.hash.insert(record = record , data_position = i)
+            self.hash.insert(record = record)
             end_time = time.time()
             return end_time - start_time
         elif index_type == "sequential":
             start_time = time.time()
-            self.sequential.add(pos_new_record = i)
+            self.sequential.add(record = record)
             end_time = time.time()
             return end_time - start_time
         elif index_type == "isam":
             start_time = time.time()
-            self.isam.add(pos_new_record = i)
+            self.isam.add(record = record)
             end_time = time.time()
             return end_time - start_time
         elif index_type == "brin":
             start_time = time.time()
-            self.brin.add(pos_new_record = i)
+            self.brin.add(record = record)
             end_time = time.time()
             return end_time - start_time
         elif index_type == "rtree":
             start_time = time.time()
-            record = self.heap.read(i)
-            self.rtree.insert(record = record, record_pos = i)
+            self.rtree.insert(record = record)
             end_time = time.time()
             return end_time - start_time
 
+    def test_insert(self, total_path ,Indices_struct, csv_time_search ):
+        df = pd.read_csv(total_path)
+        random_sample = df.sample(n=1000, random_state=42)
 
+        # Obtener lista de registros 
+        registros = random_sample.to_dict(orient='records')
+        registros = [self.Registro.correct_format(list(registro.values())) for registro in registros]
+        tiempos = {}
+        for struct in Indices_struct:
+            tiempos[struct] = []
+            print (f"Probando búsqueda en {struct}...")
+            for j in range(len(registros)):
+                time = self.insert(record = registros[j], index_type = struct)
+                time = round(time*1000, 4)
+                tiempos[struct].append(time)
+        # se crea un DataFrame con los tiempos de búsqueda
+        df = pd.DataFrame(tiempos)
+        # se guarda el DataFrame en un archivo CSV
+        if os.path.exists(csv_time_search):
+            df.to_csv(csv_time_search, mode='a', header=False, index=False)
+        else:
+            df.to_csv(csv_time_search, index=False)
 
 
 def Test_global():
@@ -395,4 +415,13 @@ def Test_search_range():
         indices = ["heap", "bptree", "hash", "sequential", "isam", "brin", "rtree_point_to_point", "rtree_knn", "rtree_radio"]
         EL_indice.test_search_range(total_path = total_path, Indices_struct = indices, csv_time_search = csv_time_search)
 
-Test_search_range()
+def Test_insert():
+    for x in range(len(num)):
+        test_data_full = f'test_data_full10001.csv'
+        total_path = os.path.join(path, test_data_full)
+        print (f"Generando datos de prueba para {num[x]} registros...")
+        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+        csv_time_search = f'csv_time_insert{num[x]}.csv'
+        EL_indice.test_insert(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
+
+Test_insert()

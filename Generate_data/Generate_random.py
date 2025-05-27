@@ -34,7 +34,7 @@ def generate_random_data(output_file, num_records , start_date):
             date = (start_date + timedelta(days=random.randint(0, 1095))).date()  # 3 años de rango
             
             record = {
-                'timestamp': (start_date + timedelta(seconds=i)).isoformat(),
+                'timestamp': (start_date + timedelta(minutes=i)).isoformat(),
                 'random_int': random.randint(1, 100000),
                 'name': name,
                 'email': email,
@@ -65,7 +65,7 @@ START_DATE = datetime(2020, 1, 1)
 #     generate_random_data(output_file, num, START_DATE)
 #     print(f"Archivo {output_file} generado con {num} registros.")
 
-num = 1000
+num = 10001
 output_file = f'Data_test/test_data_full{num}.csv'
 generate_random_data(output_file, num, START_DATE)
 print(f"Archivo {output_file} generado con {num} registros.")
