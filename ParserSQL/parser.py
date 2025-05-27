@@ -22,7 +22,6 @@ select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr]
 attr_list: NAME ("," NAME)*
 drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on"i NAME
 drop_table_stmt: "drop"i "table"i NAME
-set_stmt: "set"i INDEX "params"i "(" value_list ")"
 
 index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")" [ "params"i "(" value_list ")" ]
 
@@ -54,7 +53,7 @@ CLOSEST: "closest"i
 RADIUS: "radius"i
 ALL: "*"
 
-TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "bool"i | "timestamp"i
+TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "timestamp"i
 varchar: "varchar"i "[" VALUE "]"
 
 %import common.ESCAPED_STRING
@@ -164,9 +163,6 @@ class SQLTransformer(Transformer):
     
     def drop_table_stmt(self, items):
         return {"action": "drop table", "table": items[0]}
-
-    def set_stmt(self, items):
-        return {"action": "set", "index": items[0], "params": items[1]}
     
     def condition(self, items):
         if (str(items[2]) == "closest"):
