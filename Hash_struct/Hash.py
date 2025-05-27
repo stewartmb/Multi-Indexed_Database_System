@@ -67,34 +67,27 @@ class TreeNodeType:
     """
     Estructura que maneja el control de los nodos del arbol.
     """
-    def __init__(self):
-        self.FORMAT = 'iiii'
+    def __init__(self, power):
+        self.length = 2**power
+        self.FORMAT = 'i'*self.length + '?'
         self.size = struct.calcsize(self.FORMAT)
 
 
-    def to_bytes(self, treeNode: dict) -> bytes:
+    def to_bytes(self, treeNode: list, isleaf: bool) -> bytes:
         """
         Convierte el nodo a bytes.
         """
         return struct.pack(self.FORMAT,
-                            treeNode['bucket_position'],
-                            treeNode['left'],
-                            treeNode['right'],
-                            treeNode['depth']
+                            *treeNode,
+                            isleaf
                            )
 
-    def from_bytes(self, data: bytes) -> dict:
+    def from_bytes(self, data: bytes) -> tuple:
         """
         Convierte bytes a un nodo.
         """
         unpacked = struct.unpack(self.FORMAT, data)
-        treeNode = {
-            'bucket_position': unpacked[0],
-            'left': unpacked[1],
-            'right': unpacked[2],
-            'depth': unpacked[3]
-        }
-        return treeNode
+        return list(unpacked[:-1]), unpacked[-1]
 
 class HeaderType:
     """
@@ -126,34 +119,37 @@ class Hash:
                  buckets_file_name: str,
                  index_file_name: str,
                  data_file_name: str,
-                 global_depth: int = 16,
+                 GD: int = 4,
                  max_records_per_bucket: int = 4,
+                 power: int = 4,
                  force_create: bool = False):
-        """
-        Inicializa el hash extensible.
-        :param table_format: formato de la tabla
-        :param key: indice de ordenamiento
-        :param buckets_file_name: nombre del archivo de buckets
-        :param index_file_name: nombre del archivo de índice
-        :param global_depth: profundidad global
-        :param max_records_per_bucket: cantidad maxima de registros por bucket
-        """
         
+        if power < 1:
+            print("ERROR: power debe ser mayor a 0")
+            raise ValueError("power debe ser mayor a 0")
+        if power > 10:
+            print("WARN: seguro?")
+        if power > 20:
+            print("ERROR: power no puede ser mayor a 20")
+            raise ValueError("power no puede ser mayor a 20")
+
+        global_depth = GD*power
         self.index_file = index_file_name
         self.buckets_file = buckets_file_name
         self.global_depth = global_depth
         self.max_records = max_records_per_bucket
+        self.power = power
 
-        self.NT = TreeNodeType()
+        self.NT = TreeNodeType(power)
         self.RT = RegistroType(table_format, key)
         self.BT = BucketType(max_records_per_bucket)
         self.HEAP = Heap(table_format, key, data_file_name, force_create=force_create)
         self.Header = HeaderType()
 
-        self._initialize_files(global_depth, force=force_create)
+        self._initialize_files(global_depth, power, force=force_create)
 
     # utility functions
-    def _initialize_files(self, global_depth, force=False):
+    def _initialize_files(self, global_depth, power, force=False):
         """
         Inicializa los archivos de índice y datos.
         """
@@ -162,20 +158,19 @@ class Hash:
                 # 0 = global_depth, 1 = data_last, 2 = bucket_last, 3 = node_last
                 f.write(struct.pack('i', global_depth))
                 f.write(struct.pack('i', 0))
-                f.write(struct.pack('i', 2))
-                f.write(struct.pack('i', 3))
+                f.write(struct.pack('i', 2**power))
+                f.write(struct.pack('i', 1 + 2**power))
                 # root
-                f.write(self.NT.to_bytes({'bucket_position': -1, 'left': 1, 'right': 2, 'depth': 0}))
-                # left (0)
-                f.write(self.NT.to_bytes({'bucket_position': 0, 'left': -1, 'right': -1, 'depth': 0}))
-                # right (1)
-                f.write(self.NT.to_bytes({'bucket_position': 1, 'left': -1, 'right': -1, 'depth': 0}))
+                f.write(self.NT.to_bytes([i+1 for i in range(2**power)], isleaf=False))
+                for i in range(2**power):
+                    f.write(self.NT.to_bytes([i]*(2**power), isleaf=True))
+
 
         if force or (not os.path.exists(self.buckets_file)) or (os.path.getsize(self.buckets_file) < self.Header.size):
             with open(self.buckets_file, 'wb') as f:
                 # [0,0,0...0,0,0] + [localdepth, fullness, overflowPosition]
-                f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
-                f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
+                for i in range(2**power):
+                    f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
 
     def _insert_value_in_bucket(self, buckets_file, index_file, bucket_position, data_position):
         """
@@ -223,21 +218,25 @@ class Hash:
 
 
 
-    def _add_to_hash(self, buckets_file, index_file, data_position, index_hash):
+    def _add_to_hash(self, buckets_file, index_file, data_position, index_hash: str):
         node_index = 0
         k = 1
+        # Busca el nodo correspondiente en el árbol de índice
         while True:
             index_file.seek(self.Header.size + node_index * self.NT.size)
-            node = self.NT.from_bytes(index_file.read(self.NT.size))
-            bucket_position = node['bucket_position']
-            if bucket_position == -1:
-                if index_hash[-k] == '0':
-                    node_index = node['left']
-                else:
-                    node_index = node['right']
-                k += 1
+            node, isleaf = self.NT.from_bytes(index_file.read(self.NT.size))
+            if not isleaf:
+                selection = 0
+                # Si no es hoja, seguimos bajando por el árbol
+                for i in range(self.power): 
+                    if index_hash[self.power-i] == '1':
+                        selection += 2**(self.power - i - 1)
+                node_index = node[selection]
             else:
+                # Si es hoja, hemos encontrado el bucket
+                bucket_position = node[0]
                 break
+            
 
         inserted = self._insert_value_in_bucket(buckets_file, index_file, bucket_position, data_position)
         if not inserted:
@@ -332,76 +331,6 @@ class Hash:
                 overflow_position = bucket['overflow_position']
             return matches
 
-    def _aux_delete(self, buckets_file, index_file, node_index, index_hash, key):
-        """
-        Funcion recursiva de busqueda
-        """
-        index_file.seek(self.Header.size + node_index * self.NT.size)
-        node = self.NT.from_bytes(index_file.read(self.NT.size))
-        if node['bucket_position'] == -1:
-            if index_hash[-1] == '0':
-                return self._aux_delete(buckets_file, index_file, node['left'], index_hash[:-1], key)
-            else:
-                return self._aux_delete(buckets_file, index_file, node['right'], index_hash[:-1], key)
-        else:
-            buckets_file.seek(node['bucket_position'] * self.BT.size)
-            bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            for i in range(bucket['fullness']):
-                record = self.HEAP.read(bucket['records'][i])
-                if record != None:
-                    if self.RT.get_key(record) == key:
-                        # Eliminar el registro
-                        bucket['records'][i] = bucket['records'][bucket['fullness'] - 1]
-                        bucket['records'][bucket['fullness'] - 1] = -1
-                        bucket['fullness'] -= 1
-                        buckets_file.seek(node['bucket_position'] * self.BT.size)
-                        buckets_file.write(self.BT.to_bytes(bucket))
-                        return True
-            overflow_position = bucket['overflow_position']
-            while overflow_position != -1:
-                buckets_file.seek(overflow_position * self.BT.size)
-                bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                for i in range(bucket['fullness']):
-                    record = self.HEAP.read(bucket['records'][i])
-                    if record != None:
-                        if self.RT.get_key(record) == key:
-                            # Eliminar el registro
-                            bucket['records'][i] = -1
-                            bucket['fullness'] -= 1
-                            buckets_file.seek(node['bucket_position'] * self.BT.size)
-                            buckets_file.write(self.BT.to_bytes(bucket))
-                            return True
-        return False
-
-    def _aux_range_search(self, buckets_file, index_file, node_index, lower, upper):
-        lista = []
-        index_file.seek(self.Header.size + node_index * self.NT.size)
-        node = self.NT.from_bytes(index_file.read(self.NT.size))
-        if node['bucket_position'] == -1:
-            lista.extend(self._aux_range_search(buckets_file, index_file, node['left'], lower, upper))
-            lista.extend(self._aux_range_search(buckets_file, index_file, node['right'], lower, upper))
-        else:
-            buckets_file.seek(node['bucket_position'] * self.BT.size)
-            bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            for i in range(bucket['fullness']):
-                record = self.HEAP.read(bucket['records'][i])
-                if record != None:
-                    if lower <= self.RT.get_key(record) <= upper:
-                        lista.append(bucket['records'][i])
-            overflow_position = bucket['overflow_position']
-            while overflow_position != -1:
-                buckets_file.seek(overflow_position * self.BT.size)
-                bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                for i in range(bucket['fullness']):
-                    record = self.HEAP.read(bucket['records'][i])
-                    if record != None:
-                        if lower <= self.RT.get_key(record) <= upper:
-                            lista.append(bucket['records'][i])
-                overflow_position = bucket['overflow_position']
-
-        return lista
-
-
     def insert(self, record, data_position=None):
         """
         Inserta un registro en el hash extensible.
@@ -439,20 +368,4 @@ class Hash:
                 return self._aux_search(buckets_file, index_file, root['left'], index_hash[:-1], key)
             else:
                 return self._aux_search(buckets_file, index_file, root['right'], index_hash[:-1], key)
-
-    def range_search(self, lower, upper):
-        """
-        Busca un rango de registros en el hash extensible.
-        :param lower: limite inferior
-        :param upper: limite superior
-        :return: lista de registros encontrados
-        """
-        with open(self.index_file, 'r+b') as index_file, \
-                open(self.buckets_file, 'r+b') as buckets_file:
-            index_file.seek(self.Header.size)
-            root = self.NT.from_bytes(index_file.read(self.NT.size))
-            if root['bucket_position'] == -1:
-                lista = self._aux_range_search(buckets_file, index_file, root['left'], lower, upper)
-                lista.extend(self._aux_range_search(buckets_file, index_file, root['right'], lower, upper))
-
-        return lista
+            
