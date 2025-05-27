@@ -652,7 +652,7 @@ class BRIN:
             pos_brin = self.binary_search_all(key1)
             for i in range(pos_brin, num_brins):
                 brin = self._read_brin(i)
-                if brin.range_values[0] <= key1 <= brin.range_values[1] or brin.range_values[0] <= key2 <= brin.range_values[1]:
+                if max (brin.range_values[0], key1) <= min(brin.range_values[1], key2):
                     list_pos_brin.append(i)
                 elif brin.range_values[0] > key2:
                     break
@@ -660,7 +660,7 @@ class BRIN:
             # Si el índice BRIN no está ordenado, busca secuencialmente
             for i in range(num_brins):
                 brin = self._read_brin(i)
-                if brin.range_values[0] <= key1 <= brin.range_values[1] or brin.range_values[0] <= key2 <= brin.range_values[1]:
+                if max (brin.range_values[0], key1) <= min(brin.range_values[1], key2):
                     list_pos_brin.append(i)
         
 
@@ -673,7 +673,7 @@ class BRIN:
                 for i in range(pos_page, brin.page_count):
                     pos_page = brin.pages[i]
                     page = self._read_page(pos_page)
-                    if page.range_values[0] <= key1 <= page.range_values[1] or page.range_values[0] <= key2 <= page.range_values[1]:
+                    if max (page.range_values[0], key1) <= min(page.range_values[1], key2):
                         
                         # Si la página contiene el key, busca en las claves
                         if page.is_order:
@@ -698,7 +698,7 @@ class BRIN:
                 for i in range(brin.page_count):
                     pos_page = brin.pages[i]
                     page = self._read_page(pos_page)
-                    if page.range_values[0] <= key1 <= page.range_values[1] or page.range_values[0] <= key2 <= page.range_values[1]:
+                    if max (page.range_values[0], key1) <= min(page.range_values[1], key2):
                         if page.is_order:
                             # Si la página está ordenada, busca el índice del key
                             index = page.binary_find_index(key1)

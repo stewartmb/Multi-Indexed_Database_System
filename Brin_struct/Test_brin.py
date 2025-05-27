@@ -24,7 +24,7 @@ format_tables = [{"codigo": "i", "nombre": "50s", "ciclo": "i"},
 name_keys = ["ciclo", "iata", "zip_code", "id"]
 
 # numero aleatorio entre 1 y 3
-random_index = 2
+random_index = 1
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -120,8 +120,10 @@ def test_search_range():
     print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {Brin.format_key}\n")
     
     resultado_rango = Brin.search_range(inferior, superior)
-    for registro in resultado_rango:
-        print(registro)
+    for pos in resultado_rango:
+        registro = Brin.HEAP.read(pos)
+        if registro is not None:
+            print(registro)
 
 def test_onesearch(key):
     # BUSQUEDA DE UN REGISTRO ESPECIFICO
@@ -155,7 +157,7 @@ if __name__ == "__main__":
     # Prueba de búsqueda
     test_search()
     # # Prueba de búsqueda por rango
-    # test_search_range()
+    test_search_range()
     # # Prueba de búsqueda de un registro específico
     # test_onesearch(KEYS[0])
     # # Prueba de eliminación de un registro específico
