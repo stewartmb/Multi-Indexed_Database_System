@@ -144,7 +144,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             end_time = time.time()
             return end_time - start_time
     
-    def generate_test_data(self, path, csv_times, Indices_struct,x):
+    def generate_test_data(self, path, csv_times, Indices_struct,x , n):
         """
         Genera un archivo CSV con datos de prueba.
         Si el archivo ya existe, añade una nueva fila.
@@ -152,17 +152,18 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
         print (f"Generando datos de prueba ...")
         destroy_archivos(x) 
         diccionario_tiempos = {}
-        for struct in Indices_struct:
-            temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x , test_global = True)
-            time = temp.generate_index(struct, csv_path=path)
-            diccionario_tiempos[struct] = time
-            print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
-        df = pd.DataFrame(diccionario_tiempos, index=[0])
-        # Si el archivo existe, añade la fila sin encabezado
-        if os.path.exists(csv_times):
-            df.to_csv(csv_times, mode='a', header=False, index=False)
-        else:
-            df.to_csv(csv_times, index=False)
+        for i in range(n):
+            for struct in Indices_struct:
+                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x , test_global = True)
+                time = temp.generate_index(struct, csv_path=path)
+                diccionario_tiempos[struct] = time
+                print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
+            df = pd.DataFrame(diccionario_tiempos, index=[0])
+            # Si el archivo existe, añade la fila sin encabezado
+            if os.path.exists(csv_times):
+                df.to_csv(csv_times, mode='a', header=False, index=False)
+            else:
+                df.to_csv(csv_times, index=False)
     
     def search(self, key , key_type ,key_rtree ):
         """
@@ -388,13 +389,15 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             df.to_csv(csv_time_search, index=False)
 
 
+
+
 def Test_global():
     for x in range(len(num)):
         test_data_full = f'test_data_full{num[x]}.csv'
         total_path = os.path.join(path, test_data_full)
         csv_times = f'csv_times{num[x]}.csv'
         EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x ,test_global = True)
-        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct , x = x)
+        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct , x = x , n = 10)
 
 def Test_search():
     for x in range(len(num)):
@@ -424,3 +427,4 @@ def Test_insert():
         csv_time_search = f'csv_time_insert{num[x]}.csv'
         EL_indice.test_insert(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
+Test_global()
