@@ -378,4 +378,68 @@ El índice **R-Tree** muestra los tiempos de inserción más altos entre los ín
 
 Esta complejidad se ve agravada por la naturaleza de los datos espaciales, donde la inserción de un nuevo elemento puede afectar múltiples niveles de la estructura. La alta desviación estándar (3.3316-5.1619) sugiere que ciertas inserciones - particularmente aquellas que desencadenan rebalances completos - son significativamente más costosas que otras.
 
+## Prueba 5: Búsqueda - Accesos a memoria secundaria
+
+Para la siguiente prueba, se ha calculado el promedio de los accesos a memoria secundaria cuando se realizan las búsquedas en los índices. Como en la búsqueda no se escriben datos, no se hizo para los write.
+
+**Cuadro 1:**
+
+### Search Reads
+
+| Índice      | Máximo | Mínimo | Promedio | Desviación estándar |
+|-------------|--------|--------|----------|----------------------|
+| heap        | 451    | 451    | 451.00   | 0.0000               |
+| bptree      | 14     | 7      | 10.76    | 2.3867               |
+| hash        | 21     | 16     | 20.82    | 0.8003               |
+| sequential  | 154    | 14     | 80.94    | 42.6765              |
+| isam        | 11     | 8      | 9.66     | 0.6263               |
+| brin        | 17     | 16     | 16.36    | 0.4849               |
+| rtree       | 12     | 11     | 11.30    | 0.4629               |
+
+**Gráfico 1:**
+
+![imagen](search_reads.png) 
+
+
+## Prueba 6: Inserción - Accesos a memoria secundaria
+
+Para la siguiente prueba, se ha calculado el promedio de los accesos a memoria secundaria cuando se realizan inserciones usando los índices.
+
+**Cuadro 1:**
+
+### Insert Reads
+
+| Índice      | Máximo | Mínimo | Promedio | Desviación estándar |
+|-------------|--------|--------|----------|----------------------|
+| heap        | 4      | 4      | 4.00     | 0.0000               |
+| bptree      | 12     | 12     | 12.00    | 0.0000               |
+| hash        | 2768   | 15     | 135.56   | 476.4858             |
+| sequential  | 150    | 12     | 69.80    | 37.0725              |
+| isam        | 11     | 10     | 10.04    | 0.1979               |
+| brin        | 10     | 10     | 10.00    | 0.0000               |
+| rtree       | 25     | 12     | 13.98    | 2.4701               |
+
+**Gráfico 1:**
+
+![imagen](insert_reads.png) 
+
+**Cuadro 2:**
+
+### Insert Writes
+
+| Índice      | Máximo | Mínimo | Promedio | Desviación estándar |
+|-------------|--------|--------|----------|----------------------|
+| heap        | 2      | 2      | 2.00     | 0.0000               |
+| bptree      | 4      | 4      | 4.00     | 0.0000               |
+| hash        | 100    | 2      | 5.32     | 15.4225              |
+| sequential  | 6      | 6      | 6.00     | 0.0000               |
+| isam        | 5      | 3      | 3.08     | 0.3959               |
+| brin        | 7      | 5      | 5.12     | 0.4798               |
+| rtree       | 10     | 3      | 3.42     | 1.6793               |
+
+
+**Gráfico 2:**
+
+![imagen](insert_writes.png) 
+
 
