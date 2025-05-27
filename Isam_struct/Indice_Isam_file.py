@@ -26,15 +26,11 @@ def Calculate_M(num_records):
     m = round(m) if m is not None else None
     n = m ** 2
     if num_records < n:
-        print("El numero de registros es menor que m, se ajustara a m-1")
         m = m-1
         n = m ** 2
     elif num_records >= (m**2*(m-1)):
-        print("El numero de registros es mayor que m, se ajustara a m+1")
         m = m + 1
         n = m ** 2
-    else:
-        print("El numero de registros es correcto con m")
 
     # percentiles para posiciones 
     lista = []
@@ -42,7 +38,6 @@ def Calculate_M(num_records):
         percentil = i / n
         pos = round(num_records * percentil)
         lista.append(pos)
-    print(float(num_records/(m**2*(m-1))))
     return m, lista
 
 class Index_Page():

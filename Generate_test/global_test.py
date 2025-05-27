@@ -5,181 +5,198 @@ import os
 
 # Importar las estructuras de índices
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+from Utils.Registro import *
 import BPtree_struct.Indice_BPTree_file as BPTREE
 import Hash_struct.Hash as HASH
 import Sequential_Struct.Indice_Sequential_file as SEQUENTIAL
 import Isam_struct.Indice_Isam_file as ISAM 
 import Brin_struct.Indice_Brin_file as BRIN
 import RTree_struct.RTreeFile_Final as RTREE
-
-
+import Heap_struct.Heap as HEAP
+import time
+N = 1000
 import csv
-
+KEYS = []
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
 num = [10000,50000,100000]
-x=1
-path = "/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test"
+x=0
+path = f'/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test'
 # path = "C:/Users/Equipo/Documents/2025-1/BD2/proyecto/Proyecto_BD2/Data_test"
 data_file = f'Generate_test/data_file{num[x]}.bin'
 
 btree_file1 = f'Generate_test/btree_file1{num[x]}.bin'
 
+test_data_full = f'test_data_full{num[x]}.csv'
 
-test_data_full = f'/test_data_full{num[x]}.csv'
+total_path = os.path.join(path, test_data_full)
+
+csv_times = f'csv_times{num[x]}.csv'
+csv_time_seach = f'csv_time_seach{num[x]}.csv'
 
 table_format = {"timestamp": "24s", "random_int": "i", "name": "20s", "email": "50s", "date": "10s", "price": "d", "latitude": "d", "longitude": "d",  "is_active": "?", "category": "20s"}
 
+Indices_struct = ["heap" , "bptree", "hash", "sequential", "isam", "brin" ,"rtree"]
 
-Indices_struct = ["bptree", "hash", "sequential", "isam", "brin" ,"rtree"]
+def destroy_archivos():
+    """
+    Elimina los archivos de datos y de índices generados.
+    """
+    files_to_remove = [
+        f'Generate_test/btree_1_index{num[x]}.bin',
+        f'Generate_test/hash_1_index{num[x]}.bin',
+        f'Generate_test/hash_2_index{num[x]}.bin',
+        f'Generate_test/sequential_1_index{num[x]}.bin',
+        f'Generate_test/isam_1_index{num[x]}.bin',
+        f'Generate_test/brin_1_index{num[x]}.bin',
+        f'Generate_test/brin_2_index{num[x]}.bin',
+        f'Generate_test/rtree_1_index{num[x]}.bin',
+        f'Generate_test/data_file{num[x]}.bin',
+    ]
+    
+    for file in files_to_remove:
+        if os.path.exists(file):
+            os.remove(file)
 
 class MEGA_SUPER_HIPER_MASTER_INDICE:
-    def __init__(self, name_key, table_format , x ):
+    def __init__(self, name_key, table_format , x , num = num):
+        self.name_key = name_key
+        self.table_format = table_format
+        self.x = x
         self.data_file = f'Generate_test/data_file{num[x]}.bin'
-        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[x]}.bin', name_data_file = data_file , max_num_child = 100)
-        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[x]}.bin',data_file_name =data_file, global_depth = 100,max_records_per_bucket =100)
-        self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[x]}.bin',name_data_file = data_file , num_aux =100)
-        self.isam = ISAM.ISAM(table_format, name_key , name_index_file = f'Generate_test/isam_1_index{num[x]}.bin', name_data_file = data_file)
-        self.brin = BRIN.BRIN(table_format, name_key , name_index_file = f'Generate_test/brin_1_index{num[x]}.bin', name_page_file =  f'Generate_test/brin_2_index{num[x]}.bin',name_data_file = data_file , max_num_pages = 100, max_num_keys = 100)
-        self.rtree = RTREE.RTreeFile(table_format, name_key, )
+        self.Registro = RegistroType(table_format, name_key)
+        self.heap = HEAP.Heap(table_format, key = name_key, data_file_name = self.data_file , force_create = False)
+        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[x]}.bin', name_data_file = data_file , max_num_child = 500)
+        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[x]}.bin',data_file_name =data_file, global_depth = 16 ,max_records_per_bucket = 20)
+        self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[x]}.bin',name_data_file = data_file , num_aux =200)
+        self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[x]}.bin', name_data_file = self.data_file)
+        self.brin = BRIN.BRIN(table_format, name_key , name_index_file = f'Generate_test/brin_1_index{num[x]}.bin', name_page_file =  f'Generate_test/brin_2_index{num[x]}.bin',name_data_file = data_file , max_num_pages = 20, max_num_keys = 20)
+        self.rtree = RTREE.RTreeFile(table_format = table_format, p_key = name_key ,keys = ["latitude", "longitude"] , data_filename = data_file, index_filename = f'Generate_test/rtree_1_index{num[x]}.bin')
 
-
-
-
-def notest_insert_CSV(csv_path, index_file, data_file):
-    """
-    Inserta registros en el ORDEN EXACTO de CODIGOS_A_USAR.
-    """
-    # Eliminar archivos existentes
-    try:
-        os.remove(index_file)
-        os.remove(data_file)
-    except FileNotFoundError:
-        pass
-
-    # Leer todos los registros del CSV y guardarlos en un diccionario por código
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
-    registros_dict = {}
-    with open(csv_path, mode='r', encoding='utf-8') as file:
-        reader = csv.reader(file)
-        next(reader)
-        registros = list(reader)
-        i = 0         
-        for row in registros:
-            i += 1
-            m = N
-            if random_index == 0:
-                m = m / N
-            if i % m == 0:
-                print("|", end="")
-            key = arbol.RT.get_key(row)
-            KEYS.append(key)
-            # manejar errores de formato:
-            arbol.add(row)
-        print()
-        # arbol.print_tree_by_levels()
-
-
-    return arbol
-
-def notest_onesearch(key):
-    # BUSQUEDA DE UN REGISTRO ESPECIFICO
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
-    print("\nBúsqueda de un registro específico:")
-    resultado = arbol.search(key)
-    # for registro in resultado:
-    #     print(registro)
+    def insert_csv(self, csv_path):
+        """
+        Inserta registros en el ORDEN EXACTO de CODIGOS_A_USAR.
+        """
+        with open(csv_path, mode='r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            next(reader)
+            registros = list(reader)
+            i = 0         
+            for row in registros:
+                i += 1
+                if i % N == 0:
+                    print("|", end="")
+                key = self.Registro.get_key(row)
+                KEYS = []
+                KEYS.append(key)
+                # manejar errores de formato:
+                row = self.Registro.correct_format(row)
+                self.heap.insert(row)
+            print()
     
-    print()
-    print("Búsqueda unica de prueba finalizada.")
-
-def notest_allsearch():
-    # BUSQUEDAS
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
-    print("\nBúsquedas de prueba:")
-    i=0
-    for key in KEYS:
-        i+=1
-        resultado = arbol.search(key)
-        # print(resultado)
-        m = N
-        if random_index == 0:
-            m = m / N
-        if i % m == 0:
-            print("|", end="")
-        if resultado == []:
-            print(f"{key} No encontrado")
-            break
+    def generate_index(self, index_type ,csv_path ):
+        """
+        Genera el índice del tipo especificado.
+        """
+        if  index_type == "heap":
+            start_time = time.time()
+            self.insert_csv(csv_path)
+            end_time = time.time()
+            return end_time - start_time 
+        elif index_type == "bptree":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.bptree.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "hash":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                record = self.heap.read(i)
+                self.hash.insert(record = record , data_position = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "sequential":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.sequential.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "isam":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[x]}.bin', name_data_file = self.data_file)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "brin":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                self.brin.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "rtree":
+            start_time = time.time()
+            for i in range(num[x]-1):
+                record = self.heap.read(i)
+                self.rtree.insert(record = record, record_pos = i)
+            end_time = time.time()
+            return end_time - start_time
     
-    print()
-    print("Búsqueda de prueba finalizada.")
-
-
-def notest_search_range():
-    # BUSQUEDAS POR RANGO
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
-
-    if 's' in arbol.format_key:
-        inferior = 'A'
-        superior = 'D'
-    else:
-        inferior = 100
-        superior = 1000
-    print(f"\nBúsquedas por rango: {inferior} y {superior}:")
-    print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {arbol.format_key}\n")
+    def generate_test_data(self, path, csv_times, Indices_struct):
+        """
+        Genera un archivo CSV con datos de prueba.
+        Si el archivo ya existe, añade una nueva fila.
+        """
+        for j in range(10):
+            print (f"Generando datos de prueba {j+1}/8...")
+            destroy_archivos() 
+            diccionario_tiempos = {}
+            for struct in Indices_struct:
+                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+                time = temp.generate_index(struct, csv_path=path)
+                diccionario_tiempos[struct] = time
+                print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
+            df = pd.DataFrame(diccionario_tiempos, index=[0])
+            # Si el archivo existe, añade la fila sin encabezado
+            if os.path.exists(csv_times):
+                df.to_csv(csv_times, mode='a', header=False, index=False)
+            else:
+                df.to_csv(csv_times, index=False)
     
-    resultado_rango = arbol.search_range(inferior, superior)
-    # for registro in resultado_rango:
-    #     print(registro)
-    
-
-def notest_eliminar():
-    # ELIMINAR REGISTROS
-    arbol = archivo.BPTree(table_format, name_key, max_num_child=ma)
-    print("\nEliminando registros:")
-    while True:
-        print(" desea eliminar un registro? (e)")
-        opcion = input("Ingrese 'e' para eliminar o 'salir' para terminar: ").lower()
-        if opcion == 'salir':
-            break
-        if opcion != 'e':
-            continue
-        key = input("Ingrese la llave del registro a eliminar: ")
-        resultado = arbol.delete(int(key))
-        if resultado:
-            print(f"Registro con llave {key} eliminado.")
-        else:
-            print(f"Registro con llave {key} no encontrado.")
+    def search(self, keys_for_search, csv_time_seach , key_type):
+        """
+        Realiza una búsqueda de los keys especificados y guarda los tiempos en un CSV.
+        """
+        tiempos = {}
+        for key in keys_for_search:
+            start_time = time.time()
+            if key_type == "heap":
+                self.heap.search(key)
+            elif key_type == "bptree":
+                self.bptree.search(key)
+            elif key_type == "hash":
+                self.hash.search(key)
+            elif key_type == "sequential":
+                self.sequential.search(key)
+            elif key_type == "isam":
+                self.isam.search(key)
+            elif key_type == "brin":
+                self.brin.search(key)
+            elif key_type == "rtree":
+                self.rtree.search(key)
+            end_time = time.time()
+            tiempos[key] = end_time - start_time
         
-        arbol.print_tree_by_levels()
+        df = pd.DataFrame(tiempos, index=[0])
+        df.to_csv(csv_time_seach, mode='a', header=False, index=False)
+
+    def test_search(self, Indices_struct, csv_time_seach):
+        keys_for_search = KEYS[:100]  # Usar los primeros 100 keys para la búsqueda
 
 
 
-
-# Ejemplo de uso
-if __name__ == "__main__":
-
-    # Crear el árbol B+ e insertar registros desde el CSV
-    notest_insert_CSV(csv_path, index_file, data_file)
-
-    # Prueba de búsqueda
-    notest_allsearch()
-    # Prueba de búsqueda por rango
-    notest_search_range()
-
-    # Prueba de busqueda de un registro específico
-    notest_onesearch(KEYS[0])
-
-    # notest_eliminar()
- 
+        
 
 
-    # # eliminar archivos existentes
-    # try:
-    #     os.remove(index_file)
-    #     os.remove(data_file)
-    # except FileNotFoundError:
-    #     pass
-
-
-
+EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
