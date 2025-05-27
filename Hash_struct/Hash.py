@@ -147,6 +147,12 @@ class Hash:
         self.Header = HeaderType()
 
         self._initialize_files(global_depth, power, force=force_create)
+        
+        self.empty_bucket = self.BT.to_bytes(
+                          {'records': [-1] * self.max_records,
+                           'local_depth': 1000,
+                           'fullness': 0,
+                           'overflow_position': -1})
 
     # utility functions
     def _initialize_files(self, global_depth, power, force=False):
@@ -243,19 +249,21 @@ class Hash:
             #print("Splitting")
             buckets_file.seek(bucket_position * self.BT.size)
             old_bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-            # separar bucket buckets
+
+            
+            buckets_file.seek(bucket_left_pos * self.BT.size)
+            buckets_file.write(self.empty_bucket)
+
             bucket_left_pos = bucket_position
             bucket_right_pos = self.Header.read(index_file, 2)
             self.Header.write(index_file, bucket_right_pos + 1, 2)
-            empty_bucket = {'records': [-1] * self.max_records,
-                           'local_depth': old_bucket['local_depth'] + 1,
-                           'fullness': 0,
-                           'overflow_position': -1}
-            buckets_file.seek(bucket_left_pos * self.BT.size)
-            buckets_file.write(self.BT.to_bytes(empty_bucket))
+            
+            
             buckets_file.seek(bucket_right_pos * self.BT.size)
-            buckets_file.write(self.BT.to_bytes(empty_bucket))
+            buckets_file.write(self.BT.to_bytes())
 
+
+            
             # separar index
             pos = self.Header.read(index_file, 3)
             ## nuevos nodos
