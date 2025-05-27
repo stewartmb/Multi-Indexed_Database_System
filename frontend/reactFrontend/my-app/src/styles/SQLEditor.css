@@ -45,7 +45,7 @@
 
     /* SQL Editor Styles */
     .cm-editor {
-        background: #1e1e1e !important;
+        background: #080808 !important;
         color: #e2e8f0 !important;
     }
 
@@ -59,7 +59,7 @@
     }
 
     .cm-editor .cm-gutters {
-        background: #1e1e1e !important;
+        background: #080808 !important;
         border-right: 1px solid #2d3748;
         color: #4a5568;
     }

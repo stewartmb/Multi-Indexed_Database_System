@@ -42,7 +42,7 @@
     overflow: auto;
     padding: 1.5rem;
     font-size: 0.875rem;
-    background: #0f172a;
+    background: #0b0b0b;
     color: #e2e8f0;
 }
 
@@ -69,7 +69,7 @@
     border-radius: 0.5rem;
     overflow: hidden;
     border: 1px solid #374151;
-    background: #1e293b;
+    background: #111b2b;
 }
 
 .table {
@@ -86,7 +86,7 @@
 }
 
 .table th {
-    background: #111827;
+    background: #0a0d14;
     text-align: left;
     color: #f3f4f6;
     font-weight: 500;
@@ -96,12 +96,12 @@
 }
 
 .table td {
-    background: #1e293b;
+    background: #101722;
     color: #d1d5db;
 }
 
 .table tbody tr:hover td {
-    background: #2d3748;
+    background: #0d1016;
 }
 
 .pagination {
