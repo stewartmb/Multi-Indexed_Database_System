@@ -151,3 +151,88 @@ Los experimentos se realizaron un total de 100 veces. Se sacó el tiempo máximo
 
 
 **Análisis de los resultados:**
+ bla bla bla 
+
+
+
+ ## Prueba 3: Tiempo de búsqueda por rango de los índices
+
+Primero, se realizó la creación de la data con un total de 10k, 50k y 100k registros. 
+
+El siguiente experimento consiste en que, de la data, se elige aleatoriamente un rango y se procede a usar todos los índices para buscar dicho rango. El R-tree tiene 3 funciones que buscan dado un rango, por lo que para estas 3 funciones se eligieron rangos espaciales.
+
+Los experimentos se realizaron un total de 100 veces. Se sacó el tiempo máximo y mínimo, el tiempo promedio y la desviación estándar.
+
+### Para 10k
+
+**Cuadro 1:**
+
+
+
+| Índice             | Máximo   | Mínimo   | Promedio | Desviación Estándar |
+|------------------------|----------|----------|----------|----------------------|
+| **heap**               | 26.9928  | 20.8769  | 21.5296  | 0.6289               |
+| **bptree**             | 12.1050  | 0.1438   | 5.9454   | 3.4346               |
+| **hash**               | 262.8202 | 184.2222 | 196.4279 | 12.9245              |
+| **sequential**         | 1.4780   | 0.1762   | 0.2560   | 0.1298               |
+| **isam**               | 1.1051   | 0.0720   | 0.1182   | 0.1344               |
+| **brin**               | 0.2930   | 0.0701   | 0.0874   | 0.0225               |
+| **rtree_point_to_point** | 7.0190 | 1.3680   | 3.2386   | 0.8987               |
+| **rtree_knn**          | 16.6841  | 3.4418   | 10.5534  | 2.3755               |
+| **rtree_radio**        | 9.2432   | 2.4409   | 5.9142   | 1.4445               |
+
+
+**Gráfico 1:**
+
+![Grafico1](10k_RS.png)
+
+### Para 50k
+
+**Cuadro 2:**
+
+
+
+| Índice             | Máximo   | Mínimo   | Promedio | Desviación Estándar |
+|------------------------|----------|----------|----------|----------------------|
+| **heap**               | 128.5312 | 106.2160 | 108.3308 | 2.2024               |
+| **bptree**             | 13.0410  | 0.0668   | 1.3171   | 2.9216               |
+| **hash**               | 211.9560 | 183.4760 | 190.0892 | 5.2127               |
+| **sequential**         | 1.9648   | 0.1669   | 0.3020   | 0.1745               |
+| **isam**               | 1.0121   | 0.0851   | 0.1638   | 0.1478               |
+| **brin**               | 0.2339   | 0.0689   | 0.0859   | 0.0249               |
+| **rtree_point_to_point** | 9.1083 | 1.6260   | 3.1636   | 1.0839               |
+| **rtree_knn**          | 15.5158  | 3.3863   | 9.3521   | 2.7005               |
+| **rtree_radio**        | 10.1259  | 3.1421   | 5.9650   | 1.5833               |
+
+
+**Gráfico 2:**
+
+![Grafico1](50k_RS.png)
+
+### Para 100k
+
+**Cuadro 3:**
+
+
+| Índice             | Máximo   | Mínimo   | Promedio | Desviación Estándar |
+|------------------------|----------|----------|----------|----------------------|
+| **heap**               | 219.5749 | 210.7370 | 214.3201 | 1.4923               |
+| **bptree**             | 12.7239  | 0.0691   | 0.8215   | 2.7184               |
+| **hash**               | 247.9300 | 184.1941 | 194.4659 | 11.1113              |
+| **sequential**         | 1.4760   | 0.2031   | 0.2908   | 0.1222               |
+| **isam**               | 0.6952   | 0.0961   | 0.1748   | 0.0779               |
+| **brin**               | 0.1931   | 0.0770   | 0.0828   | 0.0117               |
+| **rtree_point_to_point** | 6.3679 | 1.1740   | 3.0954   | 0.9713               |
+| **rtree_knn**          | 15.6000  | 3.5222   | 9.6166   | 2.4041               |
+| **rtree_radio**        | 9.3052   | 2.2810   | 5.5537   | 1.6455               |
+
+
+
+**Gráfico 3:**
+
+![Grafico1](100k_RS.png)
+
+### Análisis de los resultados:
+bla bla bla
+
+
