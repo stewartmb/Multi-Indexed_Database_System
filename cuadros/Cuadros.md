@@ -1,4 +1,4 @@
-# Cuadros comparativos de desempeño
+# Cuadros comparativos de desempeño y Gráficos resultantes
 En esta sección se mostraran los cuadros comparativos de las pruebas realizadas para analizar la eficiencia de los índices.
 
 ## Para 10k datos
@@ -22,6 +22,11 @@ Se hizo este experimento un total de 10 veces. Se sacó el tiempo máximo y mín
 | isam       | 0.8259  | 0.7195  | 0.7604   | 0.0300             |
 | b+tree     | 2.3175  | 2.1017  | 2.1996   | 0.0715             |
 | rtree      | 18.0558 | 15.6037 | 16.2561  | 0.6891             |
+
+
+**Gráfico 1:**
+
+![Grafico1](10k_creacion.png)
 
 
 **Análisis:**
