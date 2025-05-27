@@ -150,7 +150,7 @@ def create_table(query):
     else:
         if query["data"]["columns"][pk]["index"] is None:
             query["data"]["columns"][pk]["index"] = "bptree"
-            query["data"]["columns"][pk]["params"] = [50]
+            query["data"]["columns"][pk]["params"] = [100]
 
     os.makedirs(os.path.dirname(table_filename(query["name"])), exist_ok=True)
     with open(table_filename(query["name"]), "w") as f:

@@ -218,8 +218,8 @@ class BRIN:
                  name_index_file = 'Brin_struct/index_file.bin',
                  name_page_file = 'Brin_struct/page_file.bin',
                  name_data_file = 'Brin_struct/data_file.bin',
-                 max_num_pages: int = 70,
-                 max_num_keys: int = 35,
+                 max_num_pages: int = 30,
+                 max_num_keys: int = 40,
                  force_create = False):
 
         self.index_file = name_index_file
@@ -451,6 +451,7 @@ class BRIN:
             pos_page = brin.pages[mid]
             page = self._read_page(pos_page)  # Leer la página correspondiente
             min_value = page.range_values[0]
+            print (mid)
             if min_value == key:
                 first_occurrence = mid
                 high = mid - 1
@@ -459,6 +460,8 @@ class BRIN:
                 low = mid + 1
             else:
                 high = mid - 1
+        if floor_index == -1 and first_occurrence == -1:
+            return 0
         return first_occurrence if first_occurrence != -1 else floor_index
 
 
@@ -481,7 +484,7 @@ class BRIN:
             for j in range(brin.page_count):
                 pos_page = brin.pages[j]
                 page = self._read_page(pos_page)
-                print(f"  Página {j}: Claves: {page.keys[:page.key_count]}, Hijos: {page.childrens[:page.key_count]}, Rango: {page.range_values}, Ordenada: {page.is_order}")
+                print(f"  Página {pos_page}: Claves: {page.keys[:page.key_count]}, Hijos: {page.childrens[:page.key_count]}, Rango: {page.range_values}, Ordenada: {page.is_order}")
 
 
     ### FUNCIONES ###
