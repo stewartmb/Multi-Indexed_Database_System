@@ -218,8 +218,8 @@ class BRIN:
                  name_index_file = 'Brin_struct/index_file.bin',
                  name_page_file = 'Brin_struct/page_file.bin',
                  name_data_file = 'Brin_struct/data_file.bin',
-                 max_num_pages: int = 100,
-                 max_num_keys: int = 100,
+                 max_num_pages: int = 70,
+                 max_num_keys: int = 35,
                  force_create = False):
 
         self.index_file = name_index_file

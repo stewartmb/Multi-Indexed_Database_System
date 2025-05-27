@@ -24,7 +24,7 @@ format_tables = [{"codigo": "i", "nombre": "50s", "ciclo": "i"},
 name_keys = ["ciclo", "iata", "zip_code", "id"]
 
 # numero aleatorio entre 1 y 3
-random_index = 1
+random_index = 3
 
 print("random_index", random_index)
 # Seleccionar el formato de tabla correspondiente
@@ -81,7 +81,7 @@ def test_insert_CSV(csv_path, index_file, data_file):
             Brin.add(row)
     print()
     print("Proceso de lectura de CSV finalizado.")
-    # Brin.print_all_brins()
+    Brin.print_all_brins()
     return Brin
 
 
@@ -93,7 +93,7 @@ def test_search():
     for key in KEYS:
         i+=1
         resultado = Brin.search(key)
-        # print(resultado)
+        print(resultado)
         m = N
         if random_index == 0:
             m = m / N
