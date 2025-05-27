@@ -461,13 +461,22 @@ def aux_select(query):
                     point = cond["point"]
                     for i in range(len(point)):
                         point[i] = cast(point[i], format[key[i]])
-                    sets.append(set(rtree.ksearch(int(cond["knn"]), point))) # desordena el knn
-                else:
-                    point = cond["value"]
-                    for i in range(len(point)):
-                        point[i] = cast(point[i], format[key[i]])
+                    lista_knn = rtree.ksearch(int(cond["knn"]), point)
+                    
 
-                    sets.append(set(rtree.search(point)))
+                    sets.append(set(lista_knn))
+                else:
+                    if "radius" in cond:
+                        point = [float(i) for i in cond["point"]]
+                        lista_radius = rtree.radius_query(point, float(cond["radius"]))
+
+
+                        sets.append(set(lista_radius))
+                    else:
+                        point = cond["value"]
+                        for i in range(len(point)):
+                            point[i] = cast(point[i], format[key[i]])
+                        sets.append(set(rtree.search(point)))
 
 
         else:
