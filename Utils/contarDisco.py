@@ -21,10 +21,16 @@ import csv
 KEYS = []
 # Lista fija de códigos a usar
 # generar todos los códigos aleatorios entre 1 y 100
-num = [100,0,0]
+num = [10000,0,0]
 x=0
+
+
 #path = f'/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test'
 path = "C:/Users/Equipo/Documents/2025-1/BD2/proyecto/Proyecto_BD2/Utils/tests"
+
+
+
+
 data_file = f'Generate_test/data_file{num[x]}.bin'
 
 btree_file1 = f'Generate_test/btree_file1{num[x]}.bin'
@@ -62,20 +68,24 @@ def destroy_archivos():
             os.remove(file)
             print (f"Archivo {file} eliminado.")
 
+
 class MEGA_SUPER_HIPER_MASTER_INDICE:
-    def __init__(self, name_key, table_format , x , num = num):
+    def __init__(self, name_key, table_format , x , num = num , test_global = False):
         self.name_key = name_key
         self.table_format = table_format
         self.x = x
         self.data_file = f'Generate_test/data_file{num[x]}.bin'
         self.Registro = RegistroType(table_format, name_key)
         self.heap = HEAP.Heap(table_format, key = name_key, data_file_name = self.data_file , force_create = False)
-        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[x]}.bin', name_data_file = data_file , max_num_child = 500)
-        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[x]}.bin',data_file_name =data_file, global_depth = 16 ,max_records_per_bucket = 20)
-        self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[x]}.bin',name_data_file = data_file , num_aux =200)
-        self.isam = None
-        self.brin = BRIN.BRIN(table_format, name_key , name_index_file = f'Generate_test/brin_1_index{num[x]}.bin', name_page_file =  f'Generate_test/brin_2_index{num[x]}.bin',name_data_file = data_file , max_num_pages = 20, max_num_keys = 20)
-        self.rtree = RTREE.RTreeFile(table_format = table_format, p_key = name_key ,keys = ["latitude", "longitude"] , data_filename = data_file, index_filename = f'Generate_test/rtree_1_index{num[x]}.bin')
+        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[self.x]}.bin', name_data_file = data_file , max_num_child = 500)
+        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[self.x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[self.x]}.bin',data_file_name =data_file, global_depth = 10 ,max_records_per_bucket = 30)
+        self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[self.x]}.bin',name_data_file = data_file , num_aux =200)
+        if test_global:
+            self.isam = None
+        else:
+            self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[self.x]}.bin', name_data_file = self.data_file)
+        self.brin = BRIN.BRIN(table_format, name_key , name_index_file = f'Generate_test/brin_1_index{num[self.x]}.bin', name_page_file =  f'Generate_test/brin_2_index{num[self.x]}.bin',name_data_file = data_file , max_num_pages = 20, max_num_keys = 20)
+        self.rtree = RTREE.RTreeFile(table_format = table_format, p_key = name_key ,keys = ["latitude", "longitude"] , data_filename = data_file, index_filename = f'Generate_test/rtree_1_index{num[self.x]}.bin')
 
     def insert_csv(self, csv_path):
         """
@@ -106,14 +116,12 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             start_time = time.time()
             self.insert_csv(csv_path)
             end_time = time.time()
-            print(contador.reset_counts())
             return end_time - start_time 
         elif index_type == "bptree":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.bptree.add(pos_new_record = i)
             end_time = time.time()
-            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "hash":
             start_time = time.time()
@@ -121,28 +129,24 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
                 record = self.heap.read(i)
                 self.hash.insert(record = record , data_position = i)
             end_time = time.time()
-            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "sequential":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.sequential.add(pos_new_record = i)
             end_time = time.time()
-            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "isam":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[x]}.bin', name_data_file = self.data_file)
             end_time = time.time()
-            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "brin":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.brin.add(pos_new_record = i)
             end_time = time.time()
-            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "rtree":
             start_time = time.time()
@@ -150,7 +154,6 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
                 record = self.heap.read(i)
                 self.rtree.insert(record = record, record_pos = i)
             end_time = time.time()
-            print(contador.reset_counts())
             return end_time - start_time
     
     def generate_test_data(self, path, csv_times, Indices_struct):
@@ -163,7 +166,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             destroy_archivos() 
             diccionario_tiempos = {}
             for struct in Indices_struct:
-                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x, test_global = True)
                 time = temp.generate_index(struct, csv_path=path)
                 diccionario_tiempos[struct] = time
                 print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
@@ -174,68 +177,147 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             else:
                 df.to_csv(csv_times, index=False)
     
-    def search(self, key, csv_time_seach , key_type):
+    def search(self, key , key_type ,key_rtree ):
         """
         Realiza una búsqueda de los keys especificados y guarda los tiempos en un CSV.
         """
         if key_type == "heap":
             start_time = time.time()
-            self.heap.search(key)
+            self.heap.search(key,key)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif key_type == "bptree":
             start_time = time.time()
             self.bptree.search(key)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif key_type == "hash":
             start_time = time.time()
             self.hash.search(key)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif key_type == "sequential":
             start_time = time.time()
             self.sequential.search(key)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif key_type == "isam":
             start_time = time.time()
             self.isam.search(key)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif key_type == "brin":
             start_time = time.time()
             self.brin.search(key)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif key_type == "rtree":
             start_time = time.time()
-            self.rtree.search(key)
+            self.rtree.search(key_rtree)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
-            tiempos[key] = end_time - start_time
-        
-        df = pd.DataFrame(tiempos, index=[0])
-        df.to_csv(csv_time_seach, mode='a', header=False, index=False)
 
-    def test_search(self, total_path ,Indices_struct, csv_time_seach ,):
-        # se lee los keys del archivo CSV
-        keys_for_search = pd.read_csv(total_path, usecols=[self.name_key]).iloc[:, 0].tolist()
-        list_latitude_longitude = pd.read_csv(total_path, usecols=["latitude", "longitude"]).values.tolist()
+    def test_search(self, total_path ,Indices_struct, csv_time_search ,):
+        df = pd.read_csv(total_path)
+        random_sample = df.sample(n=1, random_state=42)  # random_state para reproducibilidad
+        
+        # Obtener las claves y coordenadas
+        keys_for_search = random_sample[self.name_key].astype(str).tolist()
+        list_latitude_longitude = random_sample[["latitude", "longitude"]].values.tolist()
+
         # se crea un diccionario para almacenar los tiempos de búsqueda
         tiempos = {}
         for struct in Indices_struct:
-            print(f"Probando búsqueda en {struct}...")
-            temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
-            time = temp.search(keys_for_search, csv_time_seach, key_type=struct)
-            tiempos[struct] = time
-            print(f"Tiempo de búsqueda en {struct}: {time:.2f} segundos")
+            tiempos[struct] = []
+            print (f"Probando búsqueda en {struct}...")
+            for j in range(len(keys_for_search)):
+                key = keys_for_search[j]
+                latitude = float(list_latitude_longitude[j][0])
+                longitude = float(list_latitude_longitude[j][1])
+                key_rtree = (latitude, longitude)
+                time = self.search(key = keys_for_search[j], key_type = struct, key_rtree = key_rtree)
+                time = round(time*1000, 4)
+                tiempos[struct].append(time)
+        # se crea un DataFrame con los tiempos de búsqueda
+        df = pd.DataFrame(tiempos)
+        # se guarda el DataFrame en un archivo CSV
+        if os.path.exists(csv_time_search):
+            df.to_csv(csv_time_search, mode='a', header=False, index=False)
+        else:
+            df.to_csv(csv_time_search, index=False)
+
+    def insert(self, key , index_type ,key_rtree , pos):
+        """
+        Realiza una búsqueda de los keys especificados y guarda los tiempos en un CSV.
+        """
+        if  index_type == "heap":
+            pos = self.heap._read_header()
+            KEYS.append(pos)
+            start_time = time.time()
+            self.heap.insert(key)
+            end_time = time.time()
+            return end_time - start_time 
+        elif index_type == "bptree":
+            start_time = time.time()
+            self.bptree.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "hash":
+            start_time = time.time()
+            record = self.heap.read(i)
+            self.hash.insert(record = record , data_position = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "sequential":
+            start_time = time.time()
+            self.sequential.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "isam":
+            start_time = time.time()
+            self.isam.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "brin":
+            start_time = time.time()
+            self.brin.add(pos_new_record = i)
+            end_time = time.time()
+            return end_time - start_time
+        elif index_type == "rtree":
+            start_time = time.time()
+            record = self.heap.read(i)
+            self.rtree.insert(record = record, record_pos = i)
+            end_time = time.time()
+            return end_time - start_time
 
 
-print(contador.get_counts())
+
+
+def Test_global():
+    for x in range(len(num)):
+        csv_times = f'csv_times{num[x]}.csv'
+        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct, Test_global = True)
+
+def Test_search():
+    for x in range(len(num)):
+        print (f"Generando datos de prueba para {num[x]} registros...")
+        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+        csv_time_search = f'csv_time_search{num[x]}.csv'
+        EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
+
+
+
 
 EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
-EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
+csv_time_search = f'csv_time_search{num[x]}.csv'
+EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
 
-print(contador.history)

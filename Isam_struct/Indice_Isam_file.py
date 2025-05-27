@@ -250,7 +250,7 @@ class ISAM():
         num_pages, num_over, _, pos_root = self._read_header()
         
         if pos_root == -1:
-            print("Árbol vacío")
+            #print("Árbol vacío")
             return
         
         # Inicializar cola para BFS
@@ -258,32 +258,32 @@ class ISAM():
         queue.append((pos_root, 0, "Root"))  # (posición, nivel, tipo)
         
         current_level = 0
-        print("\n=== Estructura ISAM ===")
+        #print("\n=== Estructura ISAM ===")
         
         while queue:
             pos, level, node_type = queue.popleft()
             
             # Manejar cambio de nivel
             if level != current_level:
-                print()
+                #print()
                 current_level = level
             
             # Leer la página
             page = self._read_index_page(pos)
             
             # Imprimir información del nodo
-            print(f"[Nivel {level} {node_type} Pos:{pos}] ", end="")
-            print("Keys:", [k for k in page.keys[:page.key_count] if k is not None], end=" | ")
-            print("Children:", [c for c in page.childrens[:page.key_count+1] if c != -1], end="")
+            #print(f"[Nivel {level} {node_type} Pos:{pos}] ", end="")
+            #print("Keys:", [k for k in page.keys[:page.key_count] if k is not None], end=" | ")
+            #print("Children:", [c for c in page.childrens[:page.key_count+1] if c != -1], end="")
             
             # Para hojas, mostrar next
             if page.leaf:
-                print(f" | Next: {page.next}", end="")
+                #print(f" | Next: {page.next}", end="")
                 
                 # Si tiene overflow, agregar a la cola
                 if page.next != -1:
                     queue.append((page.next, level, "Overflow"))
-            print()
+            #print()
             
             # Agregar hijos no hoja a la cola
             if not page.leaf:
@@ -292,11 +292,11 @@ class ISAM():
                         queue.append((child_pos, level+1, "Interno"))
         
         # Mostrar información de páginas
-        print("\n=== Resumen ===")
-        print(f"Total páginas de datos: {num_pages}")
-        print(f"Total páginas de overflow: {num_over}")
-        print(f"Orden del árbol (M): {self.M}")
-        print(f"Posición raíz: {pos_root}")
+        #print("\n=== Resumen ===")
+        #print(f"Total páginas de datos: {num_pages}")
+        #print(f"Total páginas de overflow: {num_over}")
+        #print(f"Orden del árbol (M): {self.M}")
+        #print(f"Posición raíz: {pos_root}")
 
 
 
@@ -484,7 +484,7 @@ class ISAM():
                 record_temp = Index_temp.from_bytes(data, self.format_key)
                 key = record_temp.key
                 offset = record_temp.pos
-                # print(f"Agregando {key} al heap del bloque {i}")
+                # #print(f"Agregando {key} al heap del bloque {i}")
                 heapq.heappush(heap, (key, offset, i))
 
         with open(output_file, 'wb') as fout:
@@ -493,7 +493,7 @@ class ISAM():
                 record_temp = Index_temp(key, offset)
                 fout.write(record_temp.to_bytes(self.format_key))
                 contador.contar_write()
-                # print(f"Escribiendo {key} en {output_file}")
+                # #print(f"Escribiendo {key} en {output_file}")
 
                 # Leer siguiente elemento del mismo archivo
                 data = open_files[i].read(record_size)
@@ -503,9 +503,9 @@ class ISAM():
                     next_key = record_temp.key
                     next_offset = record_temp.pos
                     heapq.heappush(heap, (next_key, next_offset, i))
-                #     print(f"Agregando {next_key} al heap del bloque {i}")
+                #     #print(f"Agregando {next_key} al heap del bloque {i}")
                 # else:
-                #     print(f"Bloque {i} agotado")
+                #     #print(f"Bloque {i} agotado")
 
 
         # Cerrar archivos
@@ -562,9 +562,9 @@ class ISAM():
 
         lista = posiciones.copy()
         # 4. Generar paginas (HOJAS) de data ordenada
-        # print(f"Generando paginas de indice con M={self.M} ")
-        # print()
-        # print("=== Generando hojas ===")
+        # #print(f"Generando paginas de indice con M={self.M} ")
+        # #print()
+        # #print("=== Generando hojas ===")
         with open(order_file, 'rb') as f:
             limit = lista.pop(0)
             limit = lista.pop(0) 
@@ -594,10 +594,10 @@ class ISAM():
         num_pages_data, num_over , max_num_child ,  pos_root = self._read_header()
         for i in range(num_pages_data):
             page = self._read_index_page(i)
-            # print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+            # #print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
         
         # 5. Generar indices de primer nivel 
-        # print("=== Generando indices de primer nivel ===")
+        # #print("=== Generando indices de primer nivel ===")
         lista = posiciones.copy()
         with open(order_file, 'rb') as f:
             i = 1
@@ -608,14 +608,14 @@ class ISAM():
             page_root.childrens[0] = pos_page
             for num in range(1,len(lista)):
                 if i % self.M != 0 :
-                    # print(lista[num], "Nueva pagina")
+                    # #print(lista[num], "Nueva pagina")
                     f.seek(lista[num] * record_size)
                     data = f.read(record_size)
                     contador.contar_read()
                     record_temp = Index_temp.from_bytes(data, self.format_key)
                     key = record_temp.key
                     pos = record_temp.pos
-                    # print( f"Agregando clave {key} y posicion {pos}")
+                    # #print( f"Agregando clave {key} y posicion {pos}")
                     page.keys[page.key_count] = key
                     page.childrens[page.key_count+1] = i
                     page.key_count += 1
@@ -648,11 +648,11 @@ class ISAM():
         num_pages, num_over ,_ , _= self._read_header()
         for i in range(num_pages_data, num_pages-1):
             page = self._read_index_page(i)
-        #     print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+        #     #print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
         
-        # print("=== Generando root ===")
+        # #print("=== Generando root ===")
         page = self._read_index_page(num_pages-1)
-        # print(f"Página {num_pages-1}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
+        # #print(f"Página {num_pages-1}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
 
         # print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
         # print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")

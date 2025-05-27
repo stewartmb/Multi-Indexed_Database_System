@@ -344,7 +344,9 @@ class Hash:
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 contador.contar_read()
+                print("WHAT")
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+                print(bucket)
                 self._find_in_bucket(bucket, key, matches)
                 overflow_position = bucket['overflow_position']
             return matches

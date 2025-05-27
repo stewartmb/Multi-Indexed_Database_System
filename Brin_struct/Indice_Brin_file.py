@@ -463,7 +463,7 @@ class BRIN:
             pos_page = brin.pages[mid]
             page = self._read_page(pos_page)  # Leer la página correspondiente
             min_value = page.range_values[0]
-            print (mid)
+            #print(mid)
             if min_value == key:
                 first_occurrence = mid
                 high = mid - 1
@@ -484,19 +484,19 @@ class BRIN:
         """
         num_brins, is_order = self._read_header_index()
         if num_brins == 0:
-            print("No hay índices BRIN.")
+            #print("No hay índices BRIN.")
             return
         
         # Imprime el encabezado del índice BRIN
-        print(f"Encabezado del índice BRIN: Número de BRINs: {num_brins}, Ordenado: {is_order}")
+        #print(f"Encabezado del índice BRIN: Número de BRINs: {num_brins}, Ordenado: {is_order}")
         
         for i in range(num_brins):
             brin = self._read_brin(i)
-            print(f"BRIN {i}: Rango: {brin.range_values}, Páginas: {brin.page_count}, Ordenado: {brin.is_order}")
+            #print(f"BRIN {i}: Rango: {brin.range_values}, Páginas: {brin.page_count}, Ordenado: {brin.is_order}")
             for j in range(brin.page_count):
                 pos_page = brin.pages[j]
                 page = self._read_page(pos_page)
-                print(f"  Página {pos_page}: Claves: {page.keys[:page.key_count]}, Hijos: {page.childrens[:page.key_count]}, Rango: {page.range_values}, Ordenada: {page.is_order}")
+                #print(f"  Página {pos_page}: Claves: {page.keys[:page.key_count]}, Hijos: {page.childrens[:page.key_count]}, Rango: {page.range_values}, Ordenada: {page.is_order}")
 
 
     ### FUNCIONES ###
