@@ -203,8 +203,94 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             self.rtree.search(key_rtree)
             end_time = time.time()
             return end_time - start_time
+        
+    def search_range(self, key_start, key_end, key_type , rtree_left , rtree_right):
+        """
+        Realiza una búsqueda de un rango de keys especificados y guarda los tiempos en un CSV.
+        """
+        if key_type == "heap":
+            start_time = time.time()
+            self.heap.search(key_start, key_end)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "bptree":
+            start_time = time.time()
+            self.bptree.search_range(key_start, key_end)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "hash":
+            start_time = time.time()
+            self.hash.range_search(key_start, key_end)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "sequential":
+            start_time = time.time()
+            self.sequential.search_range(key_start, key_end)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "isam":
+            start_time = time.time()
+            self.isam.search_range(key_start, key_end)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "brin":
+            start_time = time.time()
+            self.brin.search_range(key_start, key_end)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "rtree_point_to_point":
+            start_time = time.time()
+            self.rtree.range_search(rtree_left, rtree_right)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "rtree_knn":
+            start_time = time.time()
+            self.rtree.ksearch( k=10 , query = rtree_left)
+            end_time = time.time()
+            return end_time - start_time
+        elif key_type == "rtree_radio":
+            start_time = time.time()
+            self.rtree.radius_query(rtree_left, 5)
+            end_time = time.time()
+            return end_time - start_time
+        
+    
+    def test_search_range(self, total_path ,Indices_struct, csv_time_search ):
+        df = pd.read_csv(total_path)
+        random_sample = df.sample(n=100, random_state=42)  # random_state para reproducibilidad
+        
+        # Obtener las claves y coordenadas
+        keys_for_search = random_sample[self.name_key].astype(str).tolist()
+        list_latitude_longitude = random_sample[["latitude", "longitude"]].values.tolist()
+      # se crea un diccionario para almacenar los tiempos de búsqueda
+        tiempos = {}
+        for struct in Indices_struct:
+            tiempos[struct] = []
+            print (f"Probando búsqueda en {struct}...")
+            for j in range(len(keys_for_search)):
+                key_start = keys_for_search[j]
+                # aumentar 2 minutos a la clave para el rango
+                key_end = str(pd.to_datetime(key_start) + pd.Timedelta(minutes=2))
+                latitude = float(list_latitude_longitude[j][0])
+                longitude = float(list_latitude_longitude[j][1])
+                rtree_left = [latitude, longitude]
+                rtree_right = [latitude + 10, longitude + 10]  # Ajustar el rango según sea necesario
 
-    def test_search(self, total_path ,Indices_struct, csv_time_search ,):
+                time = self.search_range(key_start = key_start, key_end=key_end , key_type = struct, rtree_left = rtree_left , rtree_right= rtree_right)
+                time = round(time*1000, 4)
+                tiempos[struct].append(time)
+        # se crea un DataFrame con los tiempos de búsqueda
+        df = pd.DataFrame(tiempos)
+        # se guarda el DataFrame en un archivo CSV
+        if os.path.exists(csv_time_search):
+            df.to_csv(csv_time_search, mode='a', header=False, index=False)
+        else:
+            df.to_csv(csv_time_search, index=False)
+
+
+
+
+    def test_search(self, total_path ,Indices_struct, csv_time_search ):
         df = pd.read_csv(total_path)
         random_sample = df.sample(n=100, random_state=42)  # random_state para reproducibilidad
         
@@ -214,6 +300,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
 
         # se crea un diccionario para almacenar los tiempos de búsqueda
         tiempos = {}
+
         for struct in Indices_struct:
             tiempos[struct] = []
             print (f"Probando búsqueda en {struct}...")
@@ -221,7 +308,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
                 key = keys_for_search[j]
                 latitude = float(list_latitude_longitude[j][0])
                 longitude = float(list_latitude_longitude[j][1])
-                key_rtree = (latitude, longitude)
+                key_rtree = [latitude, longitude]
                 time = self.search(key = keys_for_search[j], key_type = struct, key_rtree = key_rtree)
                 time = round(time*1000, 4)
                 tiempos[struct].append(time)
@@ -298,3 +385,14 @@ def Test_search():
         csv_time_search = f'csv_time_search{num[x]}.csv'
         EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
+def Test_search_range():
+    for x in range(len(num)):
+        test_data_full = f'test_data_full{num[x]}.csv'
+        total_path = os.path.join(path, test_data_full)
+        print (f"Generando datos de prueba para {num[x]} registros...")
+        EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+        csv_time_search = f'csv_time_search_range{num[x]}.csv'
+        indices = ["heap", "bptree", "hash", "sequential", "isam", "brin", "rtree_point_to_point", "rtree_knn", "rtree_radio"]
+        EL_indice.test_search_range(total_path = total_path, Indices_struct = indices, csv_time_search = csv_time_search)
+
+Test_search_range()
