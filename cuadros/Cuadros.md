@@ -236,3 +236,81 @@ Los experimentos se realizaron un total de 100 veces. Se sacó el tiempo máximo
 bla bla bla
 
 
+
+ ## Prueba 3: Tiempo de inserción de los índices
+
+Primero, se realizó la creación de la data con un total de 10k, 50k y 100k registros. 
+
+El siguiente experimento consiste en que insertaremos un elemento nuevo a los dataset usando los índices. Para el rtree, el elemento a insertar es distinto, porque es espacial.
+
+Los experimentos se realizaron un total de 1000 veces. Se sacó el tiempo máximo y mínimo, el tiempo promedio y la desviación estándar.
+
+
+### Para 10k datos
+
+**Cuadro 1:**
+
+
+| Índice   | Máximo   | Mínimo   | Promedio | Desviación Estándar |
+|--------------|----------|----------|----------|----------------------|
+| **heap**     | 4.3869   | 0.0787   | 0.0974   | 0.1402               |
+| **bptree**   | 4.0939   | 0.2241   | 0.2914   | 0.1703               |
+| **hash**     | 1.8542   | 0.1669   | 0.2063   | 0.0981               |
+| **sequential**| 115.1390| 0.3409   | 1.3965   | 9.4312               |
+| **isam**     | 1.3258   | 0.2198   | 0.5912   | 0.2072               |
+| **brin**     | 1.9169   | 0.2558   | 0.3181   | 0.0767               |
+| **rtree**    | 74.9481  | 1.2619   | 2.3190   | 5.0589               |
+
+
+**Gráfico 1:**
+
+
+![Grafico1](10k_insert.png)
+
+### Para 50k datos
+
+**Cuadro 2:**
+
+
+| Índice    | Máximo   | Mínimo   | Promedio | Desviación Estándar |
+|---------------|----------|----------|----------|----------------------|
+| **heap**      | 29.6431  | 0.0789   | 0.1319   | 0.9345               |
+| **bptree**    | 5.2688   | 0.2232   | 0.2880   | 0.2123               |
+| **hash**      | 3.2201   | 0.1731   | 0.2296   | 0.1214               |
+| **sequential**| 112.7710 | 0.3593   | 1.3744   | 9.3803               |
+| **isam**      | 1.9917   | 0.2270   | 0.4785   | 0.1560               |
+| **brin**      | 1.4510   | 0.2561   | 0.3221   | 0.0629               |
+| **rtree**     | 76.7779  | 1.3378   | 2.1289   | 3.3316               |
+
+
+**Gráfico 2:**
+
+![Grafico1](50k_insert.png)
+
+### Para 100k datos 
+
+**Cuadro 3:**
+
+
+| Índice    | Máximo   | Mínimo   | Promedio | Desviación Estándar |
+|---------------|----------|----------|----------|----------------------|
+| **heap**      | 4.9081   | 0.0770   | 0.0963   | 0.1530               |
+| **bptree**    | 4.8842   | 0.2251   | 0.2952   | 0.1860               |
+| **hash**      | 1.7910   | 0.1700   | 0.2118   | 0.0676               |
+| **sequential**| 118.8538 | 0.3488   | 1.3937   | 9.5054               |
+| **isam**      | 1.3392   | 0.2339   | 0.4353   | 0.1286               |
+| **brin**      | 1.5900   | 0.2549   | 0.3123   | 0.0788               |
+| **rtree**     | 76.2239  | 1.2519   | 2.3492   | 5.1619               |
+
+
+**Gráfico 3:**
+
+![Grafico1](100k_insert.png)
+
+
+### Análisis de los resultados
+
+bñla bña bla 
+
+
+
