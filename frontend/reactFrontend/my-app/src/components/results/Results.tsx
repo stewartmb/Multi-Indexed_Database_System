@@ -25,6 +25,7 @@ const Results: React.FC<Props> = ({ data, columns, message, error, details, hist
 
     // Debug logging
     React.useEffect(() => {
+        console.log("B");
         console.log('Results component received:', {
             data,
             columns,
@@ -62,6 +63,7 @@ const Results: React.FC<Props> = ({ data, columns, message, error, details, hist
 
     // Debug logging for data changes
     React.useEffect(() => {
+        setCurrentPage(1); // Reset to first page on data change
         if (data && data.length > 0) {
             console.log('Sample data row:', data[0]);
             console.log('Available columns:', columns);

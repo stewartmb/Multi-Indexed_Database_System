@@ -5,6 +5,14 @@ import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { useQueryUrl } from '../contexts/QueryUrlContext.tsx';
+import {completeFromList} from "@codemirror/autocomplete";
+
+import '../styles/SQLEditor.css';
+
+
+
+
+
 
 interface Props {
     onRun: (query: string) => void;
@@ -15,18 +23,15 @@ interface Props {
 
 // Define custom syntax highlighting based on the parser grammar
 const myHighlightStyle = HighlightStyle.define([
-    // Keywords from parser
-    { tag: t.keyword, color: "#60a5fa" },           // create, select, insert, delete, where, from, etc.
-    { tag: t.atom, color: "#38bdf8" },              // int, float, double, varchar, etc.
-    { tag: t.string, color: "#4ade80" },            // String literals
-    { tag: t.number, color: "#f87171" },            // Numbers
-    { tag: t.operator, color: "#94a3b8" },          // ==, !=, <, >, <=, >=
-    { tag: t.keyword, color: "#c084fc" },           // primary key
+    // Keywords from parser t.atom
+    { tag: t.keyword, color: "#9d9af5" },           // create, select, insert, delete, where, from, etc.
+    { tag: t.typeName, color: "#38bdf8" },              // int, float, double, varchar, etc.
+    { tag: t.string, color: "#4ade80" },            // String literals        
+    { tag: t.number, color: "#00ffff" },            // Numbers
+    { tag: t.operator, color: "#dbd1c5" },          // ==, !=, <, >, <=, >=
     { tag: t.variableName, color: "#e879f9" },      // column names
-    { tag: t.name, color: "#38bdf8" },              // table names
+    { tag: t.name, color: "#7ec1de" },              // table names
     { tag: t.comment, color: "#64748b", fontStyle: "italic" }, // Comments
-    { tag: t.atom, color: "#fb923c" },              // closest, between, and special keywords
-    { tag: t.atom, color: "#a78bfa" },              // rtree, bptree, seq, isam, hash
     { tag: t.punctuation, color: "#cbd5e1" },       // ( ) , ;
 ]);
 
@@ -54,17 +59,20 @@ const myTheme = EditorView.theme({
         backgroundColor: "rgba(30, 41, 59, 0.5)"
     },
     ".cm-selectionBackground": {
-        backgroundColor: "rgba(147, 51, 234, 0.35) !important"
+        backgroundColor: "rgba(70, 70, 70, 0.55) !important"
     },
     ".cm-cursor": {
         borderLeft: "2px solid #94a3b8"
     },
     "&.cm-focused .cm-selectionBackground": {
-        backgroundColor: "rgba(147, 51, 234, 0.45) !important"
+        backgroundColor: "rgba(15, 99, 138, 0.62) !important"
     },
     "&.cm-focused .cm-cursor": {
         borderLeftColor: "#e2e8f0"
-    }
+    },
+    "&.cm-keyword": {
+        color: "#000000"
+    },
 });
 
 const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoading = false }) => {
@@ -137,127 +145,6 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
             </div>
 
             <div className="sql-editor-body flex-1" style={{ background: '#1e1e1e' }}>
-                <style>
-                    {`
-                    .editor-btn {
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 32px;
-                        height: 32px;
-                        min-width: 32px;
-                        min-height: 32px;
-                        padding: 6px;
-                        border: 1px solid transparent;
-                        border-radius: 4px;
-                        background-color: transparent;
-                        color: #94a3b8;
-                        transition: all 0.15s ease;
-                        -webkit-appearance: none;
-                        appearance: none;
-                        position: relative;
-                        cursor: pointer;
-                    }
-                    
-                    .editor-btn:hover:not(:disabled) {
-                        background-color: #2d3748;
-                        color: #e2e8f0;
-                        border-color: #4a5568;
-                    }
-                    
-                    .editor-btn:disabled {
-                        opacity: 0.5;
-                        cursor: not-allowed;
-                    }
-
-                    .editor-btn svg {
-                        width: 16px;
-                        height: 16px;
-                        transition: transform 0.15s ease;
-                        position: absolute;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
-                    }
-
-                    .editor-btn:hover:not(:disabled) svg {
-                        transform: translate(-50%, -50%) scale(1.1);
-                    }
-
-                    /* SQL Editor Styles */
-                    .cm-editor {
-                        background: #1e1e1e !important;
-                        color: #e2e8f0 !important;
-                    }
-
-                    .cm-editor .cm-content {
-                        font-family: 'JetBrains Mono', monospace;
-                        padding: 0.5rem 0;
-                    }
-
-                    .cm-editor .cm-line {
-                        padding: 0 1rem;
-                    }
-
-                    .cm-editor .cm-gutters {
-                        background: #1e1e1e !important;
-                        border-right: 1px solid #2d3748;
-                        color: #4a5568;
-                    }
-
-                    .cm-editor .cm-activeLineGutter,
-                    .cm-editor .cm-activeLine {
-                        background: rgba(30, 41, 59, 0.5) !important;
-                    }
-
-                    .cm-editor .cm-cursor {
-                        border-left: 2px solid #94a3b8;
-                    }
-
-                    .cm-editor .cm-selectionBackground {
-                        background: rgba(147, 51, 234, 0.35) !important;
-                    }
-
-                    /* SQL Syntax Highlighting */
-                    .cm-editor .cm-keyword {
-                        color: #60a5fa !important; /* SELECT, FROM, WHERE */
-                    }
-
-                    .cm-editor .cm-operator {
-                        color: #94a3b8 !important; /* =, <, > */
-                    }
-
-                    .cm-editor .cm-number {
-                        color: #f87171 !important; /* Numbers */
-                    }
-
-                    .cm-editor .cm-string {
-                        color: #4ade80 !important; /* String literals */
-                    }
-
-                    .cm-editor .cm-comment {
-                        color: #64748b !important;
-                        font-style: italic;
-                    }
-
-                    .cm-editor .cm-def {
-                        color: #38bdf8 !important; /* Table names */
-                    }
-
-                    .cm-editor .cm-variable {
-                        color: #e879f9 !important; /* Column names */
-                    }
-
-                    .cm-editor .cm-punctuation {
-                        color: #cbd5e1 !important;
-                    }
-
-                    .cm-editor .cm-property {
-                        color: #a78bfa !important;
-                    }
-                    `}
-                </style>
-
                 <CodeMirror 
                     value={localQuery}
                     height="100%"
