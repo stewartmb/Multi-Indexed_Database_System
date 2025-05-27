@@ -114,13 +114,9 @@ Los tamaños de los dataset son de: 10k, 50k y 100k.
 - Tiempo de ejecución en ms
 - Accesos a Memoria Secundaria
 
-## Cuadros Comparativos de Desempeño
+## Cuadros Comparativos de Desempeño y Gráficos
 
-Ver aquí:
-
-### Gráficos
-
-Ver aquí:
+[Ver aquí](https://github.com/stewartmb/Proyecto_BD2/blob/main/cuadros/Cuadros.md)
 
 
 ## 👥 Autores

@@ -412,6 +412,7 @@ def create_index(query):
 
 def aux_select(query):
     print(json.dumps(query, indent=2))
+    lista_ordenada = None
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
@@ -461,17 +462,15 @@ def aux_select(query):
                     point = cond["point"]
                     for i in range(len(point)):
                         point[i] = cast(point[i], format[key[i]])
-                    lista_knn = rtree.ksearch(int(cond["knn"]), point)
-                    
+                    lista_ordenada = rtree.ksearch(int(cond["knn"]), point)
 
-                    sets.append(set(lista_knn))
+                    sets.append(set(lista_ordenada))
                 else:
                     if "radius" in cond:
                         point = [float(i) for i in cond["point"]]
-                        lista_radius = rtree.radius_query(point, float(cond["radius"]))
+                        lista_ordenada = rtree.radius_query(point, float(cond["radius"]))
 
-
-                        sets.append(set(lista_radius))
+                        sets.append(set(lista_ordenada))
                     else:
                         point = cond["value"]
                         for i in range(len(point)):
@@ -654,7 +653,17 @@ def aux_select(query):
     print("before evaluate")
     print(tree, sets, universe)
 
-    return evaluate_select(tree, sets, universe)
+    
+
+    result_set = evaluate_select(tree, sets, universe)
+
+
+    if lista_ordenada == None:
+        result_list = list(result_set)
+    else:
+        result_list = [x for x in lista_ordenada if x in result_set]
+
+    return result_list
 
 def select(query):
     #cronometrar
@@ -670,11 +679,13 @@ def select(query):
             if col not in format:
                 raise HTTPException(status_code=404, detail=f"Column {col} does not exist in table {query['table']}")
 
-    ans_set = aux_select(query)
+    ans_list = aux_select(query)
+
+
+
 
     result = []
-
-    for i in ans_set:
+    for i in ans_list:
         heap = Heap(format,
                     data["key"],
                     table_filename(query["table"]))
