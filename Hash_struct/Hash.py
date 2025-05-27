@@ -209,7 +209,7 @@ class Hash:
         }
         bucket['records'] = [-1] * self.max_records  # Limpiamos los registros del bucket original
         bucket['records'][0] = data_position
-
+        bucket['fullness'] = 0
         # El bucket base apunta ahora al nuevo overflow (nuevo "head" de la cadena)
         bucket['overflow_position'] = new_bucket_pos
 
@@ -329,7 +329,6 @@ class Hash:
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-                print(bucket)
                 self._find_in_bucket(bucket, key, matches)
                 overflow_position = bucket['overflow_position']
             return matches

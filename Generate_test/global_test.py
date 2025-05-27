@@ -26,10 +26,7 @@ path = f'/Users/stewart/2025-1/BD2/Proyecto_BD2/Data_test'
 # path = "C:/Users/Equipo/Documents/2025-1/BD2/proyecto/Proyecto_BD2/Data_test"
 data_file = f'Generate_test/data_file{num[x]}.bin'
 
-btree_file1 = f'Generate_test/btree_file1{num[x]}.bin'
-
 test_data_full = f'test_data_full{num[x]}.csv'
-
 total_path = os.path.join(path, test_data_full)
 
 csv_times = f'csv_times{num[x]}.csv'
@@ -39,7 +36,7 @@ csv_time_search = f'csv_time_search{num[x]}.csv'
 table_format = {"timestamp": "24s", "random_int": "i", "name": "20s", "email": "50s", "date": "10s", "price": "d", "latitude": "d", "longitude": "d",  "is_active": "?", "category": "20s"}
 
 Indices_struct = ["heap" , "bptree", "hash", "sequential", "isam", "brin" ,"rtree"]
-def destroy_archivos():
+def destroy_archivos(x):
     """
     Elimina los archivos de datos y de índices generados.
     """
@@ -68,8 +65,8 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
         self.data_file = f'Generate_test/data_file{num[x]}.bin'
         self.Registro = RegistroType(table_format, name_key)
         self.heap = HEAP.Heap(table_format, key = name_key, data_file_name = self.data_file , force_create = False)
-        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[self.x]}.bin', name_data_file = data_file , max_num_child = 500)
-        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[self.x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[self.x]}.bin',data_file_name =data_file, global_depth = 10 ,max_records_per_bucket = 30)
+        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[self.x]}.bin', name_data_file = data_file , max_num_child = 25)
+        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[self.x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[self.x]}.bin',data_file_name =data_file, global_depth = 32 ,max_records_per_bucket = 8)
         self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[self.x]}.bin',name_data_file = data_file , num_aux =200)
         if test_global:
             self.isam = None
@@ -147,26 +144,25 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             end_time = time.time()
             return end_time - start_time
     
-    def generate_test_data(self, path, csv_times, Indices_struct):
+    def generate_test_data(self, path, csv_times, Indices_struct,x):
         """
         Genera un archivo CSV con datos de prueba.
         Si el archivo ya existe, añade una nueva fila.
         """
-        for j in range(1):
-            print (f"Generando datos de prueba {j+1}/8...")
-            destroy_archivos() 
-            diccionario_tiempos = {}
-            for struct in Indices_struct:
-                temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x , test_global = True)
-                time = temp.generate_index(struct, csv_path=path)
-                diccionario_tiempos[struct] = time
-                print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
-            df = pd.DataFrame(diccionario_tiempos, index=[0])
-            # Si el archivo existe, añade la fila sin encabezado
-            if os.path.exists(csv_times):
-                df.to_csv(csv_times, mode='a', header=False, index=False)
-            else:
-                df.to_csv(csv_times, index=False)
+        print (f"Generando datos de prueba ...")
+        destroy_archivos(x) 
+        diccionario_tiempos = {}
+        for struct in Indices_struct:
+            temp = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x , test_global = True)
+            time = temp.generate_index(struct, csv_path=path)
+            diccionario_tiempos[struct] = time
+            print(f"Tiempo de creación del índice {struct}: {time:.2f} segundos")
+        df = pd.DataFrame(diccionario_tiempos, index=[0])
+        # Si el archivo existe, añade la fila sin encabezado
+        if os.path.exists(csv_times):
+            df.to_csv(csv_times, mode='a', header=False, index=False)
+        else:
+            df.to_csv(csv_times, index=False)
     
     def search(self, key , key_type ,key_rtree ):
         """
@@ -210,7 +206,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
 
     def test_search(self, total_path ,Indices_struct, csv_time_search ,):
         df = pd.read_csv(total_path)
-        random_sample = df.sample(n=1, random_state=42)  # random_state para reproducibilidad
+        random_sample = df.sample(n=100, random_state=42)  # random_state para reproducibilidad
         
         # Obtener las claves y coordenadas
         keys_for_search = random_sample[self.name_key].astype(str).tolist()
@@ -241,6 +237,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
         """
         Realiza una búsqueda de los keys especificados y guarda los tiempos en un CSV.
         """
+        i=1
         if  index_type == "heap":
             pos = self.heap._read_header()
             KEYS.append(pos)
@@ -286,24 +283,18 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
 
 def Test_global():
     for x in range(len(num)):
+        test_data_full = f'test_data_full{num[x]}.csv'
+        total_path = os.path.join(path, test_data_full)
         csv_times = f'csv_times{num[x]}.csv'
         EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x ,test_global = True)
-        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
+        EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct , x = x)
 
 def Test_search():
     for x in range(len(num)):
+        test_data_full = f'test_data_full{num[x]}.csv'
+        total_path = os.path.join(path, test_data_full)
         print (f"Generando datos de prueba para {num[x]} registros...")
         EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
         csv_time_search = f'csv_time_search{num[x]}.csv'
         EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
-x=0 
-print (f"Generando datos de prueba para {num[x]} registros...")
-EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
-csv_time_search = f'csv_time_search{num[x]}.csv'
-EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
-
-# exacta
-# por rango ( 2 points)
-# knn ()
-# por radio
