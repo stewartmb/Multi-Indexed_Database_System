@@ -40,7 +40,7 @@ delete_stmt: "delete"i "from"i NAME "where"i expr
 condition: NAME OP VALUE
          | NAME BETWEEN VALUE "and"i VALUE
          | attr_list OP  "[" value_list "]"
-         | attr_list BETWEEN  "[" value_list "]" "and" "[" value_list "]"
+         | attr_list BETWEEN  "[" value_list "]" "and"i "[" value_list "]"
          | attr_list "in"i "(" value_list ")" CLOSEST VALUE
          | attr_list "in"i "(" value_list ")" RADIUS VALUE
 
