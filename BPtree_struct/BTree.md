@@ -310,3 +310,15 @@ FUNCIÓN búsqueda_binaria(clave, claves):
 Lamentablemente, la eliminación en la estructura demostró ser de mucha complejidad para implementarse. Entonces, se decidió obviar esta operación.
 
 Igualmente, al momento de probar la eliminación en el frontend usando el índice se puede hacer, pero no se maneja correctamente.
+
+
+## Complejidad en acceso a memoria secundaria
+
+| Operación       | Complejidad (Accesos Disco) | Observaciones                     |
+|-----------------|----------------------------|-----------------------------------|
+| Búsqueda        | O(log<sub>M</sub>N)        | Muy eficiente para grandes datasets |
+| Búsqueda por Rango           | O(log<sub>M</sub>N + K/M)  | Eficiente para rangos localizados  |
+| Inserción       | O(log<sub>M</sub>N)        | Costo mayor si hay divisiones      |
+
+
+
