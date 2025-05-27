@@ -13,7 +13,6 @@ stmt: create_stmt ";"
     | copy_stmt ";"
     | drop_index_stmt ";"
     | drop_table_stmt ";"
-    | set_stmt ";"
 
 create_stmt: "create"i "table"i NAME "(" create_attr_list ")"
 copy_stmt: "copy"i NAME "from"i VALUE
