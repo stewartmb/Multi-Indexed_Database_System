@@ -71,7 +71,7 @@ class Sequential:
     def __init__(self, table_format , name_key: str ,
                  name_index_file = 'Sequential_Struct/index_file.bin', 
                  name_data_file = 'Sequential_Struct/data_file.bin',
-                 num_aux = 1,
+                 num_aux = 100,
                  force_create = False):
         
         self.index_file = name_index_file

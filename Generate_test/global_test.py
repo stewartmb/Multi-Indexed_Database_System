@@ -25,7 +25,6 @@ data_file = f'Generate_test/data_file{num[x]}.bin'
 
 btree_file1 = f'Generate_test/btree_file1{num[x]}.bin'
 
-btree
 
 test_data_full = f'/test_data_full{num[x]}.csv'
 
@@ -35,14 +34,14 @@ table_format = {"timestamp": "24s", "random_int": "i", "name": "20s", "email": "
 Indices_struct = ["bptree", "hash", "sequential", "isam", "brin" ,"rtree"]
 
 class MEGA_SUPER_HIPER_MASTER_INDICE:
-    def __init__(self, name_key, table_format , param1 , param2 , x ):
+    def __init__(self, name_key, table_format , x ):
         self.data_file = f'Generate_test/data_file{num[x]}.bin'
-        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[x]}.bin', name_data_file = data_file , max_num_child = param1)
-        self.hash = HASH.Hash(table_format, name_key, param1)
-        self.sequential = SEQUENTIAL.Sequential(table_format, name_key, param1)
-        self.isam = ISAM.ISAM(table_format, name_key, param1, param2)
-        self.brin = BRIN.BRIN(table_format, name_key, param1)
-        self.rtree = RTREE.RTreeFile(table_format, name_key, param1)
+        self.bptree = BPTREE.BPTree(table_format, name_key , name_index_file = f'Generate_test/btree_1_index{num[x]}.bin', name_data_file = data_file , max_num_child = 100)
+        self.hash = HASH.Hash(table_format, name_key, buckets_file_name = f'Generate_test/hash_1_index{num[x]}.bin' ,index_file_name = f'Generate_test/hash_2_index{num[x]}.bin',data_file_name =data_file, global_depth = 100,max_records_per_bucket =100)
+        self.sequential = SEQUENTIAL.Sequential(table_format, name_key, name_index_file = f'Generate_test/sequential_1_index{num[x]}.bin',name_data_file = data_file , num_aux =100)
+        self.isam = ISAM.ISAM(table_format, name_key , name_index_file = f'Generate_test/isam_1_index{num[x]}.bin', name_data_file = data_file)
+        self.brin = BRIN.BRIN(table_format, name_key , name_index_file = f'Generate_test/brin_1_index{num[x]}.bin', name_page_file =  f'Generate_test/brin_2_index{num[x]}.bin',name_data_file = data_file , max_num_pages = 100, max_num_keys = 100)
+        self.rtree = RTREE.RTreeFile(table_format, name_key, )
 
 
 
