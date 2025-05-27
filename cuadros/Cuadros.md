@@ -67,3 +67,71 @@ Los experimentos se realizaron un total de 10 veces. Se sacó el tiempo máximo 
 **Gráfico 3:**
 
 ![Grafico1](100k_creacion.png)
+
+**Análisis de los resultados**
+
+bla bla bla
+
+## Prueba 2: Tiempo de búsqueda de los índices
+
+Primero, se realizó la creación de la data con un total de 10k, 50k y 100k registros. 
+
+El experimento consiste en que, de la data, se elige aleatoriamente un valor y se usan los índices para buscarlo. El único índice que elige uno distinto es el R-Tree, ya que solo trabaja con índices espaciales.
+
+Los experimentos se realizaron un total de 100 veces. Se sacó el tiempo máximo y mínimo, el tiempo promedio y la desviación estándar.
+
+
+### Para 10k datos
+
+**Cuadro 1:**
+
+Estadísticas de búsqueda para 10k datos:
+| Índice | Máximo | Mínimo | Promedio | Desviación estándar |
+|---|---|---|---|---|
+| **heap** | 109.2489 | 21.2142 | 25.8303 | 15.4849 |
+| **bptree** | 14.2710 | 0.2339 | 2.6486 | 2.3920 |
+| **hash** | 15.2411 | 3.4630 | 6.1803 | 2.2295 |
+| **sequential** | 0.3030 | 0.1640 | 0.2074 | 0.0209 |
+| **isam** | 0.1700 | 0.0839 | 0.0945 | 0.0132 |
+| **brin** | 0.2739 | 0.1678 | 0.1885 | 0.0156 |
+| **rtree** | 6.5470 | 1.2460 | 2.9170 | 0.8109 |
+
+**Gráfico 1:**
+
+
+
+
+### Para 50k datos
+
+**Cuadro 2:**
+
+Estadísticas de búsqueda para 50k datos:
+| Índice | Máximo | Mínimo | Promedio | Desviación estándar |
+|---|---|---|---|---|
+|heap     |   110.6761 | 104.4061 | 106.2733    |           0.7796
+|bptree    |   20.6022 |  16.0282 |  18.1881    |           1.1928
+|hash     |    40.6990 |  10.1662  | 17.5435     |          5.7658
+|sequential |   0.4752 |   0.1929  |  0.2707      |         0.0432
+|isam    |      0.1721  |  0.1030  |  0.1155      |         0.0118
+|brin    |      0.3541  |  0.2019  |  0.2386      |         0.0260
+|rtree   |     13.5860  |  1.9431  |  5.0128       |        1.6829
+
+**Gráfico 2:**
+
+### Para 100k datos
+
+**Cuadro 3:**
+
+Estadísticas de búsqueda para 100k datos:
+| Índice | Máximo | Mínimo | Promedio | Desviación estándar |
+|---|---|---|---|---|
+| heap   |      219.5561|   211.0779 |  213.3680     |           1.0849
+| bptree  |     41.1952 |  36.3290  |  38.5349      |         1.1396
+| hash    |      69.0191 |   18.8599   | 32.6498     |          10.8614
+| sequential |    0.4301  |   0.1888  |   0.2590     |           0.0398
+| isam    |       0.2289  |   0.1061   |  0.1174      |          0.0161
+| brin    |       0.3572  |   0.2041   |  0.2239      |          0.0236
+| rtree   |      15.6963  |   2.2700   |  6.5242       |         2.7146
+
+
+**Gráfico 3:**
