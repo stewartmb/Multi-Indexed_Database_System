@@ -15,15 +15,15 @@ Los experimentos se realizaron un total de 10 veces. Se sacó el tiempo máximo 
 **Cuadro 1:**
 
 
-| Índice  | Máximo  | Mínimo  | Promedio | Desviación Estándar |
-|--------------|---------|---------|----------|----------------------|
-| **heap**     | 1.1552  | 0.7855  | 0.8731   | 0.0977               |
-| **bptree**   | 1.8730  | 1.5849  | 1.6497   | 0.0864               |
-| **hash**     | 2.7562  | 2.4452  | 2.5259   | 0.0888               |
-| **sequential**| 13.6686 | 12.6166 | 12.9852  | 0.3435               |
-| **isam**     | 1.0444  | 0.6843  | 0.8017   | 0.0903               |
-| **brin**     | 2.6176  | 2.0207  | 2.2080   | 0.1659               |
-| **rtree**    | 16.1120 | 15.1551 | 15.6448  | 0.2726               |
+| Índice      | Máximo  | Mínimo  | Promedio | Desviación estándar |
+|-------------|---------|---------|-----------|----------------------|
+| heap        | 2.4892  | 0.7854  | 1.1343    | 0.5199               |
+| bptree      | 5.6542  | 1.4814  | 2.4875    | 1.3659               |
+| hash        | 6.2561  | 0.8448  | 1.5899    | 1.6688               |
+| sequential  | 44.0160 | 3.4947  | 28.2596   | 11.2042              |
+| isam        | 1.4261  | 0.1557  | 0.3394    | 0.3910               |
+| brin        | 6.0144  | 2.0612  | 3.1313    | 1.3766               |
+| rtree       | 40.1289 | 21.3116 | 27.1629   | 7.0036               |
 
 
 
@@ -38,15 +38,15 @@ Los experimentos se realizaron un total de 10 veces. Se sacó el tiempo máximo 
 
 
 
-| Índice   | Máximo  | Mínimo  | Promedio | Desviación Estándar |
-|--------------|---------|---------|----------|----------------------|
-| **heap**     | 4.4133  | 0.7714  | 2.3518   | 1.8331               |
-| **bptree**   | 1.6583  | 1.5614  | 1.5869   | 0.0298               |
-| **hash**     | 2.5319  | 2.4235  | 2.4672   | 0.0340               |
-| **sequential**| 13.2518 | 12.6458 | 12.9419  | 0.2107               |
-| **isam**     | 4.2747  | 0.1599  | 1.8330   | 1.7540               |
-| **brin**     | 2.3651  | 2.0002  | 2.1657   | 0.1283               |
-| **rtree**    | 16.8225 | 15.3492 | 15.9139  | 0.5156               |
+| Índice      | Máximo  | Mínimo  | Promedio | Desviación estándar |
+|-------------|---------|---------|-----------|----------------------|
+| heap        | 4.7663  | 4.0428  | 4.3221    | 0.1905               |
+| bptree      | 1.9603  | 1.4657  | 1.6294    | 0.1621               |
+| hash        | 2.4492  | 0.8354  | 1.0160    | 0.5038               |
+| sequential  | 32.9157 | 3.5148  | 21.7434   | 9.1880               |
+| isam        | 0.1705  | 0.1548  | 0.1615    | 0.0048               |
+| brin        | 2.5403  | 2.0536  | 2.1742    | 0.1409               |
+| rtree       | 23.8681 | 16.1270 | 21.2655   | 2.1683               |
 
 
 
@@ -59,15 +59,15 @@ Los experimentos se realizaron un total de 10 veces. Se sacó el tiempo máximo 
 **Cuadro 3:**
 
 
-| Índice   | Máximo  | Mínimo  | Promedio | Desviación Estándar |
-|--------------|---------|---------|----------|----------------------|
-| **heap**     | 8.5390  | 0.8173  | 3.7171   | 3.8909               |
-| **bptree**   | 1.7211  | 1.5699  | 1.6230   | 0.0490               |
-| **hash**     | 2.5803  | 2.4541  | 2.4884   | 0.0463               |
-| **sequential**| 13.1378 | 12.8701 | 12.9502  | 0.0890               |
-| **isam**     | 8.1527  | 0.1676  | 2.5018   | 3.4176               |
-| **brin**     | 2.4801  | 2.0721  | 2.2217   | 0.1340               |
-| **rtree**    | 17.0213 | 15.5345 | 16.0672  | 0.5454               |
+| Índice      | Máximo  | Mínimo  | Promedio | Desviación estándar |
+|-------------|---------|---------|-----------|----------------------|
+| heap        | 9.0907  | 8.3632  | 8.6282    | 0.2251               |
+| bptree      | 2.0462  | 1.4589  | 1.6342    | 0.1838               |
+| hash        | 2.4851  | 0.8194  | 1.0080    | 0.5192               |
+| sequential  | 32.4301 | 3.4375  | 21.8074   | 9.1394               |
+| isam        | 0.2493  | 0.1551  | 0.1732    | 0.0306               |
+| brin        | 2.2487  | 2.1007  | 2.1675    | 0.0540               |
+| rtree       | 23.6716 | 15.9730 | 21.2567   | 2.0877               |
 
 
 **Gráfico 3:**
@@ -76,13 +76,17 @@ Los experimentos se realizaron un total de 10 veces. Se sacó el tiempo máximo 
 
 **Análisis de los resultados:**
 
-Los resultados obtenidos en la prueba de creación de índices revelan patrones. En primer lugar, los índices **heap** e **ISAM** muestran una alta variabilidad en sus tiempos de creación, especialmente en los conjuntos de datos más grandes (50k y 100k registros), con desviaciones estándar significativas (1.83 a 3.89 para heap y 1.75 a 3.42 para ISAM). Esto sugiere que estas estructuras, al carecer de una organización estricta (heap) o depender de particiones estáticas (ISAM), pueden verse afectadas por factores externos como la fragmentación de memoria o la gestión de archivos durante la inserción de datos. En contraste, los índices **B+Tree** y **hash** presentan tiempos más consistentes y predecibles, con desviaciones estándar bajas (0.03 a 0.09 para B+Tree y 0.03 a 0.09 para hash), lo que refleja su naturaleza optimizada para operaciones de inserción eficientes gracias a su estructura balanceada (B+Tree) o a la distribución uniforme mediante funciones hash.
+Los resultados muestran patrones claramente diferenciados en el tiempo requerido para construir las distintas estructuras de índices. El índice **heap** presenta tiempos de creación relativamente bajos (1.13 ms en 10k hasta 8.63 ms en 100k registros), como era de esperar dado que no requiere procesamiento adicional al simplemente almacenar los datos sin organización alguna. Sin embargo, su alta desviación estándar (0.52-0.23) en los diferentes tamaños de dataset sugiere cierta inconsistencia, probablemente relacionada con la asignación dinámica de memoria durante la creación.
 
-Los índices que tuvieron menor tiempo para crearse fueron el Heap y el ISAM. Esto se debe a que el Heap no tiene una estructura definida, es decir, solo almacena los resgistros sin ningún tipo de orden. Por otro lado, la implementación de la creación del índice ISAM explicada en su documentación, hace que este tenga poco tiempo de creación. 
+Los índices **B+Tree** y **hash** muestran comportamientos interesantes. El B+Tree tiene tiempos moderados (2.49 ms en 10k reduciéndose a 1.63 ms en datasets mayores), reflejando el costo de construir y balancear la estructura arbórea. La notable mejora en datasets más grandes sugiere que el algoritmo aprovecha mejor las economías de escala una vez superado el tamaño crítico inicial. El índice hash, por su parte, muestra una variabilidad significativa (desviación estándar hasta 1.67) debido a la naturaleza impredecible de las funciones hash y la posible necesidad de redimensionamiento durante la creación.
 
-Por otro lado, los índices **sequential** y **rtree** destacan por ser los más lentos en términos absolutos, con promedios que superan los 12 ms y 15 ms, respectivamente, en todos los tamaños de datos. Esto se debe a sus diseños especializados: el índice sequential requiere un escaneo lineal y reorganización física de los datos, mientras que el rtree, optimizado para datos multidimensionales (como coordenadas espaciales), incurre en un alto costo computacional para construir su estructura jerárquica. Estos resultados confirman la teoría de que estos índices sacrifican velocidad de creación por beneficios en consultas específicas (búsquedas por rangos en sequential o consultas espaciales en rtree). El índice **brin**, aunque más rápido que sequential y rtree, muestra un rendimiento intermedio, ya que su diseño basado en rangos de bloques reduce la sobrecarga de creación pero aún requiere procesamiento adicional para resumir la información por bloques.
+El índice **sequential** destaca por ser el más costoso en términos absolutos (promedios alrededor de 21-28 ms), lo cual era completamente previsible dado que requiere ordenar físicamente todos los registros, una operación O(n log n) computacionalmente intensiva. Su alta desviación estándar (≈9.14-11.20) indica que el tiempo de creación depende críticamente del grado de desorden inicial de los datos.
 
-Finalmente, la escalabilidad de los índices se evidencia al comparar los tiempos entre los distintos tamaños de datos. Mientras que estructuras como B+Tree y hash mantienen tiempos estables independientemente del volumen (con incrementos mínimos del 10k al 100k), heap e ISAM experimentan fluctuaciones drásticas, lo que indica que su rendimiento es más sensible al tamaño de los datos. Esto refuerza la idea de que los índices balanceados (B+Tree) o de acceso directo (hash) son más adecuados para entornos con crecimiento dinámico de datos, mientras que heap e ISAM pueden ser menos predecibles en escenarios de gran escala.
+Los resultados del **ISAM** son particularmente reveladores. Su implementación optimizada (ordenación en RAM por bloques + merge) explica sus tiempos excepcionalmente bajos (0.16-0.34 ms), los mejores entre todos los índices evaluados. La mínima desviación estándar (≤0.03 en datasets grandes) confirma la eficiencia de este enfoque por bloques, aunque cabe señalar que este rendimiento podría degradarse significativamente si los datos no caben completamente en memoria.
+
+El índice **BRIN** muestra un comportamiento consistente (≈2.17-3.13 ms) acorde con su diseño simple basado en rangos de bloques. Su baja desviación estándar (≤0.14 en datasets grandes) refleja la predecibilidad de esta estructura, que evita las complejidades de los árboles balanceados o las funciones hash.
+
+Finalmente, el **R-Tree** exhibe los mayores tiempos entre los índices especializados (≈21.27-27.16 ms), consecuencia directa de la complejidad de construir una estructura jerárquica multidimensional. Cada inserción requiere calcular rectángulos delimitadores óptimos y mantener las propiedades espaciales del árbol, operaciones significativamente más costosas que en índices unidimensionales.
 
 ## Prueba 2: Tiempo de búsqueda de los índices
 
