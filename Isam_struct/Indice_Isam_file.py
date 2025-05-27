@@ -10,6 +10,8 @@ from sympy import symbols, Eq, solve
 from Heap_struct.Heap import Heap
 from collections import deque
 
+import Utils.contador as contador
+
 # Constantes generales
 TAM_ENCABEZAD_DAT = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 TAM_ENCABEZAD_IND = 16  # Tamaño del encabezado en bytes (cantidad de pages(data), cantidad de pages(overflow), M , y pososicion del root)
@@ -320,13 +322,15 @@ class ISAM():
         with open(self.index_file, 'rb') as f:
             f.seek(0)
             header = f.read(TAM_ENCABEZAD_IND)
+            contador.contar_read()
             num_pages, num_over , max_num_child ,  pos_root = struct.unpack('iiii', header)
         return num_pages, num_over, max_num_child, pos_root
     
     def _write_header(self, num_pages, num_over, max_num_child, pos_root):
         with open(self.index_file, 'r+b') as f:
             f.seek(0)
-            f.write(struct.pack('iiii',num_pages, num_over,max_num_child ,pos_root))   
+            f.write(struct.pack('iiii',num_pages, num_over,max_num_child ,pos_root))
+            contador.contar_write()
 
     ### MANEJO DE DATOS (CASE INDEPENT) ###
     def _read_data_header(self):
@@ -336,6 +340,7 @@ class ISAM():
         with open(self.data_file, 'rb') as f:
             f.seek(0)
             header = f.read(TAM_ENCABEZAD_DAT)
+            contador.contar_read()
             size = struct.unpack('i', header)[0]
         return size
     
@@ -347,14 +352,17 @@ class ISAM():
             # Leer el tamaño actual desde el encabezado
             f.seek(0)
             header = f.read(TAM_ENCABEZAD_DAT)
+            contador.contar_read()
             size = struct.unpack('i', header)[0]
             # Calcular el offset para el nuevo registro
             offset = TAM_ENCABEZAD_DAT + size * self.RT.size
             f.seek(offset)
             f.write(self.RT.to_bytes(record))
+            contador.contar_write()
             # Actualizar el encabezado con el nuevo tamaño
             f.seek(0)
             f.write(struct.pack('i', size + 1))
+            contador.contar_write()
             return size
 
     def _read_record(self, pos : int):
@@ -365,6 +373,7 @@ class ISAM():
             offset = TAM_ENCABEZAD_DAT + pos * self.RT.size
             f.seek(offset)
             data = f.read(self.RT.size)
+            contador.contar_read()
             return self.RT.from_bytes(data)
 
     ### MANEJO DE PÁGINAS DE ÍNDICE (nodos del arbol)###
@@ -377,6 +386,7 @@ class ISAM():
             offset = TAM_ENCABEZAD_IND + page_number * self.tam_indexp
             f.seek(offset)
             data = f.read(self.tam_indexp)
+            contador.contar_read()
             return Index_Page.from_bytes(data, self.M, self.format_key, self.indexp_format)    
                           
     def _write_index_page(self, page_number, page):
@@ -387,6 +397,7 @@ class ISAM():
             offset = TAM_ENCABEZAD_IND + page_number * self.tam_indexp
             f.seek(offset)
             f.write(page.to_bytes(self.format_key, self.indexp_format))  # Escribe la página en la posición especificada
+            contador.contar_write()
 
     def _add_index_page(self, page):
         """
@@ -434,6 +445,7 @@ class ISAM():
                 block = []
                 for _ in range(max_records):
                     data = fin.read(record_size)
+                    contador.contar_read()
                     if not data:
                         break
                     record_temp = Index_temp.from_bytes(data, self.format_key)
@@ -451,6 +463,7 @@ class ISAM():
                     for key, offset in block:
                         temp_record = Index_temp(key, offset)
                         fout.write(temp_record.to_bytes(self.format_key))
+                        contador.contar_write()
                 temp_files.append(temp_name)
                 block_count += 1
 
@@ -466,6 +479,7 @@ class ISAM():
         # Inicializar el heap con el primer registro de cada archivo
         for i, f in enumerate(open_files):
             data = f.read(record_size)
+            contador.contar_read()
             if data:
                 record_temp = Index_temp.from_bytes(data, self.format_key)
                 key = record_temp.key
@@ -478,10 +492,12 @@ class ISAM():
                 key, offset, i = heapq.heappop(heap)
                 record_temp = Index_temp(key, offset)
                 fout.write(record_temp.to_bytes(self.format_key))
+                contador.contar_write()
                 # print(f"Escribiendo {key} en {output_file}")
 
                 # Leer siguiente elemento del mismo archivo
                 data = open_files[i].read(record_size)
+                contador.contar_read()
                 if data:
                     record_temp = Index_temp.from_bytes(data, self.format_key)
                     next_key = record_temp.key
@@ -515,6 +531,7 @@ class ISAM():
                     offset = i
                     record_temp = Index_temp(key, offset)
                     f.write(record_temp.to_bytes(self.format_key))
+                    contador.contar_write()
 
         # 2. Ordenar usando merge sort externo
         self.external_merge_sort_multi_temp(order_file, record_size, format_temp)
@@ -526,6 +543,7 @@ class ISAM():
         with open(order_file, 'rb') as f:
             for i in range(total_records):
                 data = f.read(record_size)
+                contador.contar_read()
                 record_temp = Index_temp.from_bytes(data, self.format_key)
                 key = record_temp.key
                 offset = record_temp.pos
@@ -553,6 +571,7 @@ class ISAM():
             page = Index_Page(leaf=True, M=self.M)
             for i in range(num_records):
                 data = f.read(record_size)
+                contador.contar_read()
                 record_temp = Index_temp.from_bytes(data, self.format_key)
                 key = record_temp.key
                 pos = record_temp.pos
@@ -592,6 +611,7 @@ class ISAM():
                     # print(lista[num], "Nueva pagina")
                     f.seek(lista[num] * record_size)
                     data = f.read(record_size)
+                    contador.contar_read()
                     record_temp = Index_temp.from_bytes(data, self.format_key)
                     key = record_temp.key
                     pos = record_temp.pos
@@ -605,6 +625,7 @@ class ISAM():
                     pos_page,_ , _,_= self._read_header()
                     f.seek(lista[num] * record_size)
                     data = f.read(record_size)
+                    contador.contar_read()
                     record_temp = Index_temp.from_bytes(data, self.format_key)
                     key = record_temp.key
                     pos = record_temp.pos

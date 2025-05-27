@@ -7,6 +7,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 from Heap_struct.Heap import *
 
+import Utils.contador as contador
+
 point_format = ""
 mbr_format = ""
 rect_format = ""

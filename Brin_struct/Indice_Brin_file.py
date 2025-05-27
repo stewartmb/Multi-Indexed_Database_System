@@ -6,6 +6,7 @@ from Utils.Registro import *
 import math
 from Heap_struct.Heap import Heap
 
+import Utils.contador as contador
 
 # Constantes generales
 TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de paginas)

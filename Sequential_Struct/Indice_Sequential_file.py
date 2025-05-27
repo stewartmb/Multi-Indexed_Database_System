@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 from Heap_struct.Heap import Heap
 import math
+import Utils.contador as contador
 
 # Constantes generales
 TAM_ENCABEZADO = 12        # Encabezado de datos.bin: 4+4+4 = 12 bytes | pos_root(i) + num_aux(i) + tam_aux(i)
@@ -87,15 +88,19 @@ class Sequential:
         if not os.path.exists(self.data_file):
             with open(self.data_file, 'wb') as f:
                 f.write(struct.pack('i', 0))
+                contador.contar_write()
         if not os.path.exists(self.index_file):
             with open(self.index_file, 'wb') as f:
-                f.write(struct.pack('iii', -1, 0 ,0))                                # encabezado: pos_root(i), num_aux(i), tam_aux(i)
+                f.write(struct.pack('iii', -1, 0 ,0)) 
+                contador.contar_write()                               # encabezado: pos_root(i), num_aux(i), tam_aux(i)
     
     ### MANEJO DE ENCABEZADOS ###
     def _read_header(self):
         with open(self.index_file, 'rb') as f:
             f.seek(0)
             header = f.read(TAM_ENCABEZADO)
+            contador.contar_read()
+            
             pos_root, num_dat, tam_aux = struct.unpack('iii', header)
         return pos_root, num_dat, tam_aux
     
@@ -103,6 +108,7 @@ class Sequential:
         with open(self.index_file, 'r+b') as f:
             f.seek(0)
             f.write(struct.pack('iii', pos_root, num_dat, tam_aux))
+            contador.contar_write()
 
     ### MANEJO DE DATOS (CASE INDEPENT) ###
     def add_record(self, record : list):
@@ -113,14 +119,17 @@ class Sequential:
             # Leer el tamaño actual desde el encabezado
             f.seek(0)
             header = f.read(TAM_DATA)
+            contador.contar_read()
             size = struct.unpack('i', header)[0]
             # Calcular el offset para el nuevo registro
             offset = TAM_DATA + size * self.RT.size
             f.seek(offset)
             f.write(self.RT.to_bytes(record))
+            contador.contar_write()
             # Actualizar el encabezado con el nuevo tamaño
             f.seek(0)
             f.write(struct.pack('i', size + 1))
+            contador.contar_write()
             return size
 
     def _read_record(self, pos : int):
@@ -131,6 +140,7 @@ class Sequential:
             offset = TAM_DATA + pos * self.RT.size
             f.seek(offset)
             data = f.read(self.RT.size)
+            contador.contar_read()
             return self.RT.from_bytes(data)
 
     ### MANEJO DE INDEX_RECORDS ###
@@ -145,6 +155,7 @@ class Sequential:
             offset =  TAM_ENCABEZADO + pos * tam_index
             f.seek(offset)
             data = f.read(tam_index)
+            contador.contar_read()
             return Index_Record.from_bytes(data, self.format_key)
     
     def write_index(self, index_record : Index_Record, pos : int):
@@ -157,6 +168,7 @@ class Sequential:
             offset = TAM_ENCABEZADO + pos * tam_index
             f.seek(offset)
             f.write(index_record.to_bytes(self.format_key))
+            contador.contar_write()
 
     def add_index(self, index_record : Index_Record):
         """
@@ -167,14 +179,17 @@ class Sequential:
         with open(self.index_file, 'r+b') as f:
             # Leer el número actual de registros desde el encabezado
             header = f.read(TAM_ENCABEZADO)
+            contador.contar_read()
             pos_root, num_dat, tam_aux = struct.unpack('iii', header)
             # Calcular el offset para el nuevo registro
             offset = TAM_ENCABEZADO + (num_dat + tam_aux) * tam_index
             f.seek(offset)
             f.write(index_record.to_bytes(self.format_key))
+            contador.contar_write()
             # Actualizar el encabezado con el nuevo número de registros
             f.seek(0)
             f.write(struct.pack('iii', pos_root, num_dat, tam_aux+1))
+            contador.contar_write()
             return num_dat + tam_aux
     
     def update_root(self, pos_root : int):
@@ -341,21 +356,25 @@ class Sequential:
         total_dat = 0
         with open("temp.bin", "wb") as temp:
             temp.write(struct.pack('iii', -1, 0, 0))
+            contador.contar_write()
             while pos_index != -1:
                 index_record = self.read_index(pos_index)
                 next_pos = index_record.next
                 if next_pos == -1:
                     index_record.next = -1
                     temp.write(index_record.to_bytes(self.format_key))
+                    contador.contar_write()
                     total_dat += 1
                     break
                 index_record.next = total_dat+1
                 temp.write(index_record.to_bytes(self.format_key))
+                contador.contar_write()
                 pos_index = next_pos
                 total_dat += 1
             # Actualizar el encabezado del nuevo archivo 
             temp.seek(0)
             temp.write(struct.pack('iii', 0, total_dat , 0))
+            contador.contar_write()
         os.remove(self.index_file)
         os.rename("temp.bin", self.index_file)
         self.K = round(total_dat**0.5 +0.5)

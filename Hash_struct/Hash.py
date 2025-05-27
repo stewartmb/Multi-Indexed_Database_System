@@ -4,8 +4,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
 from Heap_struct.Heap import *
-from Utils.contador import contar_read, contar_write
-
+import Utils.contador as contador
 
 
 def get_bits(dato: any, nbits: int) -> str:
@@ -114,6 +113,7 @@ class HeaderType:
         """
         file.seek(4 * index)
         data = file.read(4)
+        contador.contar_read()
         return struct.unpack('i', data)[0]
 
     def write(self, file, value: int, index: int) -> None:
@@ -122,6 +122,7 @@ class HeaderType:
         """
         file.seek(4 * index)
         file.write(struct.pack('i', value))
+        contador.contar_write()
 
 class Hash:
     def __init__(self, table_format: dict,
@@ -163,22 +164,21 @@ class Hash:
         if force or (not os.path.exists(self.index_file)) or (os.path.getsize(self.index_file) < self.Header.size):
             with open(self.index_file, 'wb') as f:
                 # 0 = global_depth, 1 = data_last, 2 = bucket_last, 3 = node_last
-                f.write(struct.pack('i', global_depth))
-                f.write(struct.pack('i', 0))
-                f.write(struct.pack('i', 2))
-                f.write(struct.pack('i', 3))
+                f.write(struct.pack('iiii', global_depth,0,2,3))
                 # root
                 f.write(self.NT.to_bytes({'bucket_position': -1, 'left': 1, 'right': 2, 'depth': 0}))
                 # left (0)
                 f.write(self.NT.to_bytes({'bucket_position': 0, 'left': -1, 'right': -1, 'depth': 0}))
                 # right (1)
                 f.write(self.NT.to_bytes({'bucket_position': 1, 'left': -1, 'right': -1, 'depth': 0}))
+                contador.contar_write()
 
         if force or (not os.path.exists(self.buckets_file)) or (os.path.getsize(self.buckets_file) < self.Header.size):
             with open(self.buckets_file, 'wb') as f:
                 # [0,0,0...0,0,0] + [localdepth, fullness, overflowPosition]
                 f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
                 f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
+                contador.contar_write()
 
     def _insert_value_in_bucket(self, buckets_file, index_file, bucket_position, data_position):
         """
@@ -187,6 +187,7 @@ class Hash:
         """
         buckets_file.seek(bucket_position * self.BT.size)
         bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+        contador.contar_read()
 
         # Si el bucket no está lleno, simplemente insertamos
         if bucket['fullness'] < self.max_records:
@@ -194,6 +195,7 @@ class Hash:
             bucket['fullness'] += 1
             buckets_file.seek(bucket_position * self.BT.size)
             buckets_file.write(self.BT.to_bytes(bucket))
+            contador.contar_write()
             return True
 
         # Si el bucket está lleno pero su profundidad es menor que la global → split
@@ -218,9 +220,11 @@ class Hash:
         # Escribimos ambos buckets
         buckets_file.seek(bucket_position * self.BT.size)
         buckets_file.write(self.BT.to_bytes(bucket))
+        contador.contar_write()
 
         buckets_file.seek(new_bucket_pos * self.BT.size)
         buckets_file.write(self.BT.to_bytes(new_bucket))
+        contador.contar_write()
 
         return True
 
@@ -231,6 +235,7 @@ class Hash:
         k = 1
         while True:
             index_file.seek(self.Header.size + node_index * self.NT.size)
+            contador.contar_read()
             node = self.NT.from_bytes(index_file.read(self.NT.size))
             bucket_position = node['bucket_position']
             if bucket_position == -1:
@@ -246,6 +251,7 @@ class Hash:
         if not inserted:
             #print("Splitting")
             buckets_file.seek(bucket_position * self.BT.size)
+            contador.contar_read()
             old_bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             # separar bucket buckets
             bucket_left_pos = bucket_position
@@ -257,8 +263,10 @@ class Hash:
                            'overflow_position': -1}
             buckets_file.seek(bucket_left_pos * self.BT.size)
             buckets_file.write(self.BT.to_bytes(empty_bucket))
+            contador.contar_write()
             buckets_file.seek(bucket_right_pos * self.BT.size)
             buckets_file.write(self.BT.to_bytes(empty_bucket))
+            contador.contar_write()
 
             # separar index
             pos = self.Header.read(index_file, 3)
@@ -273,10 +281,13 @@ class Hash:
 
             index_file.seek(self.Header.size + pos * self.NT.size)
             index_file.write(new_node_left)
+            contador.contar_write()
             index_file.seek(self.Header.size + (pos + 1) * self.NT.size)
             index_file.write(new_node_right)
+            contador.contar_write()
             index_file.seek(self.Header.size + node_index * self.NT.size)
             index_file.write(new_parent)
+            contador.contar_write()
 
             self.Header.write(index_file, pos + 2, 3)
 
@@ -315,6 +326,7 @@ class Hash:
         Funcion recursiva de busqueda
         """
         index_file.seek(self.Header.size + node_index * self.NT.size)
+        contador.contar_read()
         node = self.NT.from_bytes(index_file.read(self.NT.size))
         if node['bucket_position'] == -1:
             if index_hash[-1] == '0':
@@ -324,12 +336,14 @@ class Hash:
         else:
             matches = []
             buckets_file.seek(node['bucket_position'] * self.BT.size)
+            contador.contar_read()
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             self._find_in_bucket(bucket, key, matches)
 
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
+                contador.contar_read()
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 self._find_in_bucket(bucket, key, matches)
                 overflow_position = bucket['overflow_position']
@@ -340,6 +354,7 @@ class Hash:
         Funcion recursiva de busqueda
         """
         index_file.seek(self.Header.size + node_index * self.NT.size)
+        contador.contar_read()
         node = self.NT.from_bytes(index_file.read(self.NT.size))
         if node['bucket_position'] == -1:
             if index_hash[-1] == '0':
@@ -348,6 +363,7 @@ class Hash:
                 return self._aux_delete(buckets_file, index_file, node['right'], index_hash[:-1], key)
         else:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
+            contador.contar_read()
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
                 record = self.HEAP.read(bucket['records'][i])
@@ -359,10 +375,12 @@ class Hash:
                         bucket['fullness'] -= 1
                         buckets_file.seek(node['bucket_position'] * self.BT.size)
                         buckets_file.write(self.BT.to_bytes(bucket))
+                        contador.contar_write()
                         return True
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
+                contador.contar_read()
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
                     record = self.HEAP.read(bucket['records'][i])
@@ -373,18 +391,21 @@ class Hash:
                             bucket['fullness'] -= 1
                             buckets_file.seek(node['bucket_position'] * self.BT.size)
                             buckets_file.write(self.BT.to_bytes(bucket))
+                            contador.contar_write()
                             return True
         return False
 
     def _aux_range_search(self, buckets_file, index_file, node_index, lower, upper):
         lista = []
         index_file.seek(self.Header.size + node_index * self.NT.size)
+        contador.contar_read()
         node = self.NT.from_bytes(index_file.read(self.NT.size))
         if node['bucket_position'] == -1:
             lista.extend(self._aux_range_search(buckets_file, index_file, node['left'], lower, upper))
             lista.extend(self._aux_range_search(buckets_file, index_file, node['right'], lower, upper))
         else:
             buckets_file.seek(node['bucket_position'] * self.BT.size)
+            contador.contar_read()
             bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
             for i in range(bucket['fullness']):
                 record = self.HEAP.read(bucket['records'][i])
@@ -394,6 +415,7 @@ class Hash:
             overflow_position = bucket['overflow_position']
             while overflow_position != -1:
                 buckets_file.seek(overflow_position * self.BT.size)
+                contador.contar_read()
                 bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
                 for i in range(bucket['fullness']):
                     record = self.HEAP.read(bucket['records'][i])
@@ -437,6 +459,7 @@ class Hash:
                 open(self.buckets_file, 'r+b') as buckets_file:
             index_hash = get_bits(key, self.global_depth)
             index_file.seek(self.Header.size)
+            contador.contar_read()
             root = self.NT.from_bytes(index_file.read(self.NT.size))
             if index_hash[-1] == '0':
                 return self._aux_search(buckets_file, index_file, root['left'], index_hash[:-1], key)
@@ -453,6 +476,7 @@ class Hash:
         with open(self.index_file, 'r+b') as index_file, \
                 open(self.buckets_file, 'r+b') as buckets_file:
             index_file.seek(self.Header.size)
+            contador.contar_read()
             root = self.NT.from_bytes(index_file.read(self.NT.size))
             if root['bucket_position'] == -1:
                 lista = self._aux_range_search(buckets_file, index_file, root['left'], lower, upper)
@@ -476,6 +500,7 @@ class Hash:
                 open(self.buckets_file, 'r+b') as buckets_file:
             index_hash = get_bits(key, self.global_depth)
             index_file.seek(self.Header.size)
+            contador.contar_read()
             root = self.NT.from_bytes(index_file.read(self.NT.size))
             if index_hash[-1] == '0':
                 return self._aux_delete(buckets_file, index_file, root['left'], index_hash[:-1], key)

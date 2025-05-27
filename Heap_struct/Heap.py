@@ -18,26 +18,32 @@ class Heap:
         if not os.path.exists(self.filename):
             with open(self.filename, 'wb') as f:
                 f.write(struct.pack(self.HEADER_FORMAT, 0, 0))  # encabezado inicial: 0 registros
+                contador.contar_write()
         elif os.path.getsize(self.filename) < self.HEADER_SIZE:
             with open(self.filename, 'wb') as f:
                 f.write(struct.pack(self.HEADER_FORMAT, 0, 0))  # encabezado inicial: 0 registros
+                contador.contar_write()
 
         if force_create:
             with open(self.filename, 'wb') as f:
                 f.write(struct.pack(self.HEADER_FORMAT, 0, 0))
+                contador.contar_write()
 
     def _read_header(self):
         with open(self.filename, 'rb') as f:
+            contador.contar_read()
             return struct.unpack(self.HEADER_FORMAT, f.read(self.HEADER_SIZE))[0]
 
     def _read_deleted(self):
         with open(self.filename, 'rb') as f:
+            contador.contar_read()
             return struct.unpack(self.HEADER_FORMAT, f.read(self.HEADER_SIZE))[1]
 
     def _write_header(self, count, deleted):
         with open(self.filename, 'r+b') as f:
             f.seek(0)
             f.write(struct.pack(self.HEADER_FORMAT, count, deleted))
+            contador.contar_write()
 
     def is_deleted(self, pos):
         if self.read(pos):
@@ -51,6 +57,7 @@ class Heap:
             data = self.RT.to_bytes(registro)
             f.write(data)
             f.write(b'\x00')
+            contador.contar_write()
 
         count = self._read_header()
         self._write_header(count + 1, self._read_deleted())
@@ -63,6 +70,7 @@ class Heap:
             f.seek(self.HEADER_SIZE + (pos * self.record_total_size))
             data = f.read(self.RT.size)
             flag = f.read(1)
+            contador.contar_read()
             registro = self.RT.from_bytes(data)
             if flag == b'\x01':
                 return None
@@ -72,6 +80,7 @@ class Heap:
         with open(self.filename, 'r+b') as f:
             f.seek(self.HEADER_SIZE + (pos * self.record_total_size) + self.RT.size)
             f.write(b'\x01')
+            contador.contar_write()
         deleted_count = self._read_deleted()
         deleted_count += 1
         if deleted_count == 30:
@@ -89,6 +98,7 @@ class Heap:
             for _ in range(count):
                 data = f.read(self.RT.size)
                 flag = f.read(1)
+                contador.contar_read()
                 if not data or not flag:
                     break
                 if flag == b'\x01' and not include_deleted:
@@ -109,6 +119,7 @@ class Heap:
             for i in range(count):
                 data = f.read(self.RT.size)
                 flag = f.read(1)
+                contador.contar_read()
                 if not data or not flag:
                     break
                 if flag == b'\x01':
@@ -130,6 +141,7 @@ class Heap:
             for i in range(count):
                 data = f.read(self.RT.size)
                 flag = f.read(1)
+                contador.contar_read()
                 if not data or not flag:
                     break
                 if flag == b'\x01':

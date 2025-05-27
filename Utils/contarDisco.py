@@ -40,7 +40,6 @@ csv_time_search = f'csv_time_search{num[x]}.csv'
 table_format = {"timestamp": "24s", "random_int": "i", "name": "20s", "email": "50s", "date": "10s", "price": "d", "latitude": "d", "longitude": "d",  "is_active": "?", "category": "20s"}
 
 Indices_struct = ["heap" , "bptree", "hash", "sequential", "isam", "brin" ,"rtree"]
-Indices_struct = ["heap" , "bptree", "hash"]
 
 def destroy_archivos():
     """
@@ -107,12 +106,14 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
             start_time = time.time()
             self.insert_csv(csv_path)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time 
         elif index_type == "bptree":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.bptree.add(pos_new_record = i)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "hash":
             start_time = time.time()
@@ -120,24 +121,28 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
                 record = self.heap.read(i)
                 self.hash.insert(record = record , data_position = i)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "sequential":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.sequential.add(pos_new_record = i)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "isam":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.isam = ISAM.ISAM(table_format, self.name_key , name_index_file = f'Generate_test/isam_1_index{num[x]}.bin', name_data_file = self.data_file)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "brin":
             start_time = time.time()
             for i in range(num[x]-1):
                 self.brin.add(pos_new_record = i)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
         elif index_type == "rtree":
             start_time = time.time()
@@ -145,6 +150,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
                 record = self.heap.read(i)
                 self.rtree.insert(record = record, record_pos = i)
             end_time = time.time()
+            print(contador.reset_counts())
             return end_time - start_time
     
     def generate_test_data(self, path, csv_times, Indices_struct):
@@ -232,4 +238,4 @@ EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format 
 EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
 
 
-print(contador.get_counts())
+print(contador.history)
