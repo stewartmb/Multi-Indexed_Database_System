@@ -17,6 +17,7 @@ from BPtree_struct.Indice_BPTree_file import BPTree as Bptree
 from Sequential_Struct.Indice_Sequential_file import Sequential
 from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 from Isam_struct.Indice_Isam_file import ISAM as Isam
+from Brin_struct.Indice_Brin_file import BRIN as Brin
 
 M = 1000
 
@@ -149,7 +150,7 @@ def create_table(query):
     else:
         if query["data"]["columns"][pk]["index"] is None:
             query["data"]["columns"][pk]["index"] = "bptree"
-            query["data"]["columns"][pk]["params"] = [50]
+            query["data"]["columns"][pk]["params"] = [100]
 
     os.makedirs(os.path.dirname(table_filename(query["name"])), exist_ok=True)
     with open(table_filename(query["name"]), "w") as f:
@@ -180,15 +181,18 @@ def create_table(query):
                              table_filename(query["name"]), *params)
 
         elif index == "bptree":
-            if len(params) != 0:
-                bptree = Bptree(format,
-                            key,
-                            index_filename(query["name"], key, "index"),
-                            table_filename(query["name"]),
-                            *params)
-            else:
-                print("not enough parameters")
-                raise HTTPException(status_code=404, detail="Not enough parameters.")
+            bptree = Bptree(format,
+                        key,
+                        index_filename(query["name"], key, "index"),
+                        table_filename(query["name"]),
+                        *params)
+        elif index == "brin":
+            brin = Brin(format,
+                        key,
+                        index_filename(query["name"], key, "index"),
+                        index_filename(query["name"], key, "page"),
+                        table_filename(query["name"]),
+                        *params)
 
         else:
             print("INDICE NO IMPLEMENTADO AUN")
@@ -260,14 +264,11 @@ def insert(query):
             seq.add(pos_new_record=position)
 
         elif index == "bptree":
-            if len(params) != 0:
-                bptree = Bptree(format,
-                            key,
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla),
-                            *params)
-            else:
-                raise HTTPException(status_code=404, detail="Not enough parameters.")
+            bptree = Bptree(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla),
+                        *params)
             bptree.add(pos_new_record=position)
 
         elif index == "isam":
@@ -276,6 +277,15 @@ def insert(query):
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla))
             isam.add(pos_new_record=position)
+
+        elif index == "brin":
+            brin = Brin(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        index_filename(nombre_tabla, key, "page"),
+                        table_filename(nombre_tabla),
+                        *params)
+            brin.add(pos_new_record=position)
 
     # indice compuesto en rtree, añadir en el indice
     rtree_keys = data.get("indexes", {}).get("rtree")
@@ -317,6 +327,7 @@ def create_index(query):
     rtree = None
     bptree = None
     isam = None
+    brin = None
 
     heap = Heap(format,
                 data["key"],
@@ -357,14 +368,19 @@ def create_index(query):
                     table_filename(nombre_tabla))
 
     elif index == "bptree":
-        if len(query["params"]) != 0:
-            bptree = Bptree(format,
-                        keys[0],
-                        index_filename(nombre_tabla, keys[0], "index"),
-                        table_filename(nombre_tabla),
-                        *query["params"])
-        else:
-            raise HTTPException(status_code=404, detail="Not enough parameters.")
+        bptree = Bptree(format,
+                    keys[0],
+                    index_filename(nombre_tabla, keys[0], "index"),
+                    table_filename(nombre_tabla),
+                    *query["params"])
+        
+    elif index == "brin":
+        brin = Brin(format,
+                    keys[0],
+                    index_filename(nombre_tabla, keys[0], "index"),
+                    index_filename(nombre_tabla, keys[0], "page"),
+                    table_filename(nombre_tabla),
+                    *query["params"])
 
     else:
         print("INDICE NO IMPLEMENTADO AUN")
@@ -382,6 +398,8 @@ def create_index(query):
             rtree.insert(record, pos)
         elif bptree is not None:
             bptree.add(pos_new_record=pos)
+        elif brin is not None:
+            brin.add(pos_new_record=pos)
 
     end = time.time_ns()
     t_ms = end - start
@@ -518,14 +536,11 @@ def aux_select(query):
                     sets.append(set(hash.search(val)))
 
             elif index == "bptree":
-                if len(params) != 0:
-                    bptree = Bptree(format,
-                                key,
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla),
-                                *params)
-                else:
-                    raise HTTPException(status_code=404, detail="Not enough parameters.")
+                bptree = Bptree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            *params)
 
                 if cond["range_search"]:
                     if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
@@ -588,9 +603,32 @@ def aux_select(query):
                 else:
                     print(val)
                     sets.append(set(isam.search(val)))
+            
+            elif index == "brin":
+                brin = Brin(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            index_filename(nombre_tabla, key, "page"),
+                            table_filename(nombre_tabla),
+                            *params)
+                
+                if cond["range_search"]:
+                    if cond["op"] != ">" and cond["op"] != "<" and cond["op"] != "!=":
+                        sets.append(set(brin.search_range(left, right)))
+                    else:
+                        valid = set(brin.search_range(left, right))
+                        if cond["op"] == ">":
+                            invalid = set(brin.search(left))
+                        elif cond["op"] == "<":
+                            invalid = set(brin.search(right))
+                        else:
+                            curr = cast(cond["value"], format[key])
+                            invalid = set(brin.search(curr))
 
-
-
+                        sets.append(valid - invalid)
+                else:
+                    print(val)
+                    sets.append(set(brin.search(val)))
 
     for i in range(len(sets)):
         print(i, ":", sets[i])
@@ -669,6 +707,7 @@ def copy(query):
     rtree = None
     bptree = []
     isam = []
+    brin = []
 
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
@@ -691,19 +730,23 @@ def copy(query):
                         index_filename(nombre_tabla, key, "index"),
                         table_filename(nombre_tabla), *params))
         elif index == "bptree":
-            if len(params) != 0:
-                bptree.append(Bptree(format,
-                            key,
-                            index_filename(nombre_tabla, key, "index"),
-                            table_filename(nombre_tabla),
-                            *params))
-            else:
-                raise HTTPException(status_code=404, detail="Not enough parameters.")
+            bptree.append(Bptree(format,
+                        key,
+                        index_filename(nombre_tabla, key, "index"),
+                        table_filename(nombre_tabla),
+                        *params))
         elif index == "isam":
             isam.append(Isam(format,
                              key,
                              index_filename(nombre_tabla, key, "index"),
                              table_filename(nombre_tabla)))
+        elif index == "brin":
+            brin.append(Brin(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            index_filename(nombre_tabla, key, "page"),
+                            table_filename(nombre_tabla),
+                            *params))
     
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -735,6 +778,8 @@ def copy(query):
                 s.add(pos_new_record=pos)
             for i in isam:
                 i.add(pos_new_record=pos)
+            for br in brin:
+                br.add(pos_new_record=pos)
             if rtree is not None:
                 rtree.insert(row, pos)
     
@@ -757,6 +802,7 @@ def delete(query):
     rtree = None
     bptree = []
     isam = []
+    brin = []
 
     format = {}
 
@@ -797,6 +843,13 @@ def delete(query):
                              key,
                              index_filename(nombre_tabla, key, "index"),
                              table_filename(nombre_tabla)))
+        elif index == "brin":
+            brin.append(Brin(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            index_filename(nombre_tabla, key, "page"),
+                            table_filename(nombre_tabla),
+                            *params))
 
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -825,12 +878,15 @@ def delete(query):
         rtree = None
         bptree = []
         isam = []
+        brin = []
 
         # eliminar indices en la tabla
         for key in data["columns"].keys():
             index = data["columns"][key]["index"]
             if index == "hash":
                 os.remove(index_filename(nombre_tabla, key, "buckets"))
+            if index == "brin":
+                os.remove(index_filename(nombre_tabla, key, "page"))
             if index is not None and index != "rtree":
                 index_file = index_filename(nombre_tabla,
                                         key,
@@ -852,19 +908,23 @@ def delete(query):
                             index_filename(nombre_tabla, key, "index"),
                             table_filename(nombre_tabla), *params))
             elif index == "bptree":
-                if len(params) != 0:
-                    bptree.append(Bptree(format,
-                                key,
-                                index_filename(nombre_tabla, key, "index"),
-                                table_filename(nombre_tabla),
-                                *params))
-                else:
-                    raise HTTPException(status_code=404, detail="Not enough parameters.")
+                bptree.append(Bptree(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            table_filename(nombre_tabla),
+                            *params))
             elif index == "isam":
                 isam.append(Isam(format,
                                  key,
                                  index_filename(nombre_tabla, key, "index"),
                                  table_filename(nombre_tabla)))
+            elif index == "brin":
+                brin.append(Brin(format,
+                            key,
+                            index_filename(nombre_tabla, key, "index"),
+                            index_filename(nombre_tabla, key, "page"),
+                            table_filename(nombre_tabla),
+                            *params))
 
         rtree_keys = data.get("indexes", {}).get("rtree")
         if rtree_keys is not None:
@@ -894,6 +954,8 @@ def delete(query):
                 bp.add(pos_new_record=pos)
             for s in seq:
                 s.add(pos_new_record=pos)
+            for br in brin:
+                br.add(pos_new_record=pos)
             if rtree is not None:
                 rtree.insert(r, pos)
     
@@ -914,7 +976,7 @@ def drop_index(query):
     # eliminar indice en metadata
 
     data = select_meta(nombre_tabla)
-
+    
     for key in query["attr"]:
         data["columns"][str(key)]["index"] = None
 
@@ -923,7 +985,9 @@ def drop_index(query):
     try:
         os.remove(index_file)
         if query["index"] == "hash":
-            os.remove(index_filename(nombre_tabla, key, "buckets"))
+            os.remove(index_filename(nombre_tabla, *query["attr"], "buckets"))
+        if query["index"] == "brin":
+            os.remove(index_filename(nombre_tabla, *query["attr"], "page"))
 
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
@@ -949,6 +1013,8 @@ def drop_table(query):
         index = data["columns"][key]["index"]
         if index == "hash":
             os.remove(index_filename(nombre_tabla, key, "buckets"))
+        if index == "brin":
+            os.remove(index_filename(nombre_tabla, key, "page"))
         if index is not None and index != "rtree":
             index_file = index_filename(nombre_tabla,
                                     key,

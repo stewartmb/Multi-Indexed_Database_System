@@ -46,7 +46,7 @@ condition: NAME OP VALUE
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
 VALUE: "-"? /[0-9]+(\.[0-9]+)?/ | ESCAPED_STRING
-INDEX: "rtree"i | "bptree"i | "seq"i | "isam"i | "hash"i
+INDEX: "rtree"i | "bptree"i | "seq"i | "isam"i | "hash"i | "brin"i
 KEY: "primary key"i
 BETWEEN: "between"i
 CLOSEST: "closest"i
@@ -219,7 +219,7 @@ class SQLTransformer(Transformer):
                 i+=1
             if i < len(items) and items[i] is None:
                 i+=1
-            if i < len(items) and items[i] is not None and items[i] in ["rtree", "bptree", "seq", "isam", "hash"]:
+            if i < len(items) and items[i] is not None and items[i] in ["rtree", "bptree", "seq", "isam", "hash", "brin"]:
                 key_index = items[i]
                 i+=1
             dict[attr_name] = {"type": attr_type, "index": key_index}
@@ -265,16 +265,16 @@ class SQLTransformer(Transformer):
         return f"varchar[{items[0]}]"
 
 
-if __name__ == "__main__":
-    parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
-    # parser = Lark(sql_grammar, start="start", parser="lalr")
+# if __name__ == "__main__":
+#     parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
+#     # parser = Lark(sql_grammar, start="start", parser="lalr")
 
-    # Example: read SQL statements from a file
-    with open("ParserSQL/test2.txt", "r") as f:
-        sql_code = f.read()
-    try:
-        result = parser.parse(sql_code)
-        print(json.dumps(result, indent=4))
-        # print(result.pretty())
-    except Exception as e:
-        print("Error parsing input:", e)
+#     # Example: read SQL statements from a file
+#     with open("ParserSQL/test2.txt", "r") as f:
+#         sql_code = f.read()
+#     try:
+#         result = parser.parse(sql_code)
+#         print(json.dumps(result, indent=4))
+#         # print(result.pretty())
+#     except Exception as e:
+#         print("Error parsing input:", e)

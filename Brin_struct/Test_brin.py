@@ -42,8 +42,8 @@ ma = 200 # tamaño del aux
 
 N = 100 # cada cuántos registros se imprime una barra de progreso
 
-max_num_pages = 50 # máximo número de páginas
-max_num_keys = 25 # máximo número de llaves por página
+max_num_pages = 3 # máximo número de páginas
+max_num_keys = 5 # máximo número de llaves por página
 
 def test_insert_CSV(csv_path, index_file, data_file):
     """
@@ -93,7 +93,7 @@ def test_search():
     for key in KEYS:
         i+=1
         resultado = Brin.search(key)
-        print(resultado)
+        # print(resultado)
         m = N
         if random_index == 0:
             m = m / N
@@ -114,8 +114,8 @@ def test_search_range():
         inferior = 'A'
         superior = 'D'
     else:
-        inferior = 101
-        superior = 140
+        inferior = 6
+        superior = 60
     print(f"\nBúsquedas por rango: {inferior} y {superior}:")
     print( f"Nombre de la llave: {name_key}  |  Formato de la llave: {Brin.format_key}\n")
     

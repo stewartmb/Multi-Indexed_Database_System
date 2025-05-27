@@ -138,6 +138,7 @@ class Hash:
         :param global_depth: profundidad global
         :param max_records_per_bucket: cantidad maxima de registros por bucket
         """
+        
         self.index_file = index_file_name
         self.buckets_file = buckets_file_name
         self.global_depth = global_depth
@@ -148,6 +149,7 @@ class Hash:
         self.BT = BucketType(max_records_per_bucket)
         self.HEAP = Heap(table_format, key, data_file_name, force_create=force_create)
         self.Header = HeaderType()
+
         self._initialize_files(global_depth, force=force_create)
 
     # utility functions
