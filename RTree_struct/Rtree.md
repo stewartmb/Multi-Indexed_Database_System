@@ -87,6 +87,8 @@ FUNCIÓN insert(record, record_pos=None):
 
 ```
 
+Funciones auxiliares:
+
 ```
 FUNCIÓN __insert__(u_pos, point):
     u = leer_nodo(u_pos)
@@ -103,6 +105,7 @@ FUNCIÓN __insert__(u_pos, point):
         actualizar_mbr_padres(u_pos)  # Ajustar MBRs hacia arriba
 ```
 
+Algoritmo para realizar el split:
 ```
 FUNCIÓN handle_overflow(u_pos):
     u = leer_nodo(u_pos)
@@ -134,6 +137,7 @@ FUNCIÓN search(query_coords):
 
 ```
 
+Funciones auxiliares:
 
 ```
 FUNCIÓN __search__(u_pos, point, resultados):
@@ -162,7 +166,7 @@ FUNCIÓN range_search(min_coords, max_coords):
     RETORNAR resultados
 
 ```
-
+Funciones auxiliares:
 
 ```
 
@@ -197,7 +201,7 @@ FUNCIÓN ksearch(k, query_coords):
 
 
 ```
-
+Funciones auxiliares:
 
 ```
 FUNCIÓN __ksearch__(u_pos, k, point, max_heap):
@@ -232,7 +236,7 @@ FUNCIÓN delete(record_pos):
     aux_delete(record_pos, point)
 
 ```
-
+Funciones auxiliares:
 
 ```
 FUNCIÓN aux_delete(record_pos, point):
