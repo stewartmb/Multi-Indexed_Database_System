@@ -11,4 +11,52 @@ El Método de Acceso Secuencial Indexado **(ISAM)** es una solución especial de
 
 Observación: Una característica distintiva de la estructura del índice ISAM es su estaticidad, lo que significa que no cambia según los datos útiles. Por lo tanto, la demanda de inicio de sesión y ordenamiento aumentará, lo que reducirá la eficiencia del sistema para gestionar inserciones, eliminaciones y actualizaciones. 
 
+
+## Tipos 
+El ISAM puede ser implementado de dos manera: como un Dense-Index File o como un Sparse Index-File.
+
+### Dense-Index file
+Contiene una entrada para cada registro en el archivo de datos.
+
+Permite búsquedas muy rápidas de registros individuales, ya que cada registro tiene su propia entrada en el índice.
+
+(Imagen)
+
+### Sparse-Index file 
+Contiene entradas solo para algunos registros en el archivo de datos, generalmente el primer registro en cada bloque de datos.
+
+Para encontrar un registro específico, primero se busca en el índice el bloque que podría contener el registro y luego se busca secuencialmente dentro del bloque asociado.
+
+(Imagen)
+
+Para la implementación del proyecto, se utilizó el Sparse-Index con dos niveles de índices como se aprecia en la siguiente imagen:
+
+(Imagen)
+
 ## ¿Como construir la parte estática?
+
+Como el índice es estático, se debe hacer la creación del índice después de insertar los datos. 
+
+Para realizar la construcción, debemos tener los datos ordenados (Se puede realizar un algorimto de ordenación) y después, desde las hojas, ir construyendo el ISAM hasta llegar a la raíz. 
+
+(Imagen)
+
+En el siguiente link, se puede apreciar como se hace la construcción: https://youtu.be/-GyqvYHVEWo?si=FTJ_mkv8zXiCJFnH
+
+
+
+## Estructura del índice
+
+La estructura del índice ISAM es la siguiente:
+
+
+
+## Algoritmos 
+
+### Inserción
+
+### Búsqueda 
+
+### Búsqueda por rango
+
+### Eliminación 
