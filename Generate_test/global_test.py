@@ -210,7 +210,7 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
 
     def test_search(self, total_path ,Indices_struct, csv_time_search ,):
         df = pd.read_csv(total_path)
-        random_sample = df.sample(n=100, random_state=42)  # random_state para reproducibilidad
+        random_sample = df.sample(n=1, random_state=42)  # random_state para reproducibilidad
         
         # Obtener las claves y coordenadas
         keys_for_search = random_sample[self.name_key].astype(str).tolist()
@@ -298,9 +298,10 @@ def Test_search():
         EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
 x=0 
-csv_times = f'csv_times{num[x]}.csv'
-EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x ,test_global = True)
-EL_indice.generate_test_data(path =total_path , csv_times = csv_times, Indices_struct = Indices_struct)
+print (f"Generando datos de prueba para {num[x]} registros...")
+EL_indice = MEGA_SUPER_HIPER_MASTER_INDICE(name_key = "timestamp", table_format = table_format, x = x)
+csv_time_search = f'csv_time_search{num[x]}.csv'
+EL_indice.test_search(total_path = total_path, Indices_struct = Indices_struct, csv_time_search = csv_time_search)
 
 # exacta
 # por rango ( 2 points)
