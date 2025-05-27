@@ -456,25 +456,3 @@ class Hash:
                 lista.extend(self._aux_range_search(buckets_file, index_file, root['right'], lower, upper))
 
         return lista
-
-    def delete(self, key):
-        """
-        Elimina un registro del hash extensible.
-        :param key: clave a eliminar
-        """
-        if self.RT.dict_format[self.RT.key] == 'i':
-            key = int(key)
-        elif self.RT.dict_format[self.RT.key] == 'f':
-            key = float(key)
-        elif self.RT.dict_format[self.RT.key] == 'd':
-            key = float(key)
-
-        with open(self.index_file, 'r+b') as index_file, \
-                open(self.buckets_file, 'r+b') as buckets_file:
-            index_hash = get_bits(key, self.global_depth)
-            index_file.seek(self.Header.size)
-            root = self.NT.from_bytes(index_file.read(self.NT.size))
-            if index_hash[-1] == '0':
-                return self._aux_delete(buckets_file, index_file, root['left'], index_hash[:-1], key)
-            else:
-                return self._aux_delete(buckets_file, index_file, root['right'], index_hash[:-1], key)
