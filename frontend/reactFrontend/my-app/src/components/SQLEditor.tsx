@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
-import { EditorView } from '@codemirror/view';
+import { EditorView, ViewPlugin, Decoration } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { useQueryUrl } from '../contexts/QueryUrlContext.tsx';
@@ -9,10 +9,79 @@ import {completeFromList} from "@codemirror/autocomplete";
 
 import '../styles/SQLEditor.css';
 
+import type { ViewUpdate, DecorationSet } from "@codemirror/view";
+import { RangeSetBuilder } from "@codemirror/state";
 
+// 🎨 Palabras específicas y sus colores
+const specialWords: Record<string, string> = {
+  BPTREE: "#38bdf8",
+  SEQ: "#38bdf8",
+  ISAM: "#38bdf8",
+  HASH: "#38bdf8",
+  BRIN: "#38bdf8",
+  RTREE: "#38bdf8",
 
+  BOOL: "#38bdf8",
+  LONG: "#38bdf8",
+  ULONG: "#38bdf8",
 
+  CLOSEST: "#9d9af5",
+  COPY: "#9d9af5",
+};
 
+const specialWordRegex = new RegExp(`\\b(${Object.keys(specialWords).join("|")})\\b`, "gi");
+
+// 🔍 Plugin que aplica decoraciones personalizadas
+const customHighlightPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+
+    constructor(view: EditorView) {
+      this.decorations = this.buildDecorations(view);
+    }
+
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.buildDecorations(update.view);
+      }
+    }
+    
+    buildDecorations(view: EditorView): DecorationSet {
+      const builder = new RangeSetBuilder<Decoration>();
+      
+      // Obtener todo el texto del documento
+      const docText = view.state.doc.toString();
+      
+      let match;
+      specialWordRegex.lastIndex = 0;
+      
+      while ((match = specialWordRegex.exec(docText)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        const word = match[0].toUpperCase();
+        const color = specialWords[word];
+        
+        if (!color) continue;
+        
+        // Crear decoración con clase CSS personalizada y atributo data
+        const deco = Decoration.mark({
+          class: "special-word",
+          attributes: { 
+            style: `color: ${color} !important; font-weight: bold !important;`,
+            "data-word": word
+          }
+        });
+        
+        builder.add(start, end, deco);
+      }
+      
+      return builder.finish();
+    }
+  },
+  {
+    decorations: v => v.decorations
+  }
+);
 
 interface Props {
     onRun: (query: string) => void;
@@ -27,15 +96,14 @@ const myHighlightStyle = HighlightStyle.define([
     { tag: t.keyword, color: "#9d9af5" },           // create, select, insert, delete, where, from, etc.
     { tag: t.typeName, color: "#38bdf8" },              // int, float, double, varchar, etc.
     { tag: t.string, color: "#4ade80" },            // String literals        
-    { tag: t.number, color: "#00ffff" },            // Numbers
+    { tag: t.number, color: "#00eeee" },            // Numbers
     { tag: t.operator, color: "#dbd1c5" },          // ==, !=, <, >, <=, >=
     { tag: t.variableName, color: "#e879f9" },      // column names
-    { tag: t.name, color: "#7ec1de" },              // table names
     { tag: t.comment, color: "#64748b", fontStyle: "italic" }, // Comments
     { tag: t.punctuation, color: "#cbd5e1" },       // ( ) , ;
 ]);
 
-// Define custom theme
+// Define custom theme with special word styling
 const myTheme = EditorView.theme({
     "&": {
         backgroundColor: "#1e1e1e",
@@ -70,8 +138,11 @@ const myTheme = EditorView.theme({
     "&.cm-focused .cm-cursor": {
         borderLeftColor: "#e2e8f0"
     },
-    "&.cm-keyword": {
-        color: "#000000"
+    
+    ".special-word": {
+        position: "relative",
+        zIndex: "999",
+        color: "inherit !important"
     },
 });
 
@@ -150,8 +221,9 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
                     height="100%"
                     extensions={[
                         sql(),
+                        customHighlightPlugin, // Mover antes del theme y syntax highlighting
+                        myTheme,
                         syntaxHighlighting(myHighlightStyle),
-                        myTheme
                     ]}
                     onChange={handleQueryChange}
                     placeholder="Write your SQL query here..."
