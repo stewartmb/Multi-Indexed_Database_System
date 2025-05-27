@@ -102,6 +102,27 @@ Se ha creado una interfaz web sencilla e intuitiva para:
 
 - Ver los resultados en tiempo real
 
+## 📈 Experimentos y Resultados experimentales
+
+Para probar la eficiencia de todos los índices, se han realizados pruebas con distintos volúmenes de datos.
+
+Cabe recalcar que los dataset que hemos utilizado para las pruebas han sido generados por nosotros mismos. Esta decisión fue tomada para realizar las pruebas de los índices en el mismo dataset y aplicándolos en el mismo atributo, asi se podrá analizar mejor los resultados.
+
+Los tamaños de los dataset son de: 10k, 50k y 100k.
+
+### Métricas
+- Tiempo de ejecución en ms
+- Accesos a Memoria Secundaria
+
+## Cuadros Comparativos de Desempeño
+
+Ver aquí:
+
+### Gráficos
+
+Ver aquí:
+
+
 ## 👥 Autores
 
 | Nombre  | GitHub                                         |
