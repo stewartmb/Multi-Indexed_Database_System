@@ -333,9 +333,13 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
 
         # se crea un diccionario para almacenar los tiempos de búsqueda
         tiempos = {}
-
+        reads_dict = {}
+        writes_dict = {}
+        contador.reset_counts()
         for struct in Indices_struct:
             tiempos[struct] = []
+            reads = []
+            writes = []
             print (f"Probando búsqueda en {struct}...")
             for j in range(len(keys_for_search)):
                 key = keys_for_search[j]
@@ -345,7 +349,17 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
                 time = self.search(key = keys_for_search[j], key_type = struct, key_rtree = key_rtree)
                 time = round(time*1000, 4)
                 tiempos[struct].append(time)
+                cuenta = contador.reset_counts()  # cuenta es una tupla (read, write)
+                reads.append(cuenta[0])
+                writes.append(cuenta[1])
+            # Crear DataFrame con columnas 'read' y 'write'
+            reads_dict[struct] = reads
+            writes_dict[struct] = writes
         # se crea un DataFrame con los tiempos de búsqueda
+        df_reads = pd.DataFrame(reads_dict)
+        df_writes = pd.DataFrame(writes_dict)
+        df_reads.to_csv("search_reads.csv", index=False)
+        df_writes.to_csv("search_writes.csv", index=False)
         df = pd.DataFrame(tiempos)
         # se guarda el DataFrame en un archivo CSV
         if os.path.exists(csv_time_search):
@@ -405,16 +419,30 @@ class MEGA_SUPER_HIPER_MASTER_INDICE:
         registros = random_sample.to_dict(orient='records')
         registros = [self.Registro.correct_format(list(registro.values())) for registro in registros]
         tiempos = {}
+        reads_dict = {}
+        writes_dict = {}
+        contador.reset_counts()
         for struct in Indices_struct:
+            reads = []
+            writes = []
             tiempos[struct] = []
             print (f"Probando insert en {struct}...")
             for j in range(len(registros)):
-                print(registros[j])
                 time = self.insert(record = registros[j], index_type = struct)
                 time = round(time*1000, 4)
                 tiempos[struct].append(time)
+                cuenta = contador.reset_counts()  # cuenta es una tupla (read, write)
+                reads.append(cuenta[0])
+                writes.append(cuenta[1])
+            # Crear DataFrame con columnas 'read' y 'write'
+            reads_dict[struct] = reads
+            writes_dict[struct] = writes
         # se crea un DataFrame con los tiempos de búsqueda
         df = pd.DataFrame(tiempos)
+        df_reads = pd.DataFrame(reads_dict)
+        df_writes = pd.DataFrame(writes_dict)
+        df_reads.to_csv("insert_reads.csv", index=False)
+        df_writes.to_csv("insert_writes.csv", index=False)
         # se guarda el DataFrame en un archivo CSV
         if os.path.exists(csv_time_search):
             df.to_csv(csv_time_search, mode='a', header=False, index=False)

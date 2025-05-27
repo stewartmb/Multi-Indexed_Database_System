@@ -44,7 +44,6 @@ class Index_Record:
             elif format_key in ('b', '?'):
                 key_to_pack = bool(key_to_pack)
         format_index = f'{format_key}ii'
-        print("Esto va a matarme:", format_index, key_to_pack, self.pos, self.next)
         return struct.pack(format_index, key_to_pack, self.pos, self.next)
         
     @classmethod
@@ -307,7 +306,6 @@ class Sequential:
 
         ## CASO 1: Si el índice está vacío, se agrega el registro como raíz
         index_record = Index_Record(key = key, pos = pos_new_record)
-        print("WAAA:", pos_new_record)
         pos_new_index = self.add_index(index_record)
 
         if pos_root == -1:
