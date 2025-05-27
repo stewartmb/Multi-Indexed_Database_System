@@ -114,11 +114,13 @@ Los tamaños de los dataset son de: 10k, 50k y 100k.
 - Tiempo de ejecución en ms
 - Accesos a Memoria Secundaria
 
-### Cuadros Comparativos de Desempeño
+## Cuadros Comparativos de Desempeño
+
+Ver aquí:
 
 ### Gráficos
 
-
+Ver aquí:
 
 
 ## 👥 Autores
