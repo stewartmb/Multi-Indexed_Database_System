@@ -44,6 +44,7 @@ class Index_Record:
             elif format_key in ('b', '?'):
                 key_to_pack = bool(key_to_pack)
         format_index = f'{format_key}ii'
+        print("Esto va a matarme:", format_index, key_to_pack, self.pos, self.next)
         return struct.pack(format_index, key_to_pack, self.pos, self.next)
         
     @classmethod
@@ -295,8 +296,8 @@ class Sequential:
         if record is None and pos_new_record is None:
             return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
         if record is not None:
-            pos_new_record = self.add_record(record)
-            key = self.RT.get_key(record)
+             pos_new_record = self.HEAP.insert(record)  # Inserta el registro en el heap
+             key = self.RT.get_key(record)
 
         if pos_new_record is not None:
             record = self.HEAP.read(pos_new_record)
@@ -306,6 +307,7 @@ class Sequential:
 
         ## CASO 1: Si el índice está vacío, se agrega el registro como raíz
         index_record = Index_Record(key = key, pos = pos_new_record)
+        print("WAAA:", pos_new_record)
         pos_new_index = self.add_index(index_record)
 
         if pos_root == -1:
