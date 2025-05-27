@@ -11,3 +11,69 @@ El árbol B+ es una variación de la estructura de datos del árbol B+. En un á
 - **Abanico de salida**: Los árboles B+ tienen un abanico de salida alto, lo que significa que cada nodo puede tener varios nodos secundarios. Esto reduce la altura del árbol y aumenta la eficiencia de las operaciones de búsqueda e indexación.
 - **Compatible con caché**: los árboles B+ están diseñados para ser compatibles con caché, lo que significa que pueden aprovechar los mecanismos de almacenamiento en caché en las arquitecturas informáticas modernas para mejorar el rendimiento.
 - **Orientado a disco**: los árboles B+ se utilizan a menudo para sistemas de almacenamiento basados ​​en disco porque son eficientes para almacenar y recuperar datos del disco.
+
+## Estructura del índice
+
+El índice está estructurado de la siguiente manera:
+
+- Archivo de datos (data_file.bin): Almacena los registros en un heap (implementado en Heap).
+
+- Archivo de índice (index_file.bin): Contiene la estructura del árbol B+ con páginas/nodos.
+
+```python
+class IndexPage():
+    def __init__(self, leaf=True, M=None):
+        self.leaf = leaf      # True si es nodo hoja
+        self.keys = [None] * (M-1)  # Claves de búsqueda
+        self.childrens = [-1] * M   # Punteros (a registros o nodos hijos)
+        self.father = -1      # Puntero al padre
+        self.key_count = 0    # Número de claves actuales
+        self.M = M           # Orden del árbol (máx. hijos por nodo)
+```
+### Tipos de Nodos:
+#### Nodos Internos (no hoja):
+
+- keys: Valores separadores para el enrutamiento
+
+- childrens: Punteros a nodos hijos
+
+No contienen datos reales
+
+#### Nodos Hoja:
+
+- keys: Claves de búsqueda
+
+- childrens: Punteros a registros en el archivo de datos
+
+Enlazados secuencialmente (último childrens apunta al siguiente nodo hoja)
+
+## Algorimtmos
+A continuación, se presenta los algoritmos de las operaciones:
+
+### Inserción
+Algorimto de inserción:
+
+```
+
+```
+
+
+Funciones Auxiliares:
+
+### Búsqueda
+Algorimto de búsqueda:
+
+
+Funciones Auxiliares:
+
+### Búsqueda por rango
+Algorimto de búsqueda por rango:
+
+
+Funciones Auxiliares:
+
+### Eliminación
+
+Lamentablemente, la eliminación en la estructura demostró ser de mucha complejidad para implementarse. Entonces, se decidió obviar esta operación.
+
+Igualmente, al momento de probar la eliminación en el frontend usando el índice se puede hacer, pero no se maneja correctamente.
