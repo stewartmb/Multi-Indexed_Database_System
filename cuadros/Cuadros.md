@@ -1,4 +1,4 @@
-# Cuadros comparativos de desempeño y Gráficos resultantes
+# Cuadros comparativos de desempeño, Gráficos resultantes y Análisis de resultados
 En esta sección se mostraran los cuadros comparativos de las pruebas realizadas para analizar la eficiencia de los índices.
 
 ## Prueba 1: Tiempo de creación de los índices
@@ -76,7 +76,13 @@ Los experimentos se realizaron un total de 10 veces. Se sacó el tiempo máximo 
 
 **Análisis de los resultados:**
 
-bla bla bla
+Los resultados obtenidos en la prueba de creación de índices revelan patrones. En primer lugar, los índices **heap** e **ISAM** muestran una alta variabilidad en sus tiempos de creación, especialmente en los conjuntos de datos más grandes (50k y 100k registros), con desviaciones estándar significativas (1.83 a 3.89 para heap y 1.75 a 3.42 para ISAM). Esto sugiere que estas estructuras, al carecer de una organización estricta (heap) o depender de particiones estáticas (ISAM), pueden verse afectadas por factores externos como la fragmentación de memoria o la gestión de archivos durante la inserción de datos. En contraste, los índices **B+Tree** y **hash** presentan tiempos más consistentes y predecibles, con desviaciones estándar bajas (0.03 a 0.09 para B+Tree y 0.03 a 0.09 para hash), lo que refleja su naturaleza optimizada para operaciones de inserción eficientes gracias a su estructura balanceada (B+Tree) o a la distribución uniforme mediante funciones hash.
+
+Los índices que tuvieron menor tiempo para crearse fueron el Heap y el ISAM. Esto se debe a que el Heap no tiene una estructura definida, es decir, solo almacena los resgistros sin ningún tipo de orden. Por otro lado, la implementación de la creación del índice ISAM explicada en su documentación, hace que este tenga poco tiempo de creación. 
+
+Por otro lado, los índices **sequential** y **rtree** destacan por ser los más lentos en términos absolutos, con promedios que superan los 12 ms y 15 ms, respectivamente, en todos los tamaños de datos. Esto se debe a sus diseños especializados: el índice sequential requiere un escaneo lineal y reorganización física de los datos, mientras que el rtree, optimizado para datos multidimensionales (como coordenadas espaciales), incurre en un alto costo computacional para construir su estructura jerárquica. Estos resultados confirman la teoría de que estos índices sacrifican velocidad de creación por beneficios en consultas específicas (búsquedas por rangos en sequential o consultas espaciales en rtree). El índice **brin**, aunque más rápido que sequential y rtree, muestra un rendimiento intermedio, ya que su diseño basado en rangos de bloques reduce la sobrecarga de creación pero aún requiere procesamiento adicional para resumir la información por bloques.
+
+Finalmente, la escalabilidad de los índices se evidencia al comparar los tiempos entre los distintos tamaños de datos. Mientras que estructuras como B+Tree y hash mantienen tiempos estables independientemente del volumen (con incrementos mínimos del 10k al 100k), heap e ISAM experimentan fluctuaciones drásticas, lo que indica que su rendimiento es más sensible al tamaño de los datos. Esto refuerza la idea de que los índices balanceados (B+Tree) o de acceso directo (hash) son más adecuados para entornos con crecimiento dinámico de datos, mientras que heap e ISAM pueden ser menos predecibles en escenarios de gran escala.
 
 ## Prueba 2: Tiempo de búsqueda de los índices
 
@@ -151,7 +157,15 @@ Los experimentos se realizaron un total de 100 veces. Se sacó el tiempo máximo
 
 
 **Análisis de los resultados:**
- bla bla bla 
+
+Los resultados de la Prueba 2, que evalúa el tiempo de búsqueda en diferentes estructuras de índices, revelan comportamientos claramente diferenciados que se ajustan a las expectativas teóricas de cada tipo de índice. En primer lugar, el índice **heap**, al carecer de una estructura organizada, muestra los peores tiempos de búsqueda en todos los escenarios (promedios de 22.89 ms, 106.41 ms y 214.69 ms para 10k, 50k y 100k registros, respectivamente), con una escalabilidad deficiente. Esto se debe a que, sin un índice definido, el sistema debe realizar un escaneo secuencial completo (full table scan), lo que explica su crecimiento lineal con el tamaño de los datos y su alta desviación estándar (hasta 8.67 en 100k), indicando inconsistencia en el rendimiento.  
+
+En contraste, los índices **hash** y **B+Tree** demuestran un rendimiento superior, aunque con diferencias clave. El índice **hash** destaca por su eficiencia en búsquedas puntuales (promedios de 0.40 ms, 0.43 ms y 0.87 ms), gracias a su acceso directo mediante la función hash, que idealmente ofrecen complejidad *O(1)*. Sin embargo, en el caso de 100k registros, su tiempo máximo aumenta significativamente (7.50 ms), posiblemente debido a colisiones en la función hash o a un incremento en la profundidad de las listas de overflow. Por otro lado, el **B+Tree**, aunque ligeramente más lento que el hash en casos óptimos, mantiene un rendimiento estable (promedios entre 0.78 ms y 6.09 ms) debido a su estructura balanceada, que garantiza un tiempo logarítmico, incluso con datos crecientes. Su desviación estándar relativamente alta (hasta 3.53) sugiere que algunas búsquedas pueden requerir más recorridos en el árbol, dependiendo de la ubicación del dato.  
+
+Los índices **sequential**, **ISAM** y **BRIN** presentan tiempos de búsqueda notablemente bajos (todos con promedios menores a 0.50 ms en la mayoría de casos), lo que refleja su optimización para ciertos patrones de acceso. El **sequential** aprovecha el preordenamiento físico de los datos, lo que acelera las búsquedas secuenciales o por rangos. El **ISAM**, al estar basado en particiones estáticas indexadas, logra un acceso rápido a bloques específicos, aunque su rendimiento puede degradarse si hay desbalanceo en la distribución de datos. El **BRIN**, diseñado para datos correlacionados físicamente, reduce el overhead al trabajar con rangos de bloques en lugar de registros individuales, lo que explica su consistencia (desviación estándar ≤ 0.14 en 50k y 100k).  
+
+Finalmente, el índice **R-Tree** muestra un rendimiento intermedio (promedios entre 2.69 ms y 3.06 ms), coherente con su especialización en consultas espaciales. Su estructura jerárquica, optimizada para regiones multidimensionales, introduce un costo adicional comparado con índices tradicionales, pero sigue siendo más eficiente que un escaneo secuencial. La baja variabilidad en sus tiempos (desviación estándar ≤ 0.97) sugiere que su comportamiento es predecible, independientemente del tamaño de los datos.  
+
 
 
 
@@ -233,11 +247,41 @@ Los experimentos se realizaron un total de 100 veces. Se sacó el tiempo máximo
 ![Grafico1](100k_RS.png)
 
 ### Análisis de los resultados:
-bla bla bla
+
+Los resultados de la Prueba 3 sobre búsqueda por rango revelan diferencias significativas en el rendimiento de cada estructura de índices. El índice heap muestra un desempeño deficiente, con tiempos que crecen linealmente conforme aumenta el volumen de datos (promedios de 21.53 ms a 214.32 ms), ya que al carecer de organización requiere escanear toda la tabla. Este comportamiento era previsible dado que los heaps no están diseñados para operaciones eficientes de rango, sino para inserciones rápidas.
+
+Por otro lado, el B+Tree demuestra un equilibrio notable, manteniendo tiempos de búsqueda relativamente bajos (0.82 ms a 5.95 ms) gracias a su estructura balanceada que permite localizar rápidamente el inicio del rango y luego recorrer secuencialmente las hojas. Sin embargo, su desviación estándar relativamente alta (hasta 3.43) indica que algunos rangos requieren más recorridos en el árbol que otros, dependiendo de su distribución.
+
+El índice hash presenta los resultados más deficientes para esta operación (184.19 ms a 262.82 ms), lo cual era esperable pues las tablas hash están optimizadas para búsquedas exactas, no para rangos. Al no mantener ningún orden entre los elementos, la implementación probada debe examinar todos los buckets, volviéndose tan ineficiente como un escaneo secuencial pero con mayor variabilidad.
+
+Los índices sequential, ISAM y BRIN sobresalen en esta prueba, mostrando los mejores tiempos de respuesta (todos bajo 0.30 ms en promedio). El sequential aprovecha el orden físico de los datos, el ISAM utiliza bloques indexados, y el BRIN trabaja con rangos de bloques, lo que les permite localizar intervalos con mínima sobrecarga. Particularmente el BRIN destaca por su consistencia (desviación estándar ≤ 0.02), siendo ideal para datos con correlación física.
+
+El R-Tree demostró un comportamiento particularmente interesante en las pruebas de búsqueda por rango, con variaciones significativas entre sus tres operaciones evaluadas:
+
+- **Búsqueda por región (point_to_point)**: Esta operación mostró los tiempos más consistentes (3.10 ms promedio en 100k registros) porque aprovecha eficientemente la estructura jerárquica del R-Tree. El índice organiza los datos en rectángulos mínimos delimitadores (MBRs) anidados, permitiendo descartar rápidamente regiones completas que no intersectan con el área de búsqueda. La baja desviación estándar (≤ 0.97) indica que el algoritmo mantiene un comportamiento predecible independientemente de la ubicación espacial del rango buscado.
+
+- **Búsqueda por radio:** Con tiempos intermedios (5.55 ms promedio), esta operación requiere un procesamiento adicional respecto a la búsqueda por región. Aunque utiliza el mismo principio de filtrado por MBRs, debe:
+
+   - Primero identificar los nodos que intersectan el círculo de búsqueda
+   - Luego aplicar un filtro secundario para verificar qué elementos caen dentro del radio exacto
+   - Finalmente calcular distancias para los candidatos restantes
+
+ Este proceso explica por qué es aproximadamente 1.8 veces más lento que la búsqueda por región.
+
+- **K-vecinos más cercanos (kNN):** La operación más costosa (9.62 ms promedio) debido a su naturaleza iterativa:
+
+  - Requiere mantener una cola de prioridad de candidatos
+  - Calcular múltiples distancias euclidianas
+  - Expandir la búsqueda radialmente hasta encontrar los k elementos más cercanos
+  - Revisar potencialmente múltiples nodos del árbol
+    
+La complejidad aumenta con el valor de k y la densidad de los datos, lo que se refleja en la mayor desviación estándar (≤ 2.40).
+
+Un hallazgo importante es que los tiempos promedios se mantuvieron notablemente estables al aumentar el volumen de datos (variación < 5% entre 10k y 100k registros). Esto confirma la propiedad logarítmica (O(log n)) del R-Tree para consultas espaciales, donde el árbol crece en profundidad pero no en ancho de búsqueda promedio.
 
 
 
- ## Prueba 3: Tiempo de inserción de los índices
+ ## Prueba 4: Tiempo de inserción de los índices
 
 Primero, se realizó la creación de la data con un total de 10k, 50k y 100k registros. 
 
@@ -310,7 +354,24 @@ Los experimentos se realizaron un total de 1000 veces. Se sacó el tiempo máxim
 
 ### Análisis de los resultados
 
-bñla bña bla 
+Los resultados de la Prueba 4 revelan patrones de rendimiento claramente diferenciados en las operaciones de inserción. El índice **heap** demuestra ser de los más eficientes en operaciones de inserción (promedios entre 0.0963 ms y 0.1319 ms), ya que al carecer de estructura organizada simplemente añade los nuevos registros al final del almacenamiento, sin requerir operaciones adicionales de mantenimiento. Esta simplicidad explica sus tiempos mínimos, aunque su alta desviación estándar (hasta 0.9345) en el caso de 50k registros sugiere cierta inconsistencia posiblemente relacionada con la gestión de espacio en memoria.
 
+Los índices **B+Tree** y **hash** presentan un rendimiento intermedio pero consistente (promedios entre 0.2063 ms y 0.2952 ms). En el caso del B+Tree, este tiempo refleja el costo de mantener el árbol balanceado, que incluye la división de nodos cuando se llenan. La estructura hash, por su parte, muestra tiempos ligeramente mejores gracias a su mecanismo directo de direccionamiento, aunque su rendimiento puede degradarse cuando se producen colisiones frecuentes o cuando es necesario hacer splits de los buckets. La baja desviación estándar en ambos casos (≤ 0.2123) indica un comportamiento predecible independientemente del tamaño de los datos.
+
+El índice **sequential** muestra el peor rendimiento en operaciones de inserción (promedios alrededor de 1.39 ms), con tiempos máximos que superan los 100 ms. Esto era previsible dado que este tipo de índice requiere mantener el orden físico de los datos, lo que frecuentemente implica costosas operaciones de reorganización y desplazamiento de registros. Su alta desviación estándar (≈9.38-9.50) sugiere que algunas inserciones son particularmente costosas cuando ocurren en posiciones que requieren grandes reubicaciones de datos.
+
+Los índices **ISAM y BRIN** presentan un comportamiento interesante. El ISAM (promedios entre 0.4353 ms y 0.5912 ms) muestra mejor rendimiento que el sequential gracias a su estructura de bloques fijos, aunque su tiempo de inserción puede variar significativamente dependiendo de la disponibilidad de espacio en los bloques destino. El BRIN, por su parte, mantiene tiempos consistentes (≈0.31-0.32 ms) debido a que solo necesita actualizar los metadatos de rangos cuando es necesario, sin requerir reorganizaciones complejas.
+
+El índice **R-Tree** muestra los tiempos de inserción más altos entre los índices especializados (promedios entre 2.1289 ms y 2.3492 ms), lo que refleja la complejidad de mantener una estructura jerárquica multidimensional. Cada inserción requiere:
+
+- Encontrar la posición adecuada en la estructura jerárquica
+
+- Ajustar los rectángulos delimitadores (MBRs) de los nodos padres
+
+- Gestionar posibles divisiones de nodos
+
+- Mantener las propiedades espaciales del árbol
+
+Esta complejidad se ve agravada por la naturaleza de los datos espaciales, donde la inserción de un nuevo elemento puede afectar múltiples niveles de la estructura. La alta desviación estándar (3.3316-5.1619) sugiere que ciertas inserciones - particularmente aquellas que desencadenan rebalances completos - son significativamente más costosas que otras.
 
 
