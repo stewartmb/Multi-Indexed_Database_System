@@ -26,7 +26,7 @@ class BPTree:
     def __init__(self, table_format , name_key: str ,
                  name_index_file = 'BPTree_struct/index_file.bin', 
                  name_data_file = 'BPTree_struct/data_file.bin',
-                 max_num_child = None,
+                 max_num_child = 100,
                  force_create = False):
         
         self.index_file = name_index_file

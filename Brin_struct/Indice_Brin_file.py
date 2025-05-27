@@ -726,7 +726,7 @@ class BRIN:
         num_brins, is_order = self._read_header_index()
         results = []
         if num_brins == 0:
-            return results
+            return 
         
         # Buscar brins que contengan el rango del key
         list_pos_brin = []
@@ -795,6 +795,7 @@ class BRIN:
                             for j in range(page.key_count):
                                 if page.keys[j] == key:
                                     page.keys[j] =  float('nan')  # Marca la clave como eliminada
+        return
 
 
 
