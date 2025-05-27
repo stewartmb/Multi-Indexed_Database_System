@@ -29,7 +29,7 @@ create table destinos (
     name varchar[25] index seq,
     latitud double,
     longitud double,
-    ciudad varchar[20] index btree,
+    ciudad varchar[20] index bptree,
     pais varchar[20]
 );
 create index on destinos using rtree(latitud, longitud);
@@ -37,7 +37,7 @@ create index on destinos using rtree(latitud, longitud);
 🔎 En este ejemplo se combinan:
 - `hash` para identificadores
 - `seq` para nombres
-- `btree` para textos ordenables
+- `bptree` para textos ordenables
 - `rtree` para coordenadas espaciales
 
 Como la tabla tiene atributos de distintos tipos (IDs, nombres, coordenadas), se asigna a cada uno el índice más óptimo según su naturaleza.
