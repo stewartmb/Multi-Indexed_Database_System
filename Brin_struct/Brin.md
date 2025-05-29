@@ -51,12 +51,12 @@ Debido a que el BRIN tiene una entrada para cada rango de páginas, también es 
   ```
 
 ### 2. Nivel Inferior (Páginas de Índice)
-las paginas se conforman por una lista de keys (clave de ordenamiento del registro) y childrens (posicion del registro en el data_file) 
+Las paginas se conforman por una lista de keys (clave de ordenamiento del registro) y childrens (posicion del registro en el data_file) 
 - **Archivo**: `page_file.bin`
   ```python
   TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de pages)
   ```
-  Se guarda la cantidad de paginnas para facilitar la escritura de la misma
+  Se guarda la cantidad de paginas para facilitar la escritura de la misma
 - **Estructura**:
   ```python
   class Index_Page():
