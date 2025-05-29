@@ -8,8 +8,8 @@ from Heap_struct.Heap import Heap
 
 
 # Constantes generales
-TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de pages)
-TAM_ENCABEZAD_BRIN = 5  # Tamaño del encabezado en bytes (cantidad de brin y  booleano de orden)
+TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de paginas)
+TAM_ENCABEZAD_BRIN = 5  # Tamaño del encabezado en bytes (cantidad de paginas y  booleano de orden)
 TAM_ENCABEZAD_DATA = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 
 
