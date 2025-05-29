@@ -298,13 +298,11 @@ FUNCIÓN eliminar_de_bucket(bucket, key):
 
 | Operación       | Mejor Caso      | Peor Caso         | Escenario Crítico                          |
 |----------------|----------------|------------------|-------------------------------------------|
-| **Inserción**  | `O(1)`         | `O(N + K)`       | Split de buckets + reinserción de registros |
-| **Búsqueda**   | `O(1)`         | `O(log N + M)`   | Registro en último bucket de overflow      |
+| **Inserción**  | `O(1)`         | `O(N)`       | Split de buckets + reinserción de registros |
+| **Búsqueda**   | `O(1)`         | `O(D + n)`   | Registro en último bucket de overflow      |
 | **Búsqueda por Rango**      | `O(N)`         | `O(N)`           | Escaneo completo de todos los buckets      |
-| **Eliminación**| `O(1)`         | `O(log N + M)`   | Eliminación en último bucket de overflow   |
+| **Eliminación**| `O(1)`         | `O(D + n)`   | Eliminación en último bucket de overflow   |
 
 **Clave**:
-- `N`: Número total de registros  
-- `M`: Registros en cadenas de overflow  
-- `K`: Accesos para reorganización (split)  
-- `log N`: Profundidad del árbol de directorios  
+- `n`: Número total de registros   
+- `D`: Profundidad 
