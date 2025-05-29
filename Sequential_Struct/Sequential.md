@@ -335,8 +335,8 @@ FUNCIÓN delete(key):
 
 | Operación| Acceso a disco    | Complejidad       |        
 | :-------- | :------- | :------------------------- |
-| Inserción | log(N) + K (K siendo la raiz de N) | O(log n + k) / Peor caso: O(n) |
-| Búsqueda  | log(N) + K (K siendo la raiz de N) |  O(log n + k) |
-| Búsqueda por rango | log(N) + K (K siendo la raiz de N) + R (Registros dentro del rango)| O(log n + k + r) |
-| Eliminación | log(N) + K (K siendo la raiz de N) |  O(log n + k) |
+| Inserción | log(N) + K  | O(log (n) + k) / Peor caso: O(n) |
+| Búsqueda  | log(N) + K  |  O(log (n) + k) |
+| Búsqueda por rango | log(N) + K  + R (Registros dentro del rango)| O(log (n) + k + r) |
+| Eliminación | log(N) + K |  O(log (n) + k) |
 | Reconstrucción | N (Se construye un Sequential nuevo) |  O(n) |
