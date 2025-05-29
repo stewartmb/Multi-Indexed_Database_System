@@ -309,7 +309,7 @@ FUNCIÓN búsqueda_binaria(clave, claves):
 
 Lamentablemente, la eliminación en la estructura demostró ser de mucha complejidad para implementarse. Entonces, se decidió obviar esta operación.
 
-Igualmente, al momento de probar la eliminación en el frontend usando el índice se puede hacer, pero no se maneja correctamente.
+Igualmente, al momento de probar la eliminación en el frontend usando el índice se puede hacer, ya que se emplea la busqueda que devuelve las posiciones y estas se actualizan en el heap que almacena los registros, cambiando su bool de existencia.
 
 
 ## Complejidad en acceso a memoria secundaria
