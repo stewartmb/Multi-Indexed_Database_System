@@ -26,15 +26,11 @@ def Calculate_M(num_records):
     m = round(m) if m is not None else None
     n = m ** 2
     if num_records < n:
-        print("El numero de registros es menor que m, se ajustara a m-1")
         m = m-1
         n = m ** 2
     elif num_records >= (m**2*(m-1)):
-        print("El numero de registros es mayor que m, se ajustara a m+1")
         m = m + 1
         n = m ** 2
-    else:
-        print("El numero de registros es correcto con m")
 
     # percentiles para posiciones 
     lista = []
@@ -42,7 +38,6 @@ def Calculate_M(num_records):
         percentil = i / n
         pos = round(num_records * percentil)
         lista.append(pos)
-    print(float(num_records/(m**2*(m-1))))
     return m, lista
 
 class Index_Page():
@@ -177,7 +172,7 @@ class Index_temp:
         if key_to_pack is None:
             if format_key in ('i', 'q', 'Q'):
                 key_to_pack = -2147483648
-            elif format_key == 'f':
+            elif format_key in ('f', 'd'):
                 key_to_pack = float('nan')
             elif format_key in ('b', '?'):
                 key_to_pack = -128
@@ -475,7 +470,6 @@ class ISAM():
                 record_temp = Index_temp.from_bytes(data, self.format_key)
                 key = record_temp.key
                 offset = record_temp.pos
-                # print(f"Agregando {key} al heap del bloque {i}")
                 heapq.heappush(heap, (key, offset, i))
 
         with open(output_file, 'wb') as fout:
@@ -483,7 +477,6 @@ class ISAM():
                 key, offset, i = heapq.heappop(heap)
                 record_temp = Index_temp(key, offset)
                 fout.write(record_temp.to_bytes(self.format_key))
-                # print(f"Escribiendo {key} en {output_file}")
 
                 # Leer siguiente elemento del mismo archivo
                 data = open_files[i].read(record_size)
@@ -492,9 +485,7 @@ class ISAM():
                     next_key = record_temp.key
                     next_offset = record_temp.pos
                     heapq.heappush(heap, (next_key, next_offset, i))
-                #     print(f"Agregando {next_key} al heap del bloque {i}")
-                # else:
-                #     print(f"Bloque {i} agotado")
+
 
 
         # Cerrar archivos
@@ -549,8 +540,7 @@ class ISAM():
 
         lista = posiciones.copy()
         # 4. Generar paginas (HOJAS) de data ordenada
-        # print(f"Generando paginas de indice con M={self.M} ")
-        # print()
+
         # print("=== Generando hojas ===")
         with open(order_file, 'rb') as f:
             limit = lista.pop(0)
@@ -580,10 +570,7 @@ class ISAM():
         num_pages_data, num_over , max_num_child ,  pos_root = self._read_header()
         for i in range(num_pages_data):
             page = self._read_index_page(i)
-            # print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
-        
-        # 5. Generar indices de primer nivel 
-        # print("=== Generando indices de primer nivel ===")
+
         lista = posiciones.copy()
         with open(order_file, 'rb') as f:
             i = 1
@@ -594,18 +581,15 @@ class ISAM():
             page_root.childrens[0] = pos_page
             for num in range(1,len(lista)):
                 if i % self.M != 0 :
-                    # print(lista[num], "Nueva pagina")
                     f.seek(lista[num] * record_size)
                     data = f.read(record_size)
                     record_temp = Index_temp.from_bytes(data, self.format_key)
                     key = record_temp.key
                     pos = record_temp.pos
-                    # print( f"Agregando clave {key} y posicion {pos}")
                     page.keys[page.key_count] = key
                     page.childrens[page.key_count+1] = i
                     page.key_count += 1
                 else:
-                    # print (page.keys , page.childrens, page.next, "|" ,page.key_count)
                     self._add_index_page(page)
                     pos_page,_ , _,_= self._read_header()
                     f.seek(lista[num] * record_size)
@@ -615,7 +599,6 @@ class ISAM():
                     pos = record_temp.pos
                     page = Index_Page(leaf=False, M=self.M)
                     page.childrens[0] = i
-                    # print (page_root.keys , page_root.childrens, page_root.next, "|" ,page_root.key_count , "page root")
                     page_root.keys[page_root.key_count] = key
                     page_root.childrens[page_root.key_count+1] = pos_page
                     page_root.key_count += 1
@@ -632,15 +615,9 @@ class ISAM():
         num_pages, num_over ,_ , _= self._read_header()
         for i in range(num_pages_data, num_pages-1):
             page = self._read_index_page(i)
-        #     print(f"Página {i}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
-        
-        # print("=== Generando root ===")
-        page = self._read_index_page(num_pages-1)
-        # print(f"Página {num_pages-1}: {page.keys}, {page.childrens}, next: {page.next}, Claves: {page.key_count}")
 
-        # print (f"Formato de la llave: {self.format_key} | Formato del índice: {self.indexp_format}")
-        # print (f"Tamaño de la página de índice: {self.tam_indexp} bytes")
-        # print ("leyendo indice de primer nivel")
+        page = self._read_index_page(num_pages-1)
+
 
         # eliminar archivo temporal
         if os.path.exists(order_file):

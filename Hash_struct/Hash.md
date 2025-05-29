@@ -179,7 +179,7 @@ FUNCIÓN _aux_search(buckets_file, index_file, node_index, index_hash, key):
             matches += buscar_en_bucket(bucket, key)
         
 ```
-Algoritmo para buscar una llave en un bucket. Puede retornar varias si existen muchas colisiones:
+Algoritmo para buscar una llave en un bucket:
 ```
 
 FUNCIÓN buscar_en_bucket(bucket, key):
@@ -298,13 +298,13 @@ FUNCIÓN eliminar_de_bucket(bucket, key):
 
 | Operación       | Mejor Caso      | Peor Caso         | Escenario Crítico                          |
 |----------------|----------------|------------------|-------------------------------------------|
-| **Inserción**  | `O(1)`         | `O(N + K)`       | Split de buckets + reinserción de registros |
-| **Búsqueda**   | `O(1)`         | `O(log N + M)`   | Registro en último bucket de overflow      |
+| **Inserción**               | `O(1)`         | `O(D + K)`       | Split de buckets + reinserción de registros |
+| **Búsqueda**                | `O(1)`         | `O(D + M)`   | Registro en último bucket de overflow      |
 | **Búsqueda por Rango**      | `O(N)`         | `O(N)`           | Escaneo completo de todos los buckets      |
-| **Eliminación**| `O(1)`         | `O(log N + M)`   | Eliminación en último bucket de overflow   |
+| **Eliminación**             | `O(1)`         | `O(D + M)`   | Eliminación en último bucket de overflow   |
 
 **Clave**:
-- `N`: Número total de registros  
+- `N`: Número total de registros
+- `D`: Profundidad Global
 - `M`: Registros en cadenas de overflow  
-- `K`: Accesos para reorganización (split)  
-- `log N`: Profundidad del árbol de directorios  
+- `K`: Accesos para reorganización (split)

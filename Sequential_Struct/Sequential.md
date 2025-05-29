@@ -172,6 +172,10 @@ FUNCIÓN reconstruction():
 
 ## Algoritmos para las operaciones básicas
 ### Inserción:
+Algoritmo de inserción:
+
+El algoritmo de inserción maneja la adición de registros a un índice secuencial sobre un *Heap File*, asegurando que se mantenga ordenado por clave. Primero valida los parámetros: debe recibir **o bien** el registro a insertar **o bien** su posición en el *Heap File*. Luego, obtiene la clave del registro y la posición donde se almacenó en el *Heap*. Si el índice está vacío, el nuevo registro se convierte en la raíz. Si no, busca la posición correcta en el índice mediante una **búsqueda binaria** seguida de una **búsqueda lineal** para ajustar los punteros. Si la inserción requiere actualizar la raíz (por ser la clave más pequeña), se modifica; en caso contrario, se enlaza el nuevo nodo entre los registros existentes. Finalmente, si el archivo auxiliar alcanza un tamaño crítico (**K**), se dispara una **reconstrucción** del índice para mantener su eficiencia. El algoritmo garantiza que el índice siga siendo secuencial y accesible para búsquedas rápidas.
+
 ```
 FUNCIÓN add(record, pos_new_record):
     // Validación de parámetros
@@ -225,6 +229,11 @@ FUNCIÓN add(record, pos_new_record):
         reconstruction()
 ```
 ### Búsqueda:
+
+Algoritmo de búsqueda:
+
+Primero, verifica si el índice está vacío, en cuyo caso retorna una lista vacía. Si hay datos, utiliza una búsqueda binaria para encontrar una posición aproximada  y luego una búsqueda lineal para ubicar el primer registro de índice con la clave buscada. A partir de ahí, recorre la lista enlazada de registros de índice (seguir el campo next) mientras las claves coincidan, acumulando las posiciones correspondientes del Heap File en un arreglo de resultados. Finalmente, retorna todas las posiciones encontradas o una lista vacía si no hay coincidencias.
+
 ```
 FUNCIÓN search(key):
     resultado = []
@@ -248,6 +257,11 @@ FUNCIÓN search(key):
     RETORNAR resultado
 ```
 ### Búsqueda por rango:
+
+Algoritmo de búsqueda por rango:
+
+El algoritmo de **búsqueda por rango** recupera eficientemente todas las posiciones en el *Heap File* cuyas claves estén dentro del intervalo `[key1, key2]`. Primero, verifica si el índice está vacío, devolviendo una lista vacía en ese caso. Si hay datos, utiliza una **búsqueda binaria** seguida de una **búsqueda lineal** para ubicar el primer registro con clave mayor o igual a `key1`. Si no se encuentra una coincidencia exacta, ajusta el puntero al primer registro relevante. Luego, recorre secuencialmente los registros del índice (siguiendo el campo `next`), agregando al resultado las posiciones cuyas claves caigan dentro del rango, hasta superar `key2`. Este método aprovecha el orden del índice para minimizar accesos a disco y garantiza resultados completos y ordenados.
+
 ```
 FUNCIÓN search_range(key1, key2):
     resultado = []
@@ -278,6 +292,11 @@ FUNCIÓN search_range(key1, key2):
     RETORNAR resultado
 ```
 ### Eliminación:
+
+Algoritmo de la eliminación:
+
+El algoritmo de **eliminación** maneja la eliminación lógica de todos los registros del índice que coincidan con una clave dada, manteniendo la estructura ordenada del archivo secuencial. Primero verifica si el índice está vacío, retornando un mensaje en tal caso. Si hay datos, utiliza una **búsqueda binaria** seguida de una **búsqueda lineal** para encontrar la primera aparición de la clave. Luego, recorre todos los registros con esa clave, marcándolos como eliminados (estableciendo `next = -2`) sin borrarlos físicamente, lo que permite reconstrucciones posteriores. Si el registro eliminado era la raíz (`prev_ptr == -1`), actualiza la raíz al siguiente nodo válido; de lo contrario, ajusta los punteros del nodo anterior para "saltar" los eliminados, manteniendo la integridad de la lista enlazada. Este enfoque asegura eficiencia sin reorganización inmediata, delegando posibles compactaciones a una futura **reconstrucción**.
+
 ```
 FUNCIÓN delete(key):
     pos_root, num_dat, tam_aux = leer_encabezado()
@@ -316,8 +335,8 @@ FUNCIÓN delete(key):
 
 | Operación| Acceso a disco    | Complejidad       |        
 | :-------- | :------- | :------------------------- |
-| Inserción | log(N) + K (K siendo la raiz de N) | O(log n + k) / Peor caso: O(n) |
-| Búsqueda  | log(N) + K (K siendo la raiz de N) |  O(log n + k) |
-| Búsqueda por rango | log(N) + K (K siendo la raiz de N) + R (Registros dentro del rango)| O(log n + k + r) |
-| Eliminación | log(N) + K (K siendo la raiz de N) |  O(log n + k) |
+| Inserción | log(N) + K  | O(log (n) + k) |
+| Búsqueda  | log(N) + K  |  O(log (n) + k) |
+| Búsqueda por rango | log(N) + K  + R (Registros dentro del rango)| O(log (n) + k + r) |
+| Eliminación | log(N) + K |  O(log (n) + k) |
 | Reconstrucción | N (Se construye un Sequential nuevo) |  O(n) |

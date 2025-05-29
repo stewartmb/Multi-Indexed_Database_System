@@ -412,6 +412,7 @@ def create_index(query):
 
 def aux_select(query):
     print(json.dumps(query, indent=2))
+    lista_ordenada = None
     nombre_tabla = query["table"]
     data = select_meta(nombre_tabla)
     format = {}
@@ -461,13 +462,20 @@ def aux_select(query):
                     point = cond["point"]
                     for i in range(len(point)):
                         point[i] = cast(point[i], format[key[i]])
-                    sets.append(set(rtree.ksearch(int(cond["knn"]), point))) # desordena el knn
-                else:
-                    point = cond["value"]
-                    for i in range(len(point)):
-                        point[i] = cast(point[i], format[key[i]])
+                    lista_ordenada = rtree.ksearch(int(cond["knn"]), point)
 
-                    sets.append(set(rtree.search(point)))
+                    sets.append(set(lista_ordenada))
+                else:
+                    if "radius" in cond:
+                        point = [float(i) for i in cond["point"]]
+                        lista_ordenada = rtree.radius_query(point, float(cond["radius"]))
+
+                        sets.append(set(lista_ordenada))
+                    else:
+                        point = cond["value"]
+                        for i in range(len(point)):
+                            point[i] = cast(point[i], format[key[i]])
+                        sets.append(set(rtree.search(point)))
 
 
         else:
@@ -645,7 +653,17 @@ def aux_select(query):
     print("before evaluate")
     print(tree, sets, universe)
 
-    return evaluate_select(tree, sets, universe)
+    
+
+    result_set = evaluate_select(tree, sets, universe)
+
+
+    if lista_ordenada == None:
+        result_list = list(result_set)
+    else:
+        result_list = [x for x in lista_ordenada if x in result_set]
+
+    return result_list
 
 def select(query):
     #cronometrar
@@ -661,11 +679,13 @@ def select(query):
             if col not in format:
                 raise HTTPException(status_code=404, detail=f"Column {col} does not exist in table {query['table']}")
 
-    ans_set = aux_select(query)
+    ans_list = aux_select(query)
+
+
+
 
     result = []
-
-    for i in ans_set:
+    for i in ans_list:
         heap = Heap(format,
                     data["key"],
                     table_filename(query["table"]))
@@ -969,6 +989,24 @@ def delete(query):
 def drop_index(query):
     start = time.time_ns()
     nombre_tabla = query["table"]
+
+    if query["index"] == "rtree":
+
+        for key in query["attr"]:
+            data["columns"][str(key)]["index"] = None
+
+        create_meta(data, nombre_tabla)
+
+        rtree_keys = data.get("indexes", {}).get("rtree")
+        if rtree_keys is not None:
+            os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
+        end = time.time_ns()
+        t_ms = end - start
+
+        return {
+            "message": f"DELETED INDEX SUCCESSFULLY in {t_ms/1e6} ms"
+        }
+
     index_file = index_filename(nombre_tabla,
                                 *query["attr"],
                                 "index")

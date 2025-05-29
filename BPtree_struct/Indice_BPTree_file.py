@@ -441,9 +441,8 @@ class BPTree:
         if record is None and pos_new_record is None:
             return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
         if record is not None:
-            pos_new_record = self._read_header_data() 
             # record = self.RT.correct_format(record)  # Formatea el registro
-            self._add_record(record)
+            pos_new_record = self.HEAP.insert(record)
             key = self.RT.get_key(record)  # Obtiene la clave del registro
 
         if pos_new_record is not None:

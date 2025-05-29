@@ -9,7 +9,7 @@ from Heap_struct.Heap import Heap
 
 # Constantes generales
 TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de paginas)
-TAM_ENCABEZAD_BRIN = 5  # Tamaño del encabezado en bytes (cantidad de pages)
+TAM_ENCABEZAD_BRIN = 5  # Tamaño del encabezado en bytes (cantidad de paginas y  booleano de orden)
 TAM_ENCABEZAD_DATA = 4  # Tamaño del encabezado en bytes (cantidad de registros)
 
 
@@ -451,7 +451,6 @@ class BRIN:
             pos_page = brin.pages[mid]
             page = self._read_page(pos_page)  # Leer la página correspondiente
             min_value = page.range_values[0]
-            print (mid)
             if min_value == key:
                 first_occurrence = mid
                 high = mid - 1

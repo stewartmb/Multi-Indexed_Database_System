@@ -13,7 +13,6 @@ stmt: create_stmt ";"
     | copy_stmt ";"
     | drop_index_stmt ";"
     | drop_table_stmt ";"
-    | set_stmt ";"
 
 create_stmt: "create"i "table"i NAME "(" create_attr_list ")"
 copy_stmt: "copy"i NAME "from"i VALUE
@@ -22,7 +21,6 @@ select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr]
 attr_list: NAME ("," NAME)*
 drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on"i NAME
 drop_table_stmt: "drop"i "table"i NAME
-set_stmt: "set"i INDEX "params"i "(" value_list ")"
 
 index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")" [ "params"i "(" value_list ")" ]
 
@@ -40,8 +38,9 @@ delete_stmt: "delete"i "from"i NAME "where"i expr
 condition: NAME OP VALUE
          | NAME BETWEEN VALUE "and"i VALUE
          | attr_list OP  "[" value_list "]"
-         | attr_list BETWEEN  "[" value_list "]" "and" "[" value_list "]"
+         | attr_list BETWEEN  "[" value_list "]" "and"i "[" value_list "]"
          | attr_list "in"i "(" value_list ")" CLOSEST VALUE
+         | attr_list "in"i "(" value_list ")" RADIUS VALUE
 
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
@@ -50,9 +49,10 @@ INDEX: "rtree"i | "bptree"i | "seq"i | "isam"i | "hash"i | "brin"i
 KEY: "primary key"i
 BETWEEN: "between"i
 CLOSEST: "closest"i
+RADIUS: "radius"i
 ALL: "*"
 
-TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "bool"i | "timestamp"i
+TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "timestamp"i
 varchar: "varchar"i "[" VALUE "]"
 
 %import common.ESCAPED_STRING
@@ -162,13 +162,12 @@ class SQLTransformer(Transformer):
     
     def drop_table_stmt(self, items):
         return {"action": "drop table", "table": items[0]}
-
-    def set_stmt(self, items):
-        return {"action": "set", "index": items[0], "params": items[1]}
     
     def condition(self, items):
         if (str(items[2]) == "closest"):
             return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}
+        if (str(items[2]) == "radius"):
+            return {"field": items[0], "range_search": False, "point": items[1], "radius": items[3]}
         if str(items[1]) == "between":
                 return {"field": items[0], "range_search": True, "op": "between", "range_start": items[2], "range_end": items[3]}
         elif str(items[1]) == "==":
@@ -257,6 +256,18 @@ class SQLTransformer(Transformer):
 
     def VALUE(self, tok):
         return tok.value.strip('"')  # remove quotes if present
+
+    def RADIUS(self, tok):
+        return tok.value.lower()
+
+    def CLOSEST(self, tok):
+        return tok.value.lower()
+
+    def BETWEEN(self, tok):
+        return tok.value.lower()
+
+    def KEY(self, tok):
+        return tok.value.lower()
 
     def ALL(self, tok):
         return str(tok)

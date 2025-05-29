@@ -29,7 +29,7 @@ create table destinos (
     name varchar[25] index seq,
     latitud double,
     longitud double,
-    ciudad varchar[20] index btree,
+    ciudad varchar[20] index bptree,
     pais varchar[20]
 );
 create index on destinos using rtree(latitud, longitud);
@@ -37,7 +37,7 @@ create index on destinos using rtree(latitud, longitud);
 🔎 En este ejemplo se combinan:
 - `hash` para identificadores
 - `seq` para nombres
-- `btree` para textos ordenables
+- `bptree` para textos ordenables
 - `rtree` para coordenadas espaciales
 
 Como la tabla tiene atributos de distintos tipos (IDs, nombres, coordenadas), se asigna a cada uno el índice más óptimo según su naturaleza.
@@ -69,10 +69,12 @@ En cuanto a los **índices**, se han implementado los siguientes:
 | Tipo de Índice         | Descripción                                         | Documentación                                                                              |
 | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | 📄 Sequential File     | Búsqueda ordenada secuencial                        | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Sequential_Struct/Sequential.md) |
-| 🗂 ISAM (Sparse Index) | Índice jerárquico con dos niveles                   | [Ver](https://github.com/stewartmb/Proyecto_BD2/tree/main/Isam_struct/ISAM.md)             |
+| 🗂 ISAM                | Índice jerárquico con dos niveles                   | [Ver](https://github.com/stewartmb/Proyecto_BD2/tree/main/Isam_struct/ISAM.md)             |
 | #️⃣ Extendible Hashing | Hash dinámico para inserciones eficientes           | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Hash_struct/Hash.md)             |
 | 🌳 B+ Tree             | Árbol balanceado para búsquedas por rango           | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/BPtree_struct/BTree.md)          |
 | 🗺 R-Tree              | Índice espacial para coordenadas multidimensionales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/RTree_struct/Rtree.md)           |
+| 🗒️ BRIN  |Índice compacto que resume rangos de bloques para datos ordenados  | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Brin_struct/Brin.md)           |
+
 
 
 ## 🧠 Parser SQL
@@ -101,6 +103,23 @@ Se ha creado una interfaz web sencilla e intuitiva para:
 - Ejecutar comandos SQL desde el navegador
 
 - Ver los resultados en tiempo real
+
+## 📈 Experimentos y Resultados experimentales
+
+Para probar la eficiencia de todos los índices, se han realizados pruebas con distintos volúmenes de datos.
+
+Cabe recalcar que los dataset que hemos utilizado para las pruebas han sido generados por nosotros mismos. Esta decisión fue tomada para realizar las pruebas de los índices en el mismo dataset y aplicándolos en el mismo atributo, asi se podrá analizar mejor los resultados.
+
+Los tamaños de los dataset son de: 10k, 50k y 100k.
+
+### Métricas
+- Tiempo de ejecución en ms
+- Accesos a Memoria Secundaria
+
+## Cuadros Comparativos de Desempeño, Gráficos y Resultados
+
+[Ver aquí](https://github.com/stewartmb/Proyecto_BD2/blob/main/cuadros/Cuadros.md)
+
 
 ## 👥 Autores
 

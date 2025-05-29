@@ -19,13 +19,15 @@ Se soporta un subconjunto del lenguaje SQL con soporte para:
 - `SELECT ... FROM ... WHERE ...`
 - `CREATE INDEX`, `DROP INDEX`
 - `COPY FROM`
-- `SET ... PARAMS (...)`
 
 Además:
 - Condiciones lógicas: `AND`, `OR`, `NOT`
 - Condiciones avanzadas: `BETWEEN`, `CLOSEST`
-- Tipos de datos: `int`, `float`, `double`, `bool`, `date`, `timestamp`, `varchar[n]`, entre otros
-- Tipos de índice: `bptree`, `rtree`, `hash`, `seq`, `isam`
+- Tipos de datos: `int`, `float`, `double`, `bool`, `date`, `timestamp`, `long`, `ulong`, `varchar[n]`
+- Tipos de índice: `bptree`, `rtree`, `hash`, `seq`, `isam`, `brin` 
+
+
+Para más información, puede hacer click [aquí](https://github.com/stewartmb/Proyecto_BD2/blob/main/ParserSQL/Docs.md).
 
 ---
 
@@ -36,7 +38,7 @@ La gramática está definida en una cadena multilínea `sql_grammar` y usa el pa
 Tokens y producciones incluyen:
 
 ```ebnf
-start: stmt+
+?start: stmt+
 
 stmt: create_stmt ";" 
     | select_stmt ";" 
@@ -50,14 +52,13 @@ stmt: create_stmt ";"
 
 create_stmt: "create"i "table"i NAME "(" create_attr_list ")"
 copy_stmt: "copy"i NAME "from"i VALUE
-create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index"i INDEX] ("," NAME (TYPE | varchar) [ KEY ] ["index"i INDEX])*
+create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] ("," NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] )*
 select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr]
 attr_list: NAME ("," NAME)*
-drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on" NAME
-drop_table_stmt: "drop"i "table" NAME
-set_stmt: "set"i INDEX "params"i "(" value_list ")"
+drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on"i NAME
+drop_table_stmt: "drop"i "table"i NAME
 
-index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")"
+index_stmt: "create"i "index"i "on"i NAME "using"i INDEX "(" attr_list ")" [ "params"i "(" value_list ")" ]
 
 insert_stmt: "insert"i "into"i NAME "(" attr_list ")" "values"i "(" value_list ")"
 value_list: VALUE ("," VALUE)*
@@ -71,22 +72,25 @@ delete_stmt: "delete"i "from"i NAME "where"i expr
      | condition
 
 condition: NAME OP VALUE
-         | NAME BETWEEN VALUE "and" VALUE
+         | NAME BETWEEN VALUE "and"i VALUE
          | attr_list OP  "[" value_list "]"
-         | attr_list BETWEEN  "[" value_list "]" "and" "[" value_list "]"
-         | attr_list "in" "(" value_list ")" CLOSEST VALUE
+         | attr_list BETWEEN  "[" value_list "]" "and"i "[" value_list "]"
+         | attr_list "in"i "(" value_list ")" CLOSEST VALUE
+         | attr_list "in"i "(" value_list ")" RADIUS VALUE
 
 OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
 VALUE: "-"? /[0-9]+(\.[0-9]+)?/ | ESCAPED_STRING
-INDEX: "rtree"i | "bptree"i | "seq"i | "isam"i | "hash"i
+INDEX: "rtree"i | "bptree"i | "seq"i | "isam"i | "hash"i | "brin"i
 KEY: "primary key"i
 BETWEEN: "between"i
 CLOSEST: "closest"i
+RADIUS: "radius"i
 ALL: "*"
 
-TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "bool"i | "timestamp"i
+TYPE: "int"i | "float"i | "double"i | "date"i | "long"i | "ulong"i | "bool"i | "timestamp"i
 varchar: "varchar"i "[" VALUE "]"
+
 ```
 
 ---
@@ -125,4 +129,4 @@ Se resalta el manejo de las condiciones en el caso de las queries de `SELECT` y 
 
 ## 📈 Futuras mejoras
 - Se podría implementar un soporte para UPDATE.
-- Actualmente, el parser no soporta subqueries
+- Actualmente, el parser no soporta subqueries.

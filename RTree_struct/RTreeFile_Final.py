@@ -1017,6 +1017,44 @@ class RTreeFile:
         """
         positions = self.aux_ksearch(k, RTreeFile.Point(query))
         return positions
+    
+    def __radius__(self, node_pos, point, r, res):
+        node = self.get_rec_at(node_pos)
+        if node.is_leaf:
+            for p in node.points:
+                dist = RTreeFile.Point.distance(p, point)
+                if dist < r:
+                    res.append((dist, p))
+        else:
+            sorted_rec = self.sort_by_mindist(node.rectangles, point)
+            for rec_pos in sorted_rec:
+                rec = self.get_rec_at(rec_pos)
+                if RTreeFile.Point.mindist(point, rec.mbr) < r:
+                    self.__radius__(rec_pos, point, r, res)
+        return
+    
+    def aux_radius_query(self, point, r):
+        res = []
+        self.__radius__(self.get_root(), point, r, res)
+        return [pt.index for (d, pt) in sorted(res, key=lambda x: x[0])]
+
+    def radius_query(self, query, r):
+        """
+        Función para hacer la busqueda de punto en el radio en el arbol
+
+        Parametros
+        ---------------
+            r
+                radio
+            query: list
+                lista de las coordenadas del punto de busqueda
+        
+        Retorna
+        ---------------
+            lista con las registros resultados de la busqueda
+        """
+        positions = self.aux_radius_query(RTreeFile.Point(query), r)
+        return positions
 
     def __range_search__(self, node_pos, min_coords, max_coords, ans):
         """

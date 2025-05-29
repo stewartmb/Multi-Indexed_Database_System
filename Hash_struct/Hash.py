@@ -203,13 +203,14 @@ class Hash:
         self.Header.write(index_file, new_bucket_pos + 1, 2)
 
         new_bucket = {
-            'records': [-1] * self.max_records,
-            'fullness': 1,
+            'records': bucket['records'][:],  # Copiamos los registros del bucket original
+            'fullness': self.max_records,
             'local_depth': self.global_depth,
             'overflow_position': bucket['overflow_position']  # encadena al antiguo primer overflow
         }
-        new_bucket['records'][0] = data_position
-
+        bucket['records'] = [-1] * self.max_records  # Limpiamos los registros del bucket original
+        bucket['records'][0] = data_position
+        bucket['fullness'] = 0
         # El bucket base apunta ahora al nuevo overflow (nuevo "head" de la cadena)
         bucket['overflow_position'] = new_bucket_pos
 

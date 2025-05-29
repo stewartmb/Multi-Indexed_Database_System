@@ -280,9 +280,9 @@ class Sequential:
         if record is None and pos_new_record is None:
             return "Error: Debe ingresar uno de los dos argumentos (record o pos_new_record)"
         if record is not None:
-            pos_new_record = self.add_record(record)
-            key = self.RT.get_key(record)
-
+            pos_new_record = self.HEAP.insert(record)
+            key = self.RT.get_key(record)  # Obtiene la clave del registro
+            
         if pos_new_record is not None:
             record = self.HEAP.read(pos_new_record)
             key = self.RT.get_key(record)  # Obtiene la clave del registro 
