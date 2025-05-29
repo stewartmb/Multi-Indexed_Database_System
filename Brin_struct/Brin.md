@@ -1,5 +1,28 @@
 # Documentación - BRIN (Block Range Index)
 
+Debido a que el índice BRIN es tan simple, es posible describir los componentes internos con casi ninguna simplificación.
+
+Los datos en las tablas PostgreSQL están organizados en el disco en "páginas" de tamaño igual de 8kb cada una. Así que una tabla residirá físicamente en el disco como una colección de páginas. Dentro de cada página, las filas se empaquetan desde el frente, con huecos que aparecen a medida que se eliminan/actualizan los datos y, por lo general, algo de espacio libre al final para futuras actualizaciones.
+
+![Imagen_SF1](/images/brin1.png)
+
+
+Una tabla con filas estrechas (pocas columnas, valores pequeños) encajará muchas filas en una página. Una tabla con filas anchas (más columnas, cadenas largas) solo cabrán unas pocas.
+
+Debido a que cada página tiene varias filas, podemos indicar que una columna determinada en esa página tiene un valor mínimo y máximo en esa página. Al buscar un valor en particular, se puede omitir toda la página, si el valor no está dentro del mínimo/máximo de la página. Esta es la magia central de BRIN.
+
+Por lo tanto, para que BRIN sea efectivo, necesita una tabla donde el diseño físico y el orden de la columna de interés estén fuertemente correlacionados. En una situación de correlación perfecta (que probamos a continuación) cada página contendrá de hecho un conjunto de valores completamente único.
+
+![Imagen_SF1](/images/brin2.png)
+
+
+El índice BRIN es una pequeña tabla que asocia un rango de valores con un rango de páginas en el orden de la tabla. Construir el índice solo requiere un solo escaneo de la tabla, por lo que en comparación con construir una estructura como un BTree, es muy rápido.
+
+Debido a que el BRIN tiene una entrada para cada rango de páginas, también es muy pequeño. El número de páginas en un rango es configurable, pero el valor predeterminado es 128. Como veremos, ajustar este número puede marcar una gran diferencia en el rendimiento de la consulta.
+
+![Imagen_SF1](/images/brin3.png)
+
+
 ## Estructura del Índice BRIN
 
 El índice BRIN implementado sigue una estructura jerárquica de dos niveles:
