@@ -121,7 +121,7 @@ class Hash:
                  data_file_name: str,
                  GD: int = 4,
                  max_records_per_bucket: int = 4,
-                 power: int = 4,
+                 power: int = 3,
                  force_create: bool = False):
         
         if power < 1:
@@ -168,14 +168,18 @@ class Hash:
                 f.write(struct.pack('i', 1 + 2**power))
                 # root
                 f.write(self.NT.to_bytes([i+1 for i in range(2**power)], isleaf=False))
+                print("Nodo raiz:", [i+1 for i in range(2**power)])
                 for i in range(2**power):
-                    f.write(self.NT.to_bytes([i]*(2**power), isleaf=True))
+                    child_indices = [(i)*(2**power) + j for j in range(2**power)]
+                    f.write(self.NT.to_bytes(child_indices, isleaf=True))
+                    print("Nodo", i, ":", child_indices)
 
 
         if force or (not os.path.exists(self.buckets_file)) or (os.path.getsize(self.buckets_file) < self.Header.size):
             with open(self.buckets_file, 'wb') as f:
                 # [0,0,0...0,0,0] + [localdepth, fullness, overflowPosition]
-                for i in range(2**power):
+                for i in range(2**(power*2)):
+                    print("Bucket", i, ":<")
                     f.write(struct.pack(self.BT.FORMAT, *([-1] * self.max_records + [1,0,-1])))
 
     def _insert_value_in_bucket(self, buckets_file, index_file, bucket_position, data_position):
@@ -232,58 +236,68 @@ class Hash:
         while True:
             index_file.seek(self.Header.size + node_index * self.NT.size)
             node, isleaf = self.NT.from_bytes(index_file.read(self.NT.size))
+            print("Nodo:", node, "isleaf:", isleaf)
             if not isleaf:
                 selection = 0
                 # Si no es hoja, seguimos bajando por el árbol
                 for i in range(self.power): 
-                    if index_hash[self.power-i] == '1':
+                    print("i:", i, "power:", self.power, "index_hash:", index_hash, "Cosa:", index_hash[-(self.power-i)])
+                    if index_hash[-(self.power-i)] == '1':
                         selection += 2**(self.power - i - 1)
+                print(index_hash, "seleccion:", selection)
                 node_index = node[selection]
             else:
+                print("Nodo hoja encontrado:", node)
                 # Si es hoja, hemos encontrado el bucket
                 bucket_position = node[0]
                 break
             
-
+        print("Nodo_index:", node_index, "Bucket position:", bucket_position)
+        buckets_file.seek(bucket_position * self.BT.size)
+        bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+        print("Bucket:", bucket)
+        print("AAAAAA")
         inserted = self._insert_value_in_bucket(buckets_file, index_file, bucket_position, data_position)
         if not inserted:
-            #print("Splitting")
+            # TODO: SPLIT
+
+            # obtener registros en el nodo
+            print("nodo:", node)
+            for bucket in node:
+                buckets_file.seek(bucket * self.BT.size)
+                old_bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+                print("Bucket:", old_bucket)
+            int("fin")
+
+            # guardar bucket
             buckets_file.seek(bucket_position * self.BT.size)
             old_bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
 
-            
-            buckets_file.seek(bucket_left_pos * self.BT.size)
-            buckets_file.write(self.empty_bucket)
+            print(node)
+            # crear buckets
+            for i in range(2**self.power):
+                new_node_position = self.Header.read(index_file, 3)
+                new_node = [0] * (2**self.power)
+                for j in range(2**self.power):
+                    new_bucket_position = self.Header.read(index_file, 2)
+                    self.Header.write(index_file, new_bucket_position + 1, 2)
+                    new_node[i] = new_bucket_position
+                    new_bucket = {
+                        'records': [-1] * self.max_records,
+                        'local_depth': old_bucket['local_depth'] + 1,
+                        'fullness': 0,
+                        'overflow_position': -1
+                    }
+                    buckets_file.seek(new_bucket_position * self.BT.size)
+                    buckets_file.write(self.BT.to_bytes(new_bucket))
+                print(new_bucket)
 
-            bucket_left_pos = bucket_position
-            bucket_right_pos = self.Header.read(index_file, 2)
-            self.Header.write(index_file, bucket_right_pos + 1, 2)
-            
-            
-            buckets_file.seek(bucket_right_pos * self.BT.size)
-            buckets_file.write(self.BT.to_bytes())
+            print("Nuevo nodo:", node)
 
-
-            
-            # separar index
-            pos = self.Header.read(index_file, 3)
-            ## nuevos nodos
-            new_parent = self.NT.to_bytes({'bucket_position': -1,
-                                'left': pos, 'right': (pos + 1), 'depth': node['depth'] + 1})
-            new_node_left = self.NT.to_bytes({'bucket_position': bucket_left_pos,
-                                'left': -1, 'right': -1, 'depth': node['depth']+1})
-            new_node_right = self.NT.to_bytes({'bucket_position': bucket_right_pos,
-                                'left': -1, 'right': -1, 'depth': node['depth']+1})
-
-
-            index_file.seek(self.Header.size + pos * self.NT.size)
-            index_file.write(new_node_left)
-            index_file.seek(self.Header.size + (pos + 1) * self.NT.size)
-            index_file.write(new_node_right)
+            # actualizar nodo
             index_file.seek(self.Header.size + node_index * self.NT.size)
-            index_file.write(new_parent)
+            index_file.write(self.NT.to_bytes(node, isleaf=False))
 
-            self.Header.write(index_file, pos + 2, 3)
 
             # reinsertar elementos
             for i in range(old_bucket['fullness']):
@@ -377,4 +391,3 @@ class Hash:
                 return self._aux_search(buckets_file, index_file, root['left'], index_hash[:-1], key)
             else:
                 return self._aux_search(buckets_file, index_file, root['right'], index_hash[:-1], key)
-            
