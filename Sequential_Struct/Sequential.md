@@ -335,7 +335,7 @@ FUNCIÓN delete(key):
 
 | Operación| Acceso a disco    | Complejidad       |        
 | :-------- | :------- | :------------------------- |
-| Inserción | log(N) + K  | O(log (n) + k) / Peor caso: O(n) |
+| Inserción | log(N) + K  | O(log (n) + k) |
 | Búsqueda  | log(N) + K  |  O(log (n) + k) |
 | Búsqueda por rango | log(N) + K  + R (Registros dentro del rango)| O(log (n) + k + r) |
 | Eliminación | log(N) + K |  O(log (n) + k) |
