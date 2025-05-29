@@ -6,35 +6,45 @@ El índice BRIN implementado sigue una estructura jerárquica de dos niveles:
 
 ### 1. Nivel Superior (Índice BRIN)
 - **Archivo**: `index_file.bin`
+  ```c
+  TAM_ENCABEZAD_BRIN = 5  # Tamaño del encabezado en bytes (cantidad de brin y  booleano de orden)
+  ```
+  Se guarda la cantidad de indices BRIN  y un booleano para saber si esta ordenado, la necesidad de ese booleano es determinante porque cambia entre elegir una busqueda secuencial entre los rangos del brin o hacer una busqueda binaria
 - **Estructura**:
   ```c
-  struct BrinIndex {
-      Key min_val;      // Valor mínimo del rango
-      Key max_val;      // Valor máximo del rango
-      int pages[K];     // Array de posiciones de páginas (K = max_num_pages)
-      int page_count;   // Número de páginas actuales
-      bool is_order;    // Indica si el BRIN está ordenado
-  };
+  class Indice_Brin():
+      def __init__(self, K):
+          self.range_values = [None,None]                      # Valor mínimo y máximo de la página (formato: formato_key)
+          self.pages = [-1] * K                                # Lista de posiciones de las páginas, inicialmente todas son -1 (no hay páginas)
+          self.page_count = 0                                  # Contador de páginas
+          self.is_order = True                                 # Indica si el índice BRIN está ordenado
+          self.K = K                                           # Número máximo de páginas por índice BRIN
   ```
 
 ### 2. Nivel Inferior (Páginas de Índice)
+las paginas se conforman por una lista de keys (clave de ordenamiento del registro) y childrens (posicion del registro en el data_file) 
 - **Archivo**: `page_file.bin`
+  ```c
+  TAM_ENCABEZAD_PAGE = 4  # Tamaño del encabezado en bytes (cantidad de pages)
+  ```
+  Se guarda la cantidad de paginnas para facilitar la escritura de la misma
 - **Estructura**:
   ```c
-  struct IndexPage {
-      Key keys[M];      // Array de claves (M = max_num_keys)
-      int children[M];  // Array de posiciones en heap file
-      Key range_min;    // Mínimo del rango en la página
-      Key range_max;    // Máximo del rango en la página
-      int key_count;    // Número de claves actuales
-      bool is_order;    // Indica si la página está ordenada
-      int father_brin;  // Posición del BRIN padre
-  };
+  class Index_Page():
+      def __init__(self, M=None):
+          self.keys = [None] * (M)                # Lista de claves, inicialmente todas son None
+          self.childrens = [-1] * M               # Lista de posiciones, inicialmente todas son -1 (no hay registros)
+          self.range_values = [None, None]        # Valores mínimo y máximo de la página
+          self.key_count = 0                      # Contador de claves
+          self.is_order = True                    # Indica si la página está ordenada
+          self.father_brin = -1                   # Posición del padre, inicialmente -1 (sin padre)
+          self.M = M                              # Número máximo de claves por página
+    };
   ```
 
 ### 3. Almacenamiento de Datos
 - **Archivo**: `data_file.bin` (Heap File)
-- Almacena los registros completos con acceso directo mediante posiciones
+- Almacena los registros completos con acceso directo mediante posiciones, al igual q los demas indices 
 
 ## Operaciones Principales
 
@@ -46,6 +56,7 @@ El índice BRIN implementado sigue una estructura jerárquica de dos niveles:
 4. Si hay espacio, inserta en la página existente
 5. Si no hay espacio, crea nueva página o nuevo BRIN según corresponda
 6. Actualiza rangos mínimos/máximos en toda la jerarquía
+7. Actualiza si lo ordenes se respetan
 
 **Pseudocódigo**:
 ```python
