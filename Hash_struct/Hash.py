@@ -11,19 +11,18 @@ def get_bits(dato: any, nbits: int) -> str:
     :param dato: dato a convertir
     :param nbits: cantidad de bits a tomar
     """
+    hashed = None
     if isinstance(dato, int): # numeros
-        bits = bin(dato & (2 ** (nbits * 8) - 1))[2:]
+        hashed = hash(dato)
     elif isinstance(dato, float): # float
-        dato_bytes = struct.pack('d', dato) # TODO: hashear mas uniformemente
-        bits = ''.join(f'{byte:08b}' for byte in dato_bytes)
+        hashed = hash(dato)
+    elif isinstance(dato, str): # texto
+        hashed = hash(dato)
     else:
-        if isinstance(dato, str): # texto
-            dato_bytes = dato.encode('utf-8')
-        else: # otros
-            dato_bytes = pickle.dumps(dato)
+        dato_bytes = pickle.dumps(dato)
+        hashed = hash(dato_bytes)
 
-        bits = ''.join(f'{byte:08b}' for byte in dato_bytes)
-    return bits[-nbits:] if nbits <= len(bits) else bits.zfill(nbits)
+    return bin(hashed & ((1 << nbits) - 1))[2:].zfill(nbits)
 
 class BucketType:
     """

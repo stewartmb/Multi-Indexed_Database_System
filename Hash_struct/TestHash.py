@@ -58,3 +58,7 @@ class TestHash(unittest.TestCase):
         range_pos = self.hash.range_search(20, 25)
         registros = [self.hash.HEAP.read(p) for p in range_pos]
         self.assertTrue(all(r[1] != 20 for r in registros))
+
+
+if __name__ == "__main__":
+    unittest.main()
