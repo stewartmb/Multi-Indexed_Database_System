@@ -200,16 +200,29 @@ class Hash:
         new_bucket_pos = self.Header.read(index_file, 2)
         self.Header.write(index_file, new_bucket_pos + 1, 2)
 
+        # new_bucket = {
+        #     'records': bucket['records'][:],  # Copiamos los registros del bucket original
+        #     'fullness': self.max_records,
+        #     'local_depth': self.global_depth,
+        #     'overflow_position': bucket['overflow_position']  # encadena al antiguo primer overflow
+        # }
+        # bucket['records'] = [-1] * self.max_records  # Limpiamos los registros del bucket original
+        # bucket['records'][0] = data_position
+        # bucket['fullness'] = 0
+        # # El bucket base apunta ahora al nuevo overflow (nuevo "head" de la cadena)
+        # bucket['overflow_position'] = new_bucket_pos
+
+        # Nuevo bucket: recibe los registros existentes del bucket original
         new_bucket = {
-            'records': bucket['records'][:],  # Copiamos los registros del bucket original
-            'fullness': self.max_records,
+            'records': bucket['records'][:],  # Copia los registros antiguos
+            'fullness': self.max_records,     # Está lleno (todos los registros antiguos)
             'local_depth': self.global_depth,
-            'overflow_position': bucket['overflow_position']  # encadena al antiguo primer overflow
+            'overflow_position': bucket['overflow_position']  # Mantiene la cadena existente
         }
-        bucket['records'] = [-1] * self.max_records  # Limpiamos los registros del bucket original
-        bucket['records'][0] = data_position
-        bucket['fullness'] = 0
-        # El bucket base apunta ahora al nuevo overflow (nuevo "head" de la cadena)
+
+        # Bucket original: conserva el nuevo registro + apunta al overflow
+        bucket['records'] = [data_position] + [-1] * (self.max_records - 1)
+        bucket['fullness'] = 1 #actualizar fullness
         bucket['overflow_position'] = new_bucket_pos
 
         # Escribimos ambos buckets
