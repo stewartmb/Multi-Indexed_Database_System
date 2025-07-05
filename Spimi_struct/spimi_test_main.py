@@ -1,7 +1,7 @@
 import unittest
 import os
-import time
 import sys
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Spimi import Spimi
 
@@ -15,19 +15,19 @@ class TestSpimi(unittest.TestCase):
         self.spimi = Spimi(self.fd_file, self.fc_file)
 
     def tearDown(self):
-        # Eliminar archivos generados por SPIMI de forma robusta
-        for prefix in ["fd_doc_", "fd_count_"]:
-            for suf in ["_data.bin", "_buckets.bin", "_index.bin"]:
-                fname = f"{prefix}{self.fd_file}{suf}" if "fd_doc" in prefix else f"{prefix}{self.fc_file}{suf}"
-                for _ in range(5):  # hasta 5 intentos
-                    try:
-                        if os.path.exists(fname):
-                            os.remove(fname)
-                        break
-                    except PermissionError:
-                        time.sleep(0.1)
-                    except Exception:
-                        time.sleep(0.1)
+        files = [
+            "fd_doc_test_fd_data.bin",
+            "fd_doc_test_fd_buckets.bin",
+            "fd_doc_test_fd_index.bin",
+            "fd_df_test_fc_data.bin",
+            "fd_df_test_fc_buckets.bin",
+            "fd_df_test_fc_index.bin",
+            "spimi_header.bin"
+        ]
+
+        for f in files:
+            if os.path.exists(f):
+                os.remove(f)
 
     def test_spimi_insert_and_query(self):
         # Simular features distintos por documento
