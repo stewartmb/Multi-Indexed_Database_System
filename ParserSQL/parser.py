@@ -17,7 +17,7 @@ stmt: create_stmt ";"
 create_stmt: "create"i "table"i NAME "(" create_attr_list ")"
 copy_stmt: "copy"i NAME "from"i VALUE
 create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] ("," NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] )*
-select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr]
+select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr] [limit]
 attr_list: NAME ("," NAME)*
 drop_index_stmt: "drop"i "index"i INDEX "on"i "values"i attr_list "on"i NAME
 drop_table_stmt: "drop"i "table"i NAME
@@ -37,6 +37,8 @@ delete_stmt: "delete"i "from"i NAME "where"i expr
 
 condition: NAME OP VALUE
          | NAME BETWEEN VALUE "and"i VALUE
+         | NAME TEXT_OP VALUE top
+         | NAME IMAGES_OP VALUE top
          | attr_list OP  "[" value_list "]"
          | attr_list BETWEEN  "[" value_list "]" "and"i "[" value_list "]"
          | attr_list "in"i "(" value_list ")" CLOSEST VALUE
@@ -51,6 +53,10 @@ BETWEEN: "between"i
 CLOSEST: "closest"i
 RADIUS: "radius"i
 ALL: "*"
+TEXT_OP: "@@"
+IMAGES_OP: "<->"
+limit: "limit"i VALUE
+top: "top"i VALUE
 
 TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "timestamp"i
 varchar: "varchar"i "[" VALUE "]"
@@ -87,7 +93,6 @@ class SQLTransformer(Transformer):
         elif isinstance(expr, (int, float)):
             return expr
         else:
-            # Assume it's an expression like a boolean operation string
             expr_str = str(expr)
             for k, v in conditions_map.items():
                 expr_str = expr_str.replace(str(v), k)
@@ -112,12 +117,15 @@ class SQLTransformer(Transformer):
             raw_expr = items[2]
             labeled_expr = self.label_conditions(raw_expr)
             condition_expr = labeled_expr
+        if (len(items) > 3):
+            limit = items[3];
         ans = {
             "action": "select",
             "table": table,
             "attr": attributes,
             "eval": condition_expr,
-            "conditions": conditions_map
+            "conditions": conditions_map,
+            "limit": limit
         }
         counter = 0
         conditions_map = {}
@@ -166,12 +174,16 @@ class SQLTransformer(Transformer):
     def condition(self, items):
         if (str(items[2]) == "closest"):
             return {"field": items[0], "range_search": False, "point": items[1], "knn": items[3]}
-        if (str(items[2]) == "radius"):
+        elif (str(items[2]) == "radius"):
             return {"field": items[0], "range_search": False, "point": items[1], "radius": items[3]}
-        if str(items[1]) == "between":
+        elif str(items[1]) == "between":
                 return {"field": items[0], "range_search": True, "op": "between", "range_start": items[2], "range_end": items[3]}
         elif str(items[1]) == "==":
             return {"field": items[0], "range_search": False, "op": str(items[1]), "value": items[2]}
+        elif str(items[1]) == "@@":
+            return {"field": items[0], "text_search": True, "query": str(items[2]), "top_k": items[3]}
+        elif str(items[1]) == "<->":
+            return {"field": items[0], "image_search": True, "query": str(items[2]), "top_k": items[3]}
         else:
             range_start = -1
             range_end = 1
@@ -238,6 +250,12 @@ class SQLTransformer(Transformer):
             result.append(attr_name)
             i+=1
         return result
+    
+    def limit(self, items):
+        return int(items[0]);
+
+    def top(self, items):
+        return int(items[0]);
 
     def value_list(self, items):
         return [str(v) for v in items]
@@ -268,6 +286,12 @@ class SQLTransformer(Transformer):
 
     def KEY(self, tok):
         return tok.value.lower()
+    
+    def TEXT_OP(self, tok):
+        return tok.value
+    
+    def IMAGE_OP(self, tok):
+        return tok.value
 
     def ALL(self, tok):
         return str(tok)
@@ -276,16 +300,16 @@ class SQLTransformer(Transformer):
         return f"varchar[{items[0]}]"
 
 
-# if __name__ == "__main__":
-#     parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
-#     # parser = Lark(sql_grammar, start="start", parser="lalr")
+if __name__ == "__main__":
+    parser = Lark(sql_grammar, start="start", parser="lalr", transformer=SQLTransformer())
+    # parser = Lark(sql_grammar, start="start", parser="lalr")
 
-#     # Example: read SQL statements from a file
-#     with open("ParserSQL/test2.txt", "r") as f:
-#         sql_code = f.read()
-#     try:
-#         result = parser.parse(sql_code)
-#         print(json.dumps(result, indent=4))
-#         # print(result.pretty())
-#     except Exception as e:
-#         print("Error parsing input:", e)
+    # Example: read SQL statements from a file
+    with open("ParserSQL/test.txt", "r") as f:
+        sql_code = f.read()
+    try:
+        result = parser.parse(sql_code)
+        print(json.dumps(result, indent=4))
+        # print(result.pretty())
+    except Exception as e:
+        print("Error parsing input:", e)
