@@ -135,6 +135,7 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
   const [showEditor, setShowEditor] = useState(true);
   const { queryUrl, setQueryUrl } = useQueryUrl();
   const [images, setImages] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     setLocalQuery(query);
@@ -155,21 +156,58 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  const files = e.target.files;
+  if (!files) return;
 
-    const newImages: string[] = [];
-    Array.from(files).forEach(file => {
-        const url = URL.createObjectURL(file);
-        newImages.push(url);
-    });
-    setImages(newImages);
-  };
+  const newImages: string[] = [];
+  Array.from(files).forEach(file => {
+    const url = URL.createObjectURL(file);
+    newImages.push(url);
+  });
 
+  setImages(prev => [...prev, ...newImages]);
+};
+
+const handleRemoveImage = (index: number) => {
+  setImages(prev => {
+    URL.revokeObjectURL(prev[index]);
+    return prev.filter((_, i) => i !== index);
+  });
+};
 
   const toggleEditor = () => {
     setShowEditor(prev => !prev);
   };
+
+const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setIsDragging(true);
+};
+
+const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setIsDragging(false);
+};
+
+const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setIsDragging(false);
+
+  const files = e.dataTransfer.files;
+  if (!files) return;
+
+  const newImages: string[] = [];
+  Array.from(files).forEach(file => {
+    const url = URL.createObjectURL(file);
+    newImages.push(url);
+  });
+
+  setImages(prev => [...prev, ...newImages]);
+};
+
 
   return (
     <div className="sql-editor-container h-full flex flex-col">
@@ -234,24 +272,36 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
             }}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4 p-4">
-            <label className="cursor-pointer bg-gray-700 px-4 py-2 rounded hover:bg-gray-600">
-                Select images
-                <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-                />
-            </label>
+            <div
+                className={`flex flex-col items-center justify-center h-full text-gray-400 gap-4 p-4 border-2 border-dashed rounded transition 
+                    ${isDragging ? 'border-blue-400 bg-blue-900 bg-opacity-20' : 'border-gray-600'}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                >
+                <label className="cursor-pointer bg-gray-700 px-4 py-2 rounded hover:bg-gray-600">
+                    Select images
+                    <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    />
+                </label>
 
-            <div className="flex flex-wrap justify-center gap-4 mt-4">
-                {images.map((src, idx) => (
-                <img key={idx} src={src} alt={`Preview ${idx}`} className="max-w-[150px] max-h-[150px] rounded shadow" />
-                ))}
+                <div className="flex flex-wrap justify-center gap-4 mt-4">
+                    {images.map((src, idx) => (
+                    <img
+                        key={idx}
+                        src={src}
+                        alt={`Preview ${idx}`}
+                        className="max-w-[150px] max-h-[150px] rounded shadow cursor-pointer hover:opacity-70 transition"
+                        onClick={() => handleRemoveImage(idx)}
+                    />
+                    ))}
+                </div>
             </div>
-          </div>
         )}
       </div>
     </div>
