@@ -37,15 +37,20 @@ def generar_datos(num_datos):
     datos = []
     for _ in range(num_datos):
         nombre = random.choice(nombres)
-        edad = random.randint(18, 40)  # Edad entre 18 y 40
+        edad = random.randint(1000, 1000000)  # Edad entre 18 y 40
         monto = round(random.uniform(100, 1000), 2)  # Monto entre 100 y 1000
         datos.append([nombre, edad, monto])
     return datos
 
 # Generar 20 nuevos datos
-nuevos_datos = generar_datos(100)
+nuevos_datos = generar_datos(1000)
 
+print("Insertando nuevos datos")
+contador = 0
 for dato in nuevos_datos:
+    if contador % 100 == 0:
+        print(f"Insertando registro {contador} de {len(nuevos_datos)}")
+    contador += 1
     hash.insert(dato)
 
 print(nuevos_datos)

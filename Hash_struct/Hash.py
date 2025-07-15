@@ -11,19 +11,18 @@ def get_bits(dato: any, nbits: int) -> str:
     :param dato: dato a convertir
     :param nbits: cantidad de bits a tomar
     """
+    hashed = None
     if isinstance(dato, int): # numeros
-        bits = bin(dato & (2 ** (nbits * 8) - 1))[2:]
+        hashed = hash(dato)
     elif isinstance(dato, float): # float
-        dato_bytes = struct.pack('d', dato) # TODO: hashear mas uniformemente
-        bits = ''.join(f'{byte:08b}' for byte in dato_bytes)
+        hashed = hash(dato)
+    elif isinstance(dato, str): # texto
+        hashed = hash(dato)
     else:
-        if isinstance(dato, str): # texto
-            dato_bytes = dato.encode('utf-8')
-        else: # otros
-            dato_bytes = pickle.dumps(dato)
+        dato_bytes = pickle.dumps(dato)
+        hashed = hash(dato_bytes)
 
-        bits = ''.join(f'{byte:08b}' for byte in dato_bytes)
-    return bits[-nbits:] if nbits <= len(bits) else bits.zfill(nbits)
+    return bin(hashed & ((1 << nbits) - 1))[2:].zfill(nbits)
 
 class BucketType:
     """
@@ -236,44 +235,49 @@ class Hash:
         while True:
             index_file.seek(self.Header.size + node_index * self.NT.size)
             node, isleaf = self.NT.from_bytes(index_file.read(self.NT.size))
-            print("Nodo:", node, "isleaf:", isleaf)
             if not isleaf:
                 selection = 0
                 # Si no es hoja, seguimos bajando por el árbol
                 for i in range(self.power): 
-                    print("i:", i, "power:", self.power, "index_hash:", index_hash, "Cosa:", index_hash[-(self.power-i)])
                     if index_hash[-(self.power-i)] == '1':
                         selection += 2**(self.power - i - 1)
-                print(index_hash, "seleccion:", selection)
                 node_index = node[selection]
             else:
-                print("Nodo hoja encontrado:", node)
                 # Si es hoja, hemos encontrado el bucket
-                bucket_position = node[0]
+                selection = 0
+                # Si no es hoja, seguimos bajando por el árbol
+                for i in range(self.power): 
+                    if index_hash[-(self.power-i)] == '1':
+                        selection += 2**(self.power - i - 1)
+                bucket_position = node[selection]
                 break
+            index_hash = index_hash[:-(self.power)]  # Reducimos el hash para seguir bajando
             
-        print("Nodo_index:", node_index, "Bucket position:", bucket_position)
         buckets_file.seek(bucket_position * self.BT.size)
         bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
-        print("Bucket:", bucket)
-        print("AAAAAA")
         inserted = self._insert_value_in_bucket(buckets_file, index_file, bucket_position, data_position)
         if not inserted:
             # TODO: SPLIT
-
+            print("SPLIT")
             # obtener registros en el nodo
             print("nodo:", node)
+
+            all_records = []
             for bucket in node:
                 buckets_file.seek(bucket * self.BT.size)
                 old_bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+                all_records.extend(old_bucket['records'][:old_bucket['fullness']])
                 print("Bucket:", old_bucket)
-            int("fin")
+            print("Registros en el nodo:", all_records)
 
+
+            print("A?",bucket)
             # guardar bucket
             buckets_file.seek(bucket_position * self.BT.size)
             old_bucket = self.BT.from_bytes(buckets_file.read(self.BT.size))
+            print("Bucket viejo:", old_bucket)
 
-            print(node)
+            int("AAA")
             # crear buckets
             for i in range(2**self.power):
                 new_node_position = self.Header.read(index_file, 3)
@@ -290,9 +294,6 @@ class Hash:
                     }
                     buckets_file.seek(new_bucket_position * self.BT.size)
                     buckets_file.write(self.BT.to_bytes(new_bucket))
-                print(new_bucket)
-
-            print("Nuevo nodo:", node)
 
             # actualizar nodo
             index_file.seek(self.Header.size + node_index * self.NT.size)
@@ -391,3 +392,19 @@ class Hash:
                 return self._aux_search(buckets_file, index_file, root['left'], index_hash[:-1], key)
             else:
                 return self._aux_search(buckets_file, index_file, root['right'], index_hash[:-1], key)
+
+    def print_all_buckets(self):
+        """
+        Imprime todos los buckets del hash extensible.
+        """
+        contador = 0
+        with open(self.buckets_file, 'rb') as f:
+            for i in range(2**(self.power*2)):
+                f.seek(i * self.BT.size)
+                bucket = self.BT.from_bytes(f.read(self.BT.size))
+                print(f"Bucket {i}: {bucket}")
+                for record in bucket['records']:
+                    if record != -1:
+                        contador += 1
+                        print("  Registro:", self.HEAP.read(record), "Hash:", get_bits(self.RT.get_key(self.HEAP.read(record)), self.global_depth))
+        print(f"Total de registros: {contador}")
