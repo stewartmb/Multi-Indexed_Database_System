@@ -1,0 +1,78 @@
+visual_dictionary:
+
+{
+  "n_clusters": 1000,
+  "centers": [
+    [0.12, -0.34, 0.56, ..., 0.01],  // Centro del cluster 0 (vector de dimensión igual a la de los descriptores)
+    [0.22, 0.14, -0.26, ..., -0.11], // Centro del cluster 1
+    ...
+    [0.05, -0.09, 0.33, ..., 0.27]   // Centro del cluster 999
+  ]
+}
+
+
+n_clusters: Número de palabras visuales (clusters).
+
+centers: Lista de listas, cada una es el vector centroide de un cluster (palabra visual), 
+de dimensión igual a la de los descriptores SIFT (por ejemplo, 128 o menos si usaste PCA).
+
+--------------------------------------------------------------------------------------------
+
+all_descriptors.npz:
+
+Este archivo almacena, para cada imagen, una matriz de descriptores SIFT 
+(cada fila es un descriptor, cada columna una dimensión, normalmente 128 
+o menos si se usa PCA):
+
+{
+  "auto_0001_reescalado": [
+    [0.12, 0.34, ..., 0.56],   // Descriptor 1 de la imagen
+    [0.22, 0.14, ..., 0.11],   // Descriptor 2 de la imagen
+    ...
+    [0.05, -0.09, ..., 0.27]   // Descriptor N de la imagen
+  ],
+  "auto_0002_reescalado": [
+    [0.18, 0.21, ..., 0.33],
+    ...
+  ],
+  ...
+}
+
+Clave: nombre base de la imagen.
+
+Valor: matriz de descriptores (cada uno de longitud 128 o la dimensión que se use).
+
+--------------------------------------------------------------------------------------------
+
+all_histograms.npz:
+
+Este archivo almacena, para cada imagen, 
+el histograma BoVW (vector de longitud igual al número de clusters):
+
+{
+  "auto_0001_reescalado": [5, 0, 1, 2, ..., 0],  // Frecuencia de cada palabra visual (cluster)
+  "auto_0002_reescalado": [2, 1, 0, 3, ..., 1],
+  ...
+}
+
+Clave: nombre base de la imagen.
+Valor: vector (arreglo) de enteros, 
+cada uno indica cuántos descriptores de la imagen cayeron en ese cluster.
+
+--------------------------------------------------------------------------------------------
+
+all_tfidf:
+
+La representación conceptual de all_tfidf.npz es muy similar a la de all_histograms.npz, 
+pero en vez de guardar frecuencias de palabras visuales, 
+guarda los vectores TF-IDF normalizados para cada imagen.
+
+{
+  "auto_0001_reescalado": [0.12, 0.00, 0.08, 0.15, ..., 0.00],  // Vector TF-IDF normalizado para la imagen 1
+  "auto_0002_reescalado": [0.05, 0.11, 0.00, 0.09, ..., 0.03],  // Vector TF-IDF normalizado para la imagen 2
+  ...
+}
+
+Clave: nombre base de la imagen.
+Valor: vector TF-IDF normalizado (float), 
+de longitud igual al número de clusters (palabras visuales).
