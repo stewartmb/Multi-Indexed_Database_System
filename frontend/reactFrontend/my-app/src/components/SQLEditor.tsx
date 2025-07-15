@@ -6,6 +6,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { useQueryUrl } from '../contexts/QueryUrlContext.tsx';
 import {completeFromList} from "@codemirror/autocomplete";
+import fileIcon from '../assets/file_icon.png';
 
 import '../styles/SQLEditor.css';
 
@@ -134,7 +135,7 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
   const [localQuery, setLocalQuery] = useState(query);
   const [showEditor, setShowEditor] = useState(true);
   const { queryUrl, setQueryUrl } = useQueryUrl();
-  const [images, setImages] = useState<string[]>([]);
+  const [files, setFiles] = useState<{ url: string; isImage: boolean; name: string }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
@@ -156,156 +157,211 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = e.target.files;
-  if (!files) return;
+    const newFiles = e.target.files;
+    if (!newFiles) return;
 
-  const newImages: string[] = [];
-  Array.from(files).forEach(file => {
-    const url = URL.createObjectURL(file);
-    newImages.push(url);
-  });
+    const fileObjs: { url: string; isImage: boolean; name: string }[] = [];
+    Array.from(newFiles).forEach(file => {
+      const url = URL.createObjectURL(file);
+      const isImage = file.type.startsWith("image/");
+      fileObjs.push({ url, isImage, name: file.name });
+    });
 
-  setImages(prev => [...prev, ...newImages]);
-};
+    setFiles(prev => [...prev, ...fileObjs]);
+  };
 
-const handleRemoveImage = (index: number) => {
-  setImages(prev => {
-    URL.revokeObjectURL(prev[index]);
-    return prev.filter((_, i) => i !== index);
-  });
-};
+  const handleRemoveFile = (index: number) => {
+    setFiles(prev => {
+      URL.revokeObjectURL(prev[index].url);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const toggleEditor = () => {
     setShowEditor(prev => !prev);
   };
 
-const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  e.stopPropagation();
-  setIsDragging(true);
-};
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
 
-const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  e.stopPropagation();
-  setIsDragging(false);
-};
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
 
-const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  e.stopPropagation();
-  setIsDragging(false);
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
 
-  const files = e.dataTransfer.files;
-  if (!files) return;
+    const newFiles = e.dataTransfer.files;
+    if (!newFiles) return;
 
-  const newImages: string[] = [];
-  Array.from(files).forEach(file => {
-    const url = URL.createObjectURL(file);
-    newImages.push(url);
-  });
+    const fileObjs: { url: string; isImage: boolean; name: string }[] = [];
+    Array.from(newFiles).forEach(file => {
+      const url = URL.createObjectURL(file);
+      const isImage = file.type.startsWith("image/");
+      fileObjs.push({ url, isImage, name: file.name });
+    });
 
-  setImages(prev => [...prev, ...newImages]);
-};
-
-
-  return (
-    <div className="sql-editor-container h-full flex flex-col">
-      <div className="sql-editor-header" style={{
+    setFiles(prev => [...prev, ...fileObjs]);
+  };
+return (
+  <div className="sql-editor-container h-full flex flex-col">
+    <div
+      className="sql-editor-header"
+      style={{
         padding: '0.5rem',
         background: '#1e1e1e',
-        borderBottom: '1px solid #2d3748'
-      }}>
-        <div className="flex items-center gap-2">
-          <button
-            className="editor-btn"
-            onClick={() => onRun(localQuery)}
-            disabled={isLoading || !localQuery.trim()}
-            title={isLoading ? 'Query in progress...' : !localQuery.trim() ? 'Enter a query to run' : 'Run query'}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              {isLoading ? (
-                <path d="M6 12h12M12 6v12" />
-              ) : (
-                <path d="M5 3l14 9-14 9V3z" />
-              )}
-            </svg>
-          </button>
+        borderBottom: '1px solid #2d3748',
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <button
+          className="editor-btn"
+          onClick={() => onRun(localQuery)}
+          disabled={isLoading || !localQuery.trim()}
+          title={isLoading ? 'Query in progress...' : !localQuery.trim() ? 'Enter a query to run' : 'Run query'}
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {isLoading ? <path d="M6 12h12M12 6v12" /> : <path d="M5 3l14 9-14 9V3z" />}
+          </svg>
+        </button>
 
-          <button
-            className="editor-btn"
-            onClick={handleClear}
-            disabled={isLoading}
-            title="Clear editor"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3-3h6M9 3v3M15 3v3M4 6h16" />
-            </svg>
-          </button>
+        <button
+          className="editor-btn"
+          onClick={handleClear}
+          disabled={isLoading}
+          title="Clear editor"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3-3h6M9 3v3M15 3v3M4 6h16" />
+          </svg>
+        </button>
 
-          <button
-            className="editor-btn"
-            onClick={toggleEditor}
-            title={showEditor ? 'Load files' : 'Edit query'}
-          >
-            {showEditor ? 'Load files' : 'Edit query'}
-          </button>
-        </div>
-      </div>
-
-      <div className="sql-editor-body flex-1" style={{ background: '#1e1e1e' }}>
-        {showEditor ? (
-          <CodeMirror 
-            value={localQuery}
-            height="100%"
-            extensions={[
-              sql(),
-              customHighlightPlugin,
-              myTheme,
-              syntaxHighlighting(myHighlightStyle),
-            ]}
-            onChange={handleQueryChange}
-            placeholder="Write your SQL query here..."
-            style={{
-              fontSize: '14px',
-              height: '100%'
-            }}
-          />
-        ) : (
-            <div
-                className={`flex flex-col items-center justify-center h-full text-gray-400 gap-4 p-4 border-2 border-dashed rounded transition 
-                    ${isDragging ? 'border-blue-400 bg-blue-900 bg-opacity-20' : 'border-gray-600'}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                >
-                <label className="cursor-pointer bg-gray-700 px-4 py-2 rounded hover:bg-gray-600">
-                    Select images
-                    <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    />
-                </label>
-
-                <div className="flex flex-wrap justify-center gap-4 mt-4">
-                    {images.map((src, idx) => (
-                    <img
-                        key={idx}
-                        src={src}
-                        alt={`Preview ${idx}`}
-                        className="max-w-[150px] max-h-[150px] rounded shadow cursor-pointer hover:opacity-70 transition"
-                        onClick={() => handleRemoveImage(idx)}
-                    />
-                    ))}
-                </div>
-            </div>
-        )}
+        <button
+          className="editor-btn"
+          onClick={toggleEditor}
+          title={showEditor ? 'Load files' : 'Edit query'}
+        >
+          {showEditor ? 'Load files' : 'Edit query'}
+        </button>
       </div>
     </div>
-  );
+
+    <div className="sql-editor-body flex-1" style={{ background: '#1e1e1e' }}>
+      {showEditor ? (
+        <CodeMirror
+          value={localQuery}
+          height="100%"
+          extensions={[sql(), customHighlightPlugin, myTheme, syntaxHighlighting(myHighlightStyle)]}
+          onChange={handleQueryChange}
+          placeholder="Write your SQL query here..."
+          style={{ fontSize: '14px', height: '100%' }}
+        />
+      ) : (
+        <label
+          className={`flex flex-col items-center justify-center h-full text-gray-300 gap-4 p-4 border-2 border-dashed rounded transition ${
+            isDragging ? 'border-blue-400 bg-blue-900 bg-opacity-20' : 'border-gray-600'
+          } ${files.length === 0 ? 'cursor-pointer' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {files.length === 0 && (
+            <>
+              <span className="text-gray-300">Click or drag files here</span>
+              <input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </>
+          )}
+
+          <div className="flex flex-wrap justify-center gap-4 mt-4 max-h-64 overflow-auto p-2">
+            {files.map((file, idx) => (
+              <div
+                key={idx}
+                onClick={() => handleRemoveFile(idx)}
+                className="flex flex-col items-center cursor-pointer hover:opacity-70 transition"
+              >
+                <div
+                  style={{
+                    backgroundColor: 'rgba(6, 1, 29, 0.2)',
+                    borderRadius: '0.5rem',
+                    padding: '0.5rem',
+                    margin: '0.5rem',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                    width: '150px',
+                    height: '150px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {file.isImage ? (
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                        }}
+                        >
+                        <img
+                            src={file.url}
+                            alt={file.name}
+                            className="max-w-[150px] max-h-[150px] rounded"
+                        />
+                        <span
+                            style={{
+                            wordBreak: 'break-all',
+                            textAlign: 'center',
+                            color: '#6e7486ff',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '16px',
+                            }}
+                        >
+                            {file.name}
+                        </span>
+                        </div>
+                  ) : (
+                    <div
+                      className="flex flex-col items-center justify-center w-[150px] h-[150px] bg-gray-800 rounded text-white text-xs p-2"
+                    >
+                      <img
+                        src={fileIcon}
+                        alt="File icon"
+                        className="mb-2 opacity-80"
+                        style={{ width: '64px', height: '64px', objectFit: 'contain' }}
+                      />
+                      <span
+                      style={{
+                        wordBreak: 'break-all',
+                        textAlign: 'center',
+                        color: '#5f6f83ff',
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '16px',
+                      }}
+                    >
+                      {file.name}
+                    </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </label>
+      )}
+    </div>
+  </div>
+);
 };
 
 export default SQLEditor;
