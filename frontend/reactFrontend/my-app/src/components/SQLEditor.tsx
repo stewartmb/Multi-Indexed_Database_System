@@ -244,11 +244,18 @@ return (
         </button>
 
         <button
-          className="editor-btn"
-          onClick={toggleEditor}
-          title={showEditor ? 'Load files' : 'Edit query'}
+        className="editor-btn"
+        onClick={toggleEditor}
+        title={showEditor ? 'Load files' : 'Edit query'}
+        style={{
+            minWidth: '120px',
+            minHeight: '36px',
+            marginLeft: '1rem',
+            border: '1px solid #4a5568', // gris oscuro, puedes ajustar el color
+            borderRadius: '0.375rem', // opcional: bordes redondeados
+        }}
         >
-          {showEditor ? 'Load files' : 'Edit query'}
+        {showEditor ? 'Load files' : 'Edit query'}
         </button>
       </div>
     </div>
