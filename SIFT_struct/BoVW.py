@@ -82,4 +82,4 @@ if __name__ == "__main__":
     # 4. Guardar histogramas
     guardar_histogramas(histogramas, output_hist_path)
 
-    graficar_histogramas(histogramas)
+    mostrar_histogramas(histogramas)

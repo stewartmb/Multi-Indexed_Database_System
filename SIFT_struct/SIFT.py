@@ -79,7 +79,7 @@ def main():
     try:
         # Configuración de rutas
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        test_images_dir = os.path.join(script_dir, 'test_images')
+        test_images_dir = os.path.join(script_dir, 'test_images_reescaladas')
         output_npz_path = os.path.join(script_dir, 'descriptors', 'all_descriptors.npz')
 
         # Crear directorio para descriptores si no existe
@@ -90,7 +90,7 @@ def main():
             raise FileNotFoundError(f"Directorio no encontrado: {test_images_dir}")
 
         # Cambia el valor de n_components para reducir la dimensión (por ejemplo, 70)
-        process_and_save_all_descriptors(test_images_dir, output_npz_path, n_components=70)
+        process_and_save_all_descriptors(test_images_dir, output_npz_path, n_components=100)
 
     except Exception as e:
         print(f"\n❌ Error: {str(e)}", file=sys.stderr)
