@@ -43,28 +43,51 @@ def fit_pca_on_all_descriptors(images_dir, sift, n_components):
     pca.fit(all_desc)
     return pca
 
-def process_and_save_all_descriptors(images_dir, output_npz_path, n_components=None):
-    """Procesa todas las imágenes y guarda todos los descriptores (posiblemente reducidos) en un solo archivo .npz"""
+def process_and_save_all_descriptors(images_dir, output_npz_path, n_components=None, batch_size=50):
+    """
+    Procesa todas las imágenes y guarda todos los descriptores (posiblemente reducidos) en un solo archivo .npz.
+    Procesa en lotes y guarda temporalmente cada batch para ahorrar memoria.
+    """
     sift = cv2.SIFT_create()
     pca = None
+    filenames = [f for f in os.listdir(images_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
     if n_components is not None and n_components < 128:
         print(f"Ajustando PCA para reducir descriptores a {n_components} dimensiones...")
         pca = fit_pca_on_all_descriptors(images_dir, sift, n_components)
-    all_descriptors = {}
-    for filename in os.listdir(images_dir):
-        if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+
+    batch_files_list = []
+    total = len(filenames)
+    for batch_start in range(0, total, batch_size):
+        batch_files = filenames[batch_start:batch_start+batch_size]
+        batch_descriptors = {}
+        print(f"\nProcesando batch {batch_start//batch_size + 1} ({len(batch_files)} imágenes)...")
+        for filename in batch_files:
             img_path = os.path.join(images_dir, filename)
-            print(f"Procesando {filename}...")
+            print(f"  Procesando {filename}...")
             try:
                 img = load_and_verify_image(img_path)
                 keypoints, descriptors = extract_descriptors(img, sift, pca)
                 if descriptors is None:
-                    print(f"  ⚠️  No se encontraron descriptores en {filename}")
+                    print(f"    ⚠️  No se encontraron descriptores en {filename}")
                     continue
                 key = os.path.splitext(filename)[0]
-                all_descriptors[key] = descriptors
+                batch_descriptors[key] = descriptors
             except Exception as img_e:
-                print(f"  ❌ Error procesando {filename}: {img_e}")
+                print(f"    ❌ Error procesando {filename}: {img_e}")
+        # Guardar temporalmente el batch
+        batch_npz = f"{output_npz_path}_batch_{batch_start//batch_size + 1}.npz"
+        np.savez(batch_npz, **batch_descriptors)
+        batch_files_list.append(batch_npz)
+        del batch_descriptors  # Libera memoria
+
+    # Combinar todos los batches en un solo archivo final
+    all_descriptors = {}
+    for batch_npz in batch_files_list:
+        with np.load(batch_npz) as data:
+            for key in data.files:
+                all_descriptors[key] = data[key]
+        os.remove(batch_npz)  # Borra el archivo temporal
+
     np.savez(output_npz_path, **all_descriptors)
     print(f"\n✔️  Todos los descriptores guardados en {output_npz_path}")
 

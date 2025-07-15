@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
 import os
 import matplotlib.pyplot as plt
 
@@ -18,9 +18,9 @@ def cargar_todos_los_descriptores(npz_path):
     return all_desc, nombres, data_dict
 
 def crear_vocabulario_visual(all_desc, n_clusters=1000, random_state=42):
-    """Aplica KMeans a todos los descriptores para crear el vocabulario visual"""
-    print(f"Entrenando KMeans con {n_clusters} clusters sobre {all_desc.shape[0]} descriptores...")
-    kmeans = KMeans(n_clusters=n_clusters, random_state=random_state, n_init=10)
+    """Aplica MiniBatchKMeans a todos los descriptores para crear el vocabulario visual"""
+    print(f"Entrenando MiniBatchKMeans con {n_clusters} clusters sobre {all_desc.shape[0]} descriptores...")
+    kmeans = MiniBatchKMeans(n_clusters=n_clusters, random_state=random_state, batch_size=1000, n_init=3)
     kmeans.fit(all_desc)
     print("✔️ Vocabulario visual generado.")
     return kmeans
@@ -33,6 +33,7 @@ def construir_histogramas_por_imagen(data_dict, kmeans):
         hist, _ = np.histogram(words, bins=np.arange(kmeans.n_clusters+1))
         histogramas[key] = hist
     return histogramas
+
 def guardar_histogramas(histogramas, output_path):
     """Guarda los histogramas de todas las imágenes en un archivo .npz"""
     np.savez(output_path, **histogramas)
@@ -43,8 +44,6 @@ def mostrar_histogramas(histogramas):
     print("Histogramas de palabras visuales por imagen:")
     for key, hist in histogramas.items():
         print(f"- {key}: {hist}")
-
-
 
 def graficar_histogramas(histogramas, n_cols=3, figsize=(15, 8)):
     """Grafica los histogramas de palabras visuales para cada imagen"""
@@ -62,7 +61,6 @@ def graficar_histogramas(histogramas, n_cols=3, figsize=(15, 8)):
         plt.tight_layout()
     plt.show()
 
-
 if __name__ == "__main__":
     # Configura las rutas según tu estructura
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -72,7 +70,7 @@ if __name__ == "__main__":
     # 1. Cargar todos los descriptores
     all_desc, nombres, data_dict = cargar_todos_los_descriptores(npz_path)
 
-    # 2. Crear vocabulario visual (KMeans)
+    # 2. Crear vocabulario visual (MiniBatchKMeans)
     n_clusters = 1000  # Puedes ajustar este valor
     kmeans = crear_vocabulario_visual(all_desc, n_clusters=n_clusters)
 
@@ -81,5 +79,3 @@ if __name__ == "__main__":
 
     # 4. Guardar histogramas
     guardar_histogramas(histogramas, output_hist_path)
-
-    mostrar_histogramas(histogramas)
