@@ -22,8 +22,8 @@ class Spimi:
         
         """ Crear archivos de hash para documentos y hash para df de features."""
 
-        fd_files = self._make_hash_filenames("fd_doc", feature_docs_hash_file_name)
-        fc_files = self._make_hash_filenames("fd_df", feature_df_hash_file_name)
+        fd_files = self._make_hash_filenames("term_doc", feature_docs_hash_file_name)
+        fc_files = self._make_hash_filenames("term_df", feature_df_hash_file_name)
 
         """ El archivo de cabecera que contiene el número total de documentos."""
 
@@ -49,7 +49,7 @@ class Spimi:
         )
 
         self.feature_df_hash = Hash(
-            table_format={"encoded_feature": "64s", "df": "i"},
+            table_format={"encoded_feature": encoded_feature_format, "df": "i"},
             key="encoded_feature",
             data_file_name=fc_files["data_file_name"],
             buckets_file_name=fc_files["buckets_file_name"],
@@ -58,16 +58,16 @@ class Spimi:
             force_create=False
         )
 
-    def _make_hash_filenames(self, prefix: str, base: str):
+    def _make_hash_filenames(self, suffix: str, base: str):
         """
         Helper para generar nombres de los hash struct files.
         Eejemplo: prefix='fd_doc', base='myfile' -> 
             fd_doc_myfile_data.bin, fd_doc_myfile_buckets.bin, fd_doc_myfile_index.bin
         """
         return {
-            "data_file_name":   f"{prefix}_{base}_data.bin",
-            "buckets_file_name":f"{prefix}_{base}_buckets.bin",
-            "index_file_name":  f"{prefix}_{base}_index.bin"
+            "data_file_name":   f"{base}_{suffix}_data.bin",
+            "buckets_file_name":f"{base}_{suffix}_buckets.bin",
+            "index_file_name":  f"{base}_{suffix}_index.bin"
         }
     
     def _init_header_file(self):
@@ -102,7 +102,7 @@ class Spimi:
             pos_list = self.feature_df_hash.search(encoded_feature)
             if pos_list:
                 reg = self.feature_df_hash.HEAP.read(pos_list[0])
-                current_df = reg[1] 
+                current_df = reg[1]
 
                 self.feature_df_hash.delete(encoded_feature)
                 self.feature_df_hash.insert([encoded_feature, current_df + 1])
@@ -118,7 +118,7 @@ class Spimi:
         """
         pos_list = self.feature_df_hash.search(encoded_feature)
 
-        if pos_list != []:
+        if pos_list:
             reg = self.feature_df_hash.HEAP.read(pos_list[0])
             current_df = reg[1] 
             

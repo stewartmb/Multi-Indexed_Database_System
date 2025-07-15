@@ -12,12 +12,12 @@ class TestSpimiPersistence(unittest.TestCase):
 
     def tearDown(self):
         files = [
-            "fd_doc_persist_fd_data.bin",
-            "fd_doc_persist_fd_buckets.bin",
-            "fd_doc_persist_fd_index.bin",
-            "fd_df_persist_fc_data.bin",
-            "fd_df_persist_fc_buckets.bin",
-            "fd_df_persist_fc_index.bin",
+            "persist_fd_term_doc_data.bin",
+            "persist_fd_term_doc_buckets.bin",
+            "persist_fd_term_doc_index.bin",
+            "persist_fc_term_df_data.bin",
+            "persist_fc_term_df_buckets.bin",
+            "persist_fc_term_df_index.bin",
             "spimi_header.bin"
         ]
 

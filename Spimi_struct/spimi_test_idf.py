@@ -18,19 +18,19 @@ class TestSpimi(unittest.TestCase):
     def tearDown(self):
         files = [
             #-- Archivos de prueba con datoss
-            "fd_doc_test_fd_data.bin",
-            "fd_doc_test_fd_buckets.bin",
-            "fd_doc_test_fd_index.bin",
-            "fd_df_test_fc_data.bin",
-            "fd_df_test_fc_buckets.bin",
-            "fd_df_test_fc_index.bin",
+            "test_fd_term_doc_data.bin",
+            "test_fd_term_doc_buckets.bin",
+            "test_fd_term_doc_index.bin",
+            "test_fc_term_df_data.bin",
+            "test_fc_term_df_buckets.bin",
+            "test_fc_term_df_index.bin",
             #-- Archivos de prueba vacíos
-            "fd_doc_empty_fd_data.bin",
-            "fd_doc_empty_fd_buckets.bin",
-            "fd_doc_empty_fd_index.bin",
-            "fd_df_empty_fc_data.bin",
-            "fd_df_empty_fc_buckets.bin",
-            "fd_df_empty_fc_index.bin",
+            "empty_fd_term_doc_data.bin",
+            "empty_fd_term_doc_buckets.bin",
+            "empty_fd_term_doc_index.bin",
+            "empty_fc_term_df_data.bin",
+            "empty_fc_term_df_buckets.bin",
+            "empty_fc_term_df_index.bin",
             #-- Archivos de encabezado
             "spimi_header.bin",
             "empty_spimi_header.bin"

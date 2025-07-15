@@ -16,12 +16,12 @@ class TestSpimi(unittest.TestCase):
 
     def tearDown(self):
         files = [
-            "fd_doc_test_fd_data.bin",
-            "fd_doc_test_fd_buckets.bin",
-            "fd_doc_test_fd_index.bin",
-            "fd_df_test_fc_data.bin",
-            "fd_df_test_fc_buckets.bin",
-            "fd_df_test_fc_index.bin",
+            "test_fd_term_doc_data.bin",
+            "test_fd_term_doc_buckets.bin",
+            "test_fd_term_doc_index.bin",
+            "test_fc_term_df_data.bin",
+            "test_fc_term_df_buckets.bin",
+            "test_fc_term_df_index.bin",
             "spimi_header.bin"
         ]
 
