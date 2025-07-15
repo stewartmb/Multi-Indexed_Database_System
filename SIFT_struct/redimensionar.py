@@ -8,10 +8,12 @@ def resize_to_256_square(image_path, output_path, z):
 
         # Si ya es z x z, se puede guardar directamente
         if original_width == z and original_height == z:
+            if img.mode != "RGB":
+                img = img.convert("RGB")
             img.save(output_path)
             return
 
-        # Ajustar área a 65536 manteniendo la relación de aspecto
+        # Ajustar área a z*z manteniendo la relación de aspecto
         aspect_ratio = original_width / original_height
         target_area = z * z
 
@@ -21,6 +23,8 @@ def resize_to_256_square(image_path, output_path, z):
         img_resized = img.resize((new_width, new_height), Image.LANCZOS)
         img_final = img_resized.resize((z, z), Image.LANCZOS)
 
+        if img_final.mode != "RGB":
+            img_final = img_final.convert("RGB")
         img_final.save(output_path)
         print(f"Procesado: {output_path}")
 

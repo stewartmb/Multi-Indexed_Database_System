@@ -17,7 +17,7 @@ def cargar_todos_los_descriptores(npz_path):
         all_desc = np.vstack(descriptores)
     return all_desc, nombres, data_dict
 
-def crear_vocabulario_visual(all_desc, n_clusters=100, random_state=42):
+def crear_vocabulario_visual(all_desc, n_clusters=1000, random_state=42):
     """Aplica KMeans a todos los descriptores para crear el vocabulario visual"""
     print(f"Entrenando KMeans con {n_clusters} clusters sobre {all_desc.shape[0]} descriptores...")
     kmeans = KMeans(n_clusters=n_clusters, random_state=random_state, n_init=10)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     all_desc, nombres, data_dict = cargar_todos_los_descriptores(npz_path)
 
     # 2. Crear vocabulario visual (KMeans)
-    n_clusters = 100  # Puedes ajustar este valor
+    n_clusters = 1000  # Puedes ajustar este valor
     kmeans = crear_vocabulario_visual(all_desc, n_clusters=n_clusters)
 
     # 3. Construir histogramas para cada imagen
