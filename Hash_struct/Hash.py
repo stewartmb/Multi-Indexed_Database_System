@@ -1,5 +1,6 @@
 import pickle
 import sys
+import hashlib
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Utils.Registro import *
@@ -11,18 +12,33 @@ def get_bits(dato: any, nbits: int) -> str:
     :param dato: dato a convertir
     :param nbits: cantidad de bits a tomar
     """
-    hashed = None
-    if isinstance(dato, int): # numeros
-        hashed = hash(dato)
-    elif isinstance(dato, float): # float
-        hashed = hash(dato)
-    elif isinstance(dato, str): # texto
-        hashed = hash(dato)
-    else:
-        dato_bytes = pickle.dumps(dato)
-        hashed = hash(dato_bytes)
+    # hashed = None
+    # if isinstance(dato, int): # numeros
+    #     hashed = hash(dato)
+    # elif isinstance(dato, float): # float
+    #     hashed = hash(dato)
+    # elif isinstance(dato, str): # texto
+    #     hashed = hash(dato)
+    # else:
+    #     dato_bytes = pickle.dumps(dato)
+    #     hashed = hash(dato_bytes)
 
-    return bin(hashed & ((1 << nbits) - 1))[2:].zfill(nbits)
+    # Convert data to bytes for hashing
+    if isinstance(dato, int):
+        data_bytes = str(dato).encode('utf-8')
+    elif isinstance(dato, float):
+        data_bytes = str(dato).encode('utf-8')
+    elif isinstance(dato, str):
+        data_bytes = dato.encode('utf-8')
+    else:
+        data_bytes = pickle.dumps(dato)
+    
+    # Hash deterministico persitente usando SHA256
+    hash_obj = hashlib.sha256(data_bytes)
+    hash_int = int(hash_obj.hexdigest(), 16)
+
+    # return bin(hashed & ((1 << nbits) - 1))[2:].zfill(nbits)
+    return bin(hash_int & ((1 << nbits) - 1))[2:].zfill(nbits)
 
 class BucketType:
     """
@@ -379,11 +395,20 @@ class Hash:
                     if record != None:
                         if self.RT.get_key(record) == key:
                             # Eliminar el registro
-                            bucket['records'][i] = -1
-                            bucket['fullness'] -= 1
-                            buckets_file.seek(node['bucket_position'] * self.BT.size)
+                            # bucket['records'][i] = -1
+                            # bucket['fullness'] -= 1
+                            # buckets_file.seek(node['bucket_position'] * self.BT.size)
+                            # buckets_file.write(self.BT.to_bytes(bucket))
+
+                            last_index = bucket['fullness'] - 1
+                            bucket['records'][i] = bucket['records'][last_index]
+                            bucket['records'][last_index] = -1
+                            bucket['fullness'] = last_index  # Decrement fullness
+                            
+                            buckets_file.seek(overflow_position * self.BT.size)
                             buckets_file.write(self.BT.to_bytes(bucket))
                             return True
+                overflow_position = bucket['overflow_position'] 
         return False
 
     def _aux_range_search(self, buckets_file, index_file, node_index, lower, upper):
