@@ -31,8 +31,8 @@ function App() {
         setQueryResult({
             data: null,
             columns: null,
-            columns_types: null, // ✅ nuevo campo
-            table: null,         // ✅ nuevo campo
+            columns_types: null, 
+            table: null,         
             message: null,
             error: null,
             details: null
@@ -56,14 +56,13 @@ function App() {
         setQueryResult({
             data: result.data || null,
             columns: result.columns || null,
-            columns_types: result.columns_types || null, // ✅ nuevo campo
-            table: result.table || null,                 // ✅ nuevo campo
+            columns_types: result.columns_types || null, 
+            table: result.table || null,                 
             message: result.message || null,
             error: null,
             details: null
         });
 
-        console.log("✅ Query result set:", result); // 🔍 Log para depuración
 
         } catch (err: any) {
             let errorMessage = 'Error executing query';

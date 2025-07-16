@@ -63,19 +63,54 @@ const Results: React.FC<Props> = ({ data, columns, columns_types, table, message
         
         const imageUrl = `${queryUrl}/multimedia/${table}/${value}`;
         console.log(imageUrl);
+        if (columns_types && columns_types[columnIndex] === "file" && value) {
+        const fileUrl = `${queryUrl}/multimedia/${table}/${value}`;
+        const fileExtension = value.split('.').pop()?.toLowerCase();
+
+        if (!fileExtension) return 'Invalid file';
+
+        // Mostrar imagen
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension)) {
+            return (
+            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                <img 
+                src={fileUrl}
+                alt={value}
+                style={{ 
+                    maxWidth: '250px',
+                    maxHeight: '250px',
+                    objectFit: 'cover',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                }}
+                />
+            </a>
+            );
+        }
+
+        // Mostrar audio
+        if (['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(fileExtension)) {
+            return (
+            <audio controls style={{ maxWidth: '250px' }}>
+                <source src={fileUrl} type={`audio/${fileExtension}`} />
+                Your browser does not support the audio element.
+            </audio>
+            );
+        }
+
+        // Otro tipo de archivo (PDF, TXT, etc.)
         return (
-            <img 
-            src={imageUrl}
-            alt={value}
-            style={{ 
-                maxWidth: '300px', 
-                maxHeight: '200px', 
-                objectFit: 'cover', 
-                display: 'block',
-                margin: '0 auto'
-            }}
-            />
+            <a 
+            href={fileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ color: '#007bff', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+            📄 {value}
+            </a>
         );
+        }
+
     }
 
     if (value === null || value === undefined) return 'NULL';
