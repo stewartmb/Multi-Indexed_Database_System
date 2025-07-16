@@ -134,9 +134,19 @@ const myTheme = EditorView.theme({
 const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoading = false }) => {
   const [localQuery, setLocalQuery] = useState(query);
   const [showEditor, setShowEditor] = useState(true);
-  const { queryUrl, setQueryUrl } = useQueryUrl();
-  const [files, setFiles] = useState<{ url: string; isImage: boolean; name: string }[]>([]);
+  const [files, setFiles] = useState<{ url: string; isImage: boolean; name: string; file: File }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
+
+    const handleCopyName = async (name: string) => {
+    try {
+        await navigator.clipboard.writeText(name);
+        setCopiedMessage(`Copied: ${name}`);
+        setTimeout(() => setCopiedMessage(null), 3000); // Ocultar después de 2 segundos
+    } catch (err) {
+        console.error('Failed to copy!', err);
+    }
+    };
 
   useEffect(() => {
     setLocalQuery(query);
@@ -160,11 +170,11 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
     const newFiles = e.target.files;
     if (!newFiles) return;
 
-    const fileObjs: { url: string; isImage: boolean; name: string }[] = [];
+    const fileObjs: { url: string; isImage: boolean; name: string; file: File }[] = [];
     Array.from(newFiles).forEach(file => {
       const url = URL.createObjectURL(file);
       const isImage = file.type.startsWith("image/");
-      fileObjs.push({ url, isImage, name: file.name });
+      fileObjs.push({ url, isImage, name: file.name , file });
     });
 
     setFiles(prev => [...prev, ...fileObjs]);
@@ -201,15 +211,49 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
     const newFiles = e.dataTransfer.files;
     if (!newFiles) return;
 
-    const fileObjs: { url: string; isImage: boolean; name: string }[] = [];
+    const fileObjs: { url: string; isImage: boolean; name: string; file: File }[] = [];
     Array.from(newFiles).forEach(file => {
       const url = URL.createObjectURL(file);
       const isImage = file.type.startsWith("image/");
-      fileObjs.push({ url, isImage, name: file.name });
+      fileObjs.push({ url, isImage, name: file.name, file });
     });
 
     setFiles(prev => [...prev, ...fileObjs]);
   };
+
+  const handleUploadFiles = async () => {
+  try {
+    if (files.length === 0) {
+      console.log("No files to upload");
+      return;
+    }
+
+    const formData = new FormData();
+    files.forEach((fileObj) => {
+      formData.append("files", fileObj.file);
+    });
+
+    const response = await fetch("http://localhost:8000/upload_files/", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload files");
+    }
+
+    const data = await response.json();
+    console.log("Files uploaded:", data);
+    alert("Files uploaded successfully!");
+
+  } catch (error) {
+    console.error("Error uploading files:", error);
+    alert("Error uploading files");
+  }
+};
+
+  
+
 return (
   <div className="sql-editor-container h-full flex flex-col">
     <div
@@ -243,20 +287,57 @@ return (
           </svg>
         </button>
 
+      
         <button
-        className="editor-btn"
-        onClick={toggleEditor}
-        title={showEditor ? 'Load files' : 'Edit query'}
-        style={{
+            className="editor-btn"
+            onClick={toggleEditor}
+            title={showEditor ? 'Load files' : 'Edit query'}
+            style={{
+                minWidth: '120px',
+                minHeight: '36px',
+                marginLeft: '1rem',
+                border: '1px solid #4a5568',
+                borderRadius: '0.375rem',
+            }}>
+
+        {showEditor ? 'Load files' : 'Edit query'}
+        </button>
+
+        {!showEditor && (
+        <button
+            className="editor-btn"
+            onClick={handleUploadFiles}
+            title="Save content"
+            style={{
             minWidth: '120px',
             minHeight: '36px',
             marginLeft: '1rem',
-            border: '1px solid #4a5568', // gris oscuro, puedes ajustar el color
-            borderRadius: '0.375rem', // opcional: bordes redondeados
-        }}
+            border: '1px solid #4a5568',
+            borderRadius: '0.375rem',
+            }}
         >
-        {showEditor ? 'Load files' : 'Edit query'}
+            Save content
         </button>
+        )}
+
+        {copiedMessage && (
+        <div
+            style={{
+            position: 'fixed',
+            top: '1rem',
+            right: '1rem',
+            background: 'rgba(0, 0, 0, 0.8)',
+            color: '#fff',
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            zIndex: 9999,
+            fontSize: '14px',
+            }}
+        >
+            {copiedMessage}
+        </div>
+        )}
+
       </div>
     </div>
 
@@ -281,7 +362,18 @@ return (
         >
           {files.length === 0 && (
             <>
-              <span className="text-gray-300">Click or drag files here</span>
+              <span className="text-gray-300"
+              style={{
+                fontSize: '24px',
+                color: isDragging ? '#38bdf8' : '#cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                width: '100%',
+                }}
+              
+              >Click or drag files here</span>
               <input
                 type="file"
                 multiple
@@ -291,77 +383,111 @@ return (
             </>
           )}
 
-          <div className="flex flex-wrap justify-center gap-4 mt-4 max-h-64 overflow-auto p-2">
+          <div
+            className="flex flex-wrap justify-center gap-4 mt-4 p-2"
+            style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'auto',
+                scrollbarWidth: 'none',         // Firefox
+                msOverflowStyle: 'none',        // IE y Edge
+            }}
+            >
             {files.map((file, idx) => (
               <div
-                key={idx}
-                onClick={() => handleRemoveFile(idx)}
-                className="flex flex-col items-center cursor-pointer hover:opacity-70 transition"
-              >
-                <div
-                  style={{
-                    backgroundColor: 'rgba(6, 1, 29, 0.2)',
-                    borderRadius: '0.5rem',
-                    padding: '0.5rem',
-                    margin: '0.5rem',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                    width: '150px',
-                    height: '150px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {file.isImage ? (
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                        }}
-                        >
-                        <img
-                            src={file.url}
-                            alt={file.name}
-                            className="max-w-[150px] max-h-[150px] rounded"
-                        />
-                        <span
-                            style={{
-                            wordBreak: 'break-all',
-                            textAlign: 'center',
-                            color: '#6e7486ff',
-                            fontFamily: 'JetBrains Mono, monospace',
-                            fontSize: '16px',
-                            }}
-                        >
-                            {file.name}
-                        </span>
-                        </div>
-                  ) : (
-                    <div
-                      className="flex flex-col items-center justify-center w-[150px] h-[150px] bg-gray-800 rounded text-white text-xs p-2"
-                    >
-                      <img
-                        src={fileIcon}
-                        alt="File icon"
-                        className="mb-2 opacity-80"
-                        style={{ width: '64px', height: '64px', objectFit: 'contain' }}
-                      />
-                      <span
-                      style={{
-                        wordBreak: 'break-all',
-                        textAlign: 'center',
-                        color: '#5f6f83ff',
-                        fontFamily: 'JetBrains Mono, monospace',
-                        fontSize: '16px',
-                      }}
-                    >
-                      {file.name}
-                    </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+  key={idx}
+  className="flex flex-col items-center relative transition hover:opacity-80"
+>
+  {/* Botón X en la esquina */}
+  <div
+  onClick={(e) => {
+    e.stopPropagation();
+    handleRemoveFile(idx);
+  }}
+  style={{
+    position: 'absolute',
+    top: '4px',
+    right: '4px',
+    background: 'rgba(0,0,0,0.6)',
+    color: '#fff',
+    borderRadius: '50%',
+    width: '24px',
+    height: '24px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    lineHeight: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    userSelect: 'none',
+  }}
+>
+  ×
+</div>
+
+  <div
+    onClick={() => handleCopyName(file.name)}
+    
+    style={{
+      backgroundColor: 'rgba(6, 1, 29, 0.2)',
+      borderRadius: '0.5rem',
+      padding: '0.5rem',
+      margin: '0.5rem',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+      width: '150px',
+      height: '150px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      flexDirection: 'column',
+    }}
+  >
+    {file.isImage ? (
+      <>
+        <img
+          src={file.url}
+          alt={file.name}
+          className="max-w-[150px] max-h-[150px] rounded"
+        />
+        <span
+          style={{
+            wordBreak: 'break-all',
+            textAlign: 'center',
+            color: '#6e7486ff',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '16px',
+          }}
+        >
+          {file.name}
+        </span>
+      </>
+    ) : (
+      <div
+        className="flex flex-col items-center justify-center w-[150px] h-[150px] bg-gray-800 rounded text-white text-xs p-2"
+      >
+        <img
+          src={fileIcon}
+          alt="File icon"
+          className="mb-2 opacity-80"
+          style={{ width: '64px', height: '64px', objectFit: 'contain' }}
+        />
+        <span
+          style={{
+            wordBreak: 'break-all',
+            textAlign: 'center',
+            color: '#5f6f83ff',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '16px',
+          }}
+        >
+          {file.name}
+        </span>
+      </div>
+    )}
+  </div>
+</div>
+
             ))}
           </div>
         </label>
