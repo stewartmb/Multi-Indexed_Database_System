@@ -278,7 +278,7 @@ def main():
             'Review_Text': '512s',
             'Branch': '16s'
         },
-        text_column='Review_Text',
+        text_column='Review_Text', # MISMO NOMBRE QUE EN EL CSV
         output_base_path='../collections',
         key_column='Review_ID',
         max_records=100,
