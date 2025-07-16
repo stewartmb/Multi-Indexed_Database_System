@@ -41,6 +41,8 @@ def to_struct(type):
         return "?"
     if type == "timestamp":
         return "26s"
+    if type == "file":
+        return "255s"
     elif varchar_match:
         size = varchar_match.group(1)  # Extraemos el tamaño entre los corchetes
         return f"{size}s"
@@ -419,6 +421,8 @@ def aux_select(query):
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
 
+    print("FORMAT",format)
+
     if query["eval"] is None:
         heap = Heap(format,
                     data["key"],
@@ -670,6 +674,9 @@ def select(query):
     start = time.time_ns()
 
     data = select_meta(query["table"])
+
+    print("DATA", data)
+
     format = {}
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
@@ -680,9 +687,6 @@ def select(query):
                 raise HTTPException(status_code=404, detail=f"Column {col} does not exist in table {query['table']}")
 
     ans_list = aux_select(query)
-
-
-
 
     result = []
     for i in ans_list:
@@ -701,11 +705,16 @@ def select(query):
         indices = [column_indices[x] for x in columns_names]
         result = [[r[i] for i in indices] for r in result]
 
+    columns_types = [data["columns"][col]["type"] for col in columns_names]
+
+
     end = time.time_ns()
     t_ms = end - start
     print("RESULT_DATA:",result)
     return {
+        "table": query["table"],
         "columns": columns_names,
+        "columns_types": columns_types,
         "data": result,
         "message": f"SELECTED {len(result)} RECORDS FROM TABLE {query['table']} in {t_ms/1e6} ms",
     }

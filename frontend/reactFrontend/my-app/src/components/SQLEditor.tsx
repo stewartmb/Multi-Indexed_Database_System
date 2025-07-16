@@ -137,6 +137,7 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
   const [files, setFiles] = useState<{ url: string; isImage: boolean; name: string; file: File }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
+  const { queryUrl } = useQueryUrl();
 
     const handleCopyName = async (name: string) => {
     try {
@@ -232,10 +233,13 @@ const SQLEditor: React.FC<Props> = ({ onRun, query = '', onQueryChange, isLoadin
     files.forEach((fileObj) => {
       formData.append("files", fileObj.file);
     });
+    
+    const uploadEndpoint = `${queryUrl}/upload_files`;
+    console.log("Uploading files to:", uploadEndpoint);
 
-    const response = await fetch("http://localhost:8000/upload_files/", {
-      method: "POST",
-      body: formData,
+    const response = await fetch(uploadEndpoint, {
+    method: "POST",
+    body: formData,
     });
 
     if (!response.ok) {

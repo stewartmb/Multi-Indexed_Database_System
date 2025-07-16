@@ -7,6 +7,8 @@ import { useQueryUrl } from '../contexts/QueryUrlContext';
 interface QueryResult {
     data: any[] | null;
     columns: string[] | null;
+    columns_types: string[] | null;
+    table: string | null;
     message: string | null;
     error: string | null;
     details?: string | null;
@@ -38,6 +40,16 @@ const ResizablePanel: React.FC<Props> = ({ queryResult, onRunQuery }) => {
         setQuery(selectedQuery);
     };
 
+    console.log("🟡 Props passed to <Results />:", {
+    table: queryResult.table,
+    columns: queryResult.columns,
+    columns_types: queryResult.columns_types,
+    data: queryResult.data,
+    message: queryResult.message,
+    error: queryResult.error,
+    details: queryResult.details,
+    });
+
     return (
         <ResizableLayout
             topContent={
@@ -52,6 +64,8 @@ const ResizablePanel: React.FC<Props> = ({ queryResult, onRunQuery }) => {
                 <Results
                     data={queryResult.data}
                     columns={queryResult.columns || []}
+                    columns_types={queryResult.columns_types || []}
+                    table={queryResult.table}
                     message={queryResult.message}
                     error={queryResult.error}
                     details={queryResult.details}

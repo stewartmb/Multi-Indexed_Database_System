@@ -10,8 +10,17 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from ParserSQL.parser import *
 from API.services import *
 from typing import List
+from fastapi.staticfiles import StaticFiles
+
 
 app = FastAPI()
+
+print(os.getcwd())
+if os.getcwd().endswith("API"):
+    os.chdir(os.path.dirname(os.getcwd()))
+    print("Changed working directory to:", os.getcwd())
+
+app.mount("/multimedia", StaticFiles(directory="Schema/multimedia"), name="DatabaseFiles")
 
 app.add_middleware(
     CORSMiddleware,

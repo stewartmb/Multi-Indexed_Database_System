@@ -31,8 +31,9 @@ def select_meta(name: str) -> dict:
     """Busca y devuelve el diccionario correspondiente a 'name' desde MetaData"""
     filename = "Schema/metadata"+".meta"
 
+    
     if not os.path.exists(filename):
-        print(f"El archivo '{filename}' no existe.")
+        print(f"El archivo '{filename}' no existe en {os.getcwd()}.")
         return {}
 
     with open(filename, "r", encoding="utf-8") as f:
@@ -71,6 +72,7 @@ def delete_meta(name: str) -> None:
 
 
 def get_info_from_meta() -> dict:
+    print("Currently in:", os.getcwd())
     """Devuelve el diccionario"""
     filename = "Schema/metadata"+".meta"
 
@@ -79,7 +81,7 @@ def get_info_from_meta() -> dict:
         # si no existe buscar en carpeta padre
         filename = os.path.join(os.path.dirname(os.getcwd()), filename)
         # cambiar cwd
-        os.chdir(os.path.dirname(filename))
+        os.chdir(os.path.dirname(os.getcwd()))
         if not os.path.exists(filename):
             return {}
 
