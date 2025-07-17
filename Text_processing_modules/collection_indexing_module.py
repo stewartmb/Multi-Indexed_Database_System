@@ -288,4 +288,5 @@ def main():
     # Procesar reviews de Disney
     disney_indexer.process()
 
-if __name__ ==
+if __name__ == "__main__":
+    main()

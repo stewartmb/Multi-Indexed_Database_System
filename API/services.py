@@ -1118,4 +1118,26 @@ def drop_table(query):
             os.remove(index_filename(nombre_tabla, key, "page"))
         if index is not None and index != "rtree" and index != "spimi":
             print("hola")
-            index_file = index_filename(nomb
+            index_file = index_filename(nombre_tabla,
+                                    key,
+                                    "index")
+            os.remove(index_file)
+
+    rtree_keys = data.get("indexes", {}).get("rtree")
+    if rtree_keys is not None:
+        os.remove(index_filename(nombre_tabla, *rtree_keys, "index"))
+
+    # eliminar entrada en metadata
+    delete_meta(nombre_tabla)
+
+    try:
+        os.remove(data_file)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    end = time.time_ns()
+    t_ms = end - start
+
+    return {
+        "message": f"DELETED TABLE SUCCESSFULLY in {t_ms/1e6} ms"
+    }
