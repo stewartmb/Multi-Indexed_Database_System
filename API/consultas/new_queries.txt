@@ -1,0 +1,5 @@
+create table disneyland_reviews ( id varchar[32] primary key, rating int, year_month varchar[16], location varchar[32], review text, branch varchar[16] );
+
+drop table disneyland_reviews;
+
+copy disneyland_reviews from "DisneylandReviews.csv";

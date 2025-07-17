@@ -5,7 +5,7 @@ import sys
 import math
 import contextlib
 import time
-from preprocessing_module import preprocess, preprocess_batch
+from Text_processing_modules.preprocessing_module import preprocess, preprocess_batch
 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
