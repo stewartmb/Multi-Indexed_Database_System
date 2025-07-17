@@ -10,6 +10,7 @@ from Text_processing_modules.preprocessing_module import preprocess
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Hash_struct.Hash import Hash
 from Spimi_struct.Spimi import Spimi
+from Utils.file_format import table_filename
 
 class NLQueryModule:
     """Sistema de consultas por similitud coseno"""
@@ -74,10 +75,11 @@ class NLQueryModule:
     
     def _cargar_documentos(self):
         """Cargar hash de documentos"""
+        print(table_filename(self.collection_name))
         self.review_hash = Hash(
             table_format=self.table_format,
             key=self.key_column,  # Usar primera columna como key
-            data_file_name=str(self.collection_path / f'{self.collection_name}_data.bin'),
+            data_file_name=table_filename(self.collection_name),
             buckets_file_name=str(self.collection_path / f'{self.collection_name}_buckets.bin'),
             index_file_name=str(self.collection_path / f'{self.collection_name}_index.bin'),
             force_create=False
@@ -192,10 +194,10 @@ class NLQueryModule:
             tuple: Registro del documento o None si no se encuentra
         """
         positions = self.review_hash.search(doc_id)
+        print(positions)
         if positions:
             # Como mencionas que solo habrá un registro, tomamos el primero
-            registro = self.review_hash.HEAP.read(positions[0])
-            return registro
+            return positions[0]
         else:
             return None
     
@@ -219,6 +221,7 @@ class NLQueryModule:
         # Obtener documentos candidatos
         candidate_docs = self._obtener_documentos_candidatos(valid_terms)
 
+
         if not candidate_docs:
             return []
         
@@ -240,11 +243,7 @@ class NLQueryModule:
         for doc_id, score in top_k:
             registro = self._obtener_registro_documento(doc_id)
             if registro:
-                results.append({
-                    'id': doc_id,
-                    'score': score,
-                    'record': registro
-                })
+                results.append(registro)
         
         return results
     
@@ -267,16 +266,16 @@ if __name__ == "__main__":
     try:
         # Inicializar sistema con una colección de ejemplo
         system = NLQueryModule(
-            collection_path="collections/disneyland_reviews",
+            collection_path="Schema/collections/disneyland_reviews",
             collection_name="disneyland_reviews",
-            key_column='Review_ID',
+            key_column='id',
             table_format={
-            'Review_ID': '32s',
-            'Rating': 'i',
-            'Year_Month': '16s',
-            'Reviewer_Location': '32s',
-            'Review_Text': '512s',
-            'Branch': '16s'
+            'id': '32s',
+            'rating': 'i',
+            'year_month': '16s',
+            'location': '32s',
+            'review': '512s',
+            'branch': '16s'
             }
         )
         

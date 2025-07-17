@@ -5,6 +5,7 @@ import re
 import csv
 import time
 import datetime
+import shutil
 from fastapi import HTTPException
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
@@ -507,6 +508,17 @@ def aux_select(query):
                             point[i] = cast(point[i], format[key[i]])
                         sets.append(set(rtree.search(point)))
 
+        elif data["columns"][key]["index"] == "spimi":
+                collection_path = "Schema/collections/" + nombre_tabla
+                spimi = QueryAid(
+                    collection_path=collection_path,
+                    collection_name=nombre_tabla,
+                    key_column=data["key"],
+                    table_format=format
+                )
+
+                # print(spimi.query(cond["query"], cond["top_k"]))
+                sets.append(spimi.query(cond["query"], cond["top_k"]))
 
         else:
             index = data["columns"][key]["index"]
@@ -667,18 +679,6 @@ def aux_select(query):
                 else:
                     print(val)
                     sets.append(set(brin.search(val)))
-            
-            elif index == "spimi":
-                collection_path = "collection/" + nombre_tabla
-                spimi = QueryAid(
-                    collection_path=collection_path,
-                    collection_name=nombre_tabla,
-                    key_column=data["key"],
-                    table_format=format
-                )
-
-                results = spimi.query(cond["query"], cond["top_k"])
-                print(results)
 
     for i in range(len(sets)):
         print(i, ":", sets[i])
@@ -777,6 +777,7 @@ def copy(query):
     brin = []
 
     spimi = None
+    positions = []
 
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
@@ -817,8 +818,6 @@ def copy(query):
                             table_filename(nombre_tabla),
                             *params))
         elif index == "spimi":
-            print(json.dumps(format, indent=4))
-            print(json.dumps(data, indent=4))
             spimi = TextIndexer(
                 csv_file_path=query["from"],
                 collection_name=nombre_tabla,
@@ -829,7 +828,7 @@ def copy(query):
                 max_records=100, # TODO: remove
                 use_absolute_path=False  # Usar ruta relativa
             )
-            spimi.process()
+            positions = spimi.process()
     
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -848,24 +847,38 @@ def copy(query):
         reader = csv.reader(f)
         next(reader)
 
-        for row in reader:
-            # insertar en el principal y en todos los índices
-            pos = heap.insert(row)
-            print(pos)
-            print(heap.read(pos))
-            for h in hash:
-                h.insert(row, pos)
-            for bp in bptree:
-                bp.add(pos_new_record=pos)
-            for s in seq:
-                s.add(pos_new_record=pos)
-            for i in isam:
-                i.add(pos_new_record=pos)
-            for br in brin:
-                br.add(pos_new_record=pos)
-            if rtree is not None:
-                rtree.insert(row, pos)
-    
+        if spimi is None:
+            for row in reader:
+                # insertar en el principal y en todos los índices
+                pos = heap.insert(row)
+                for h in hash:
+                    h.insert(row, pos)
+                for bp in bptree:
+                    bp.add(pos_new_record=pos)
+                for s in seq:
+                    s.add(pos_new_record=pos)
+                for i in isam:
+                    i.add(pos_new_record=pos)
+                for br in brin:
+                    br.add(pos_new_record=pos)
+                if rtree is not None:
+                    rtree.insert(row, pos)
+        else:
+            for row, pos in zip(reader, positions):
+                # insertar en el principal y en todos los índices
+                for h in hash:
+                    h.insert(row, pos)
+                for bp in bptree:
+                    bp.add(pos_new_record=pos)
+                for s in seq:
+                    s.add(pos_new_record=pos)
+                for i in isam:
+                    i.add(pos_new_record=pos)
+                for br in brin:
+                    br.add(pos_new_record=pos)
+                if rtree is not None:
+                    rtree.insert(row, pos)
+        
     end = time.time_ns()
     t_ms = end - start
 
@@ -1108,6 +1121,10 @@ def drop_table(query):
     print(json.dumps(data, indent=4))
 
     data_file = table_filename(nombre_tabla)
+
+    path = "Schema/collections/"+nombre_tabla
+    if os.path.exists(path):
+        shutil.rmtree(path)
 
     # eliminar indices en la tabla
     for key in data["columns"].keys():
