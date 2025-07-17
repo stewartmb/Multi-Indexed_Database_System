@@ -454,6 +454,7 @@ class Hash:
 
             index_hash = get_bits(self.RT.get_key(record), self.global_depth)
             self._add_to_hash(buckets_file, index_file, data_position, index_hash)
+            return data_position
 
     def search(self, key):
         """

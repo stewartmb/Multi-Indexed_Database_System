@@ -15,7 +15,7 @@ stmt: create_stmt ";"
     | drop_table_stmt ";"
 
 create_stmt: "create"i "table"i NAME "(" create_attr_list ")"
-copy_stmt: "copy"i NAME "from"i VALUE
+copy_stmt: "copy"i NAME "from"i VALUE ["limit"i VALUE]
 create_attr_list: NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] ("," NAME (TYPE | varchar) [ KEY ] ["index"i INDEX ["(" value_list ")"]] )*
 select_stmt: "select"i (ALL | attr_list) "from"i NAME ["where"i expr] [limit]
 attr_list: NAME ("," NAME)*
@@ -58,7 +58,7 @@ IMAGES_OP: "<->"
 limit: "limit"i VALUE
 top: "top"i VALUE
 
-TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "timestamp"i
+TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "timestamp"i | "text"i | "file"i
 varchar: "varchar"i "[" VALUE "]"
 
 %import common.ESCAPED_STRING
@@ -163,7 +163,7 @@ class SQLTransformer(Transformer):
         return dict
 
     def copy_stmt(self, items):
-        return {"action": "copy", "table": str(items[0]), "from": str(items[1])}
+        return {"action": "copy", "table": str(items[0]), "from": str(items[1]), "limit": items[2]}
     
     def drop_index_stmt(self, items):
         return {"action": "drop index", "table": items[2], "index": items[0], "attr": items[1]}

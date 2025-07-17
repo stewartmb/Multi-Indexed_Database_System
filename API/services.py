@@ -5,6 +5,7 @@ import re
 import csv
 import time
 import datetime
+import shutil
 from fastapi import HTTPException
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
@@ -18,6 +19,8 @@ from Sequential_Struct.Indice_Sequential_file import Sequential
 from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 from Isam_struct.Indice_Isam_file import ISAM as Isam
 from Brin_struct.Indice_Brin_file import BRIN as Brin
+from Text_processing_modules.collection_indexing_module import TextCollectionIndexer as TextIndexer
+from Text_processing_modules.natural_language_query_module import NLQueryModule as QueryAid
 
 M = 1000
 
@@ -43,6 +46,8 @@ def to_struct(type):
         return "26s"
     if type == "file":
         return "255s"
+    if type == "text":
+        return "512s"
     elif varchar_match:
         size = varchar_match.group(1)  # Extraemos el tamaño entre los corchetes
         return f"{size}s"
@@ -164,11 +169,32 @@ def create_table(query):
     for key in cols.keys():
         format[key] = to_struct(cols[key]["type"])
 
-    # crear indices
+    # crear spimi si tiene atributo texto e indices
     for key in cols.keys():
         index = cols[key]["index"]
         params = cols[key].get("params", [])
-        if index == None:
+        type = cols[key]["type"]
+        
+        if type == "text":
+            # spimi = TextIndexer(
+            #     csv_file_path='../DisneylandReviews.csv',
+            #     collection_name='disneyland_reviews',
+            #     table_format={
+            #         'Review_ID': '32s',
+            #         'Rating': 'i',
+            #         'Year_Month': '16s',
+            #         'Reviewer_Location': '32s',
+            #         'Review_Text': '512s',
+            #         'Branch': '16s'
+            #     },
+            #     text_column='Review_Text', # MISMO NOMBRE QUE EN EL CSV
+            #     output_base_path='collections',
+            #     key_column='Review_ID',
+            #     max_records=100,
+            #     use_absolute_path=False  # Usar ruta relativa
+            # )
+            cols[key]["index"] = "spimi"
+        elif index == None:
             pass
         elif index == "hash":
             hash = Hash(format,
@@ -195,7 +221,6 @@ def create_table(query):
                         index_filename(query["name"], key, "page"),
                         table_filename(query["name"]),
                         *params)
-
         else:
             print("INDICE NO IMPLEMENTADO AUN")
 
@@ -207,6 +232,8 @@ def create_table(query):
     lista = []
     for key in query["data"]["columns"].keys():
         column = query["data"]["columns"][key]
+        if query["data"]["columns"][key]["type"] == "text":
+            lista.append([key, column["type"], "spimi"])
         lista.append([key, column["type"], column["index"]])
 
 
@@ -481,6 +508,17 @@ def aux_select(query):
                             point[i] = cast(point[i], format[key[i]])
                         sets.append(set(rtree.search(point)))
 
+        elif data["columns"][key]["index"] == "spimi":
+                collection_path = "Schema/collections/" + nombre_tabla
+                spimi = QueryAid(
+                    collection_path=collection_path,
+                    collection_name=nombre_tabla,
+                    key_column=data["key"],
+                    table_format=format
+                )
+
+                # print(spimi.query(cond["query"], cond["top_k"]))
+                sets.append(spimi.query(cond["query"], cond["top_k"]))
 
         else:
             index = data["columns"][key]["index"]
@@ -738,6 +776,9 @@ def copy(query):
     isam = []
     brin = []
 
+    spimi = None
+    positions = []
+
     for key in data["columns"].keys():
         format[key] = to_struct(data["columns"][key]["type"])
 
@@ -776,6 +817,18 @@ def copy(query):
                             index_filename(nombre_tabla, key, "page"),
                             table_filename(nombre_tabla),
                             *params))
+        elif index == "spimi":
+            spimi = TextIndexer(
+                csv_file_path=query["from"],
+                collection_name=nombre_tabla,
+                table_format=format,
+                text_column=key, # TODO: MISMO NOMBRE QUE EN EL CSV
+                output_base_path='Schema/collections',
+                key_column=data["key"], # TODO: MISMO NOMBRE QUE EN EL CSV
+                max_records=100, # TODO: remove
+                use_absolute_path=False  # Usar ruta relativa
+            )
+            positions = spimi.process()
     
     rtree_keys = data.get("indexes", {}).get("rtree")
     if rtree_keys is not None:
@@ -794,24 +847,38 @@ def copy(query):
         reader = csv.reader(f)
         next(reader)
 
-        for row in reader:
-            # insertar en el principal y en todos los índices
-            pos = heap.insert(row)
-            print(pos)
-            print(heap.read(pos))
-            for h in hash:
-                h.insert(row, pos)
-            for bp in bptree:
-                bp.add(pos_new_record=pos)
-            for s in seq:
-                s.add(pos_new_record=pos)
-            for i in isam:
-                i.add(pos_new_record=pos)
-            for br in brin:
-                br.add(pos_new_record=pos)
-            if rtree is not None:
-                rtree.insert(row, pos)
-    
+        if spimi is None:
+            for row in reader:
+                # insertar en el principal y en todos los índices
+                pos = heap.insert(row)
+                for h in hash:
+                    h.insert(row, pos)
+                for bp in bptree:
+                    bp.add(pos_new_record=pos)
+                for s in seq:
+                    s.add(pos_new_record=pos)
+                for i in isam:
+                    i.add(pos_new_record=pos)
+                for br in brin:
+                    br.add(pos_new_record=pos)
+                if rtree is not None:
+                    rtree.insert(row, pos)
+        else:
+            for row, pos in zip(reader, positions):
+                # insertar en el principal y en todos los índices
+                for h in hash:
+                    h.insert(row, pos)
+                for bp in bptree:
+                    bp.add(pos_new_record=pos)
+                for s in seq:
+                    s.add(pos_new_record=pos)
+                for i in isam:
+                    i.add(pos_new_record=pos)
+                for br in brin:
+                    br.add(pos_new_record=pos)
+                if rtree is not None:
+                    rtree.insert(row, pos)
+        
     end = time.time_ns()
     t_ms = end - start
 
@@ -1055,6 +1122,10 @@ def drop_table(query):
 
     data_file = table_filename(nombre_tabla)
 
+    path = "Schema/collections/"+nombre_tabla
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
     # eliminar indices en la tabla
     for key in data["columns"].keys():
         index = data["columns"][key]["index"]
@@ -1062,7 +1133,8 @@ def drop_table(query):
             os.remove(index_filename(nombre_tabla, key, "buckets"))
         if index == "brin":
             os.remove(index_filename(nombre_tabla, key, "page"))
-        if index is not None and index != "rtree":
+        if index is not None and index != "rtree" and index != "spimi":
+            print("hola")
             index_file = index_filename(nombre_tabla,
                                     key,
                                     "index")

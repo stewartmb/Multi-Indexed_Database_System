@@ -5,12 +5,14 @@ import sys
 import math
 import contextlib
 import time
-from preprocessing_module import preprocess, preprocess_batch
+from Text_processing_modules.preprocessing_module import preprocess, preprocess_batch
 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Hash_struct.Hash import Hash
 from Spimi_struct.Spimi import Spimi
+from Utils.file_format import table_filename
+
 
 class TextCollectionIndexer:
     """
@@ -80,16 +82,28 @@ class TextCollectionIndexer:
         
         with open(csv_path, newline='', encoding=self.encoding) as csvfile:
             reader = csv.DictReader(csvfile)
+
+            # positions = []
+
+            self.record_hash = None
             
             # Determinar columna clave
             if self.key_column is None:
                 self.key_column = reader.fieldnames[0]
+                self.record_hash = Hash(
+                    table_format=self.table_format,
+                    key=self.key_column,
+                    data_file_name=table_filename(self.collection_name),
+                    buckets_file_name=os.path.join(self.output_dir, f'{self.collection_name}_buckets.bin'),
+                    index_file_name=os.path.join(self.output_dir, f'{self.collection_name}_index.bin'),
+                    force_create=False
+                )
             
             # Cargar registros
             for i, row in enumerate(reader):
                 if self.max_records and i >= self.max_records:
                     break
-                
+
                 record_id = row[self.key_column]
                 record = {}
                 
@@ -98,6 +112,12 @@ class TextCollectionIndexer:
                     record[column] = row[column]
                 
                 self.records[record_id] = record
+
+                # if self.record_hash is not None:
+                #     pos = self.record_hash.insert(row)
+                #     positions.append(pos)
+            
+
         
         print(f"[STATUS] Total de registros cargados: {len(self.records)}")
         
@@ -110,6 +130,9 @@ class TextCollectionIndexer:
         record_ids = list(self.records.keys())
         for i, record_id in enumerate(record_ids):
             self.records[record_id]['bow'] = all_bows[i]
+
+        # return positions
+
     
     def build_vocabulary(self):
         """Construir vocabulario a partir de todos los documentos procesados."""
@@ -123,18 +146,20 @@ class TextCollectionIndexer:
         
         print(f"[STATUS] Tamaño del vocabulario: {len(self.vocab_dict)}")
     
-    def create_record_hash(self):
+    def create_record_hash(self): # TODO: CAMBIAR A HEAP
         """Crear tabla hash para almacenamiento de registros."""
         print("[STATUS] Creando tabla hash de registros...")
         
         self.record_hash = Hash(
             table_format=self.table_format,
             key=self.key_column,
-            data_file_name=os.path.join(self.output_dir, f'{self.collection_name}_data.bin'),
+            data_file_name=table_filename(self.collection_name),
             buckets_file_name=os.path.join(self.output_dir, f'{self.collection_name}_buckets.bin'),
             index_file_name=os.path.join(self.output_dir, f'{self.collection_name}_index.bin'),
             force_create=False
         )
+
+        positions = []
         
         # Insertar registros en el hash
         for i, record in enumerate(self.records.values(), 1):
@@ -154,10 +179,13 @@ class TextCollectionIndexer:
                 else:
                     hash_record.append(value)
             
-            self.record_hash.insert(hash_record)
+            pos = self.record_hash.insert(hash_record)
+            print(f"POSITIONS {pos}")
+            positions.append(pos)
             
             if i % 100 == 0 or i == len(self.records):
                 print(f"[STATUS] Insertados {i}/{len(self.records)} registros en el hash.")
+        return positions
     
     def persist_vocabulary(self):
         """Persistir vocabulario en tabla hash."""
@@ -223,6 +251,7 @@ class TextCollectionIndexer:
             }
             
             # Guardar metadata en archivo
+            print(self.output_dir)
             meta_file = os.path.join(self.output_dir, f'{self.collection_name}_{record_id}_metadata.json')
             with open(meta_file, 'w', encoding='utf-8') as f:
                 json.dump(metadata, f, indent=2, ensure_ascii=False)
@@ -241,7 +270,7 @@ class TextCollectionIndexer:
         self.build_vocabulary()
         
         # Paso 3: Crear hash de registros
-        self.create_record_hash()
+        positions = self.create_record_hash()
         
         # Paso 4: Persistir vocabulario
         self.persist_vocabulary()
@@ -256,7 +285,9 @@ class TextCollectionIndexer:
         self.calculate_vectors_and_metadata()
         
         print(f"[STATUS] Proceso de indexación completado. Archivos generados en: {self.output_dir}")
-        return self.output_dir
+
+        print(positions)
+        return positions
 
 
 def main():
@@ -268,19 +299,19 @@ def main():
     
     # Ejemplo : Reviews de Disney 
     disney_indexer = TextCollectionIndexer(
-        csv_file_path='../DisneylandReviews.csv',
+        csv_file_path='DisneylandReviews.csv',
         collection_name='disneyland_reviews',
         table_format={
-            'Review_ID': '32s',
-            'Rating': 'i',
-            'Year_Month': '16s',
-            'Reviewer_Location': '32s',
-            'Review_Text': '512s',
-            'Branch': '16s'
+            'id': '32s',
+            'rating': 'i',
+            'year_month': '16s',
+            'location': '32s',
+            'review': '512s',
+            'branch': '16s'
         },
-        text_column='Review_Text', # MISMO NOMBRE QUE EN EL CSV
-        output_base_path='../collections',
-        key_column='Review_ID',
+        text_column='review', # MISMO NOMBRE QUE EN EL CSV
+        output_base_path='Schema/collections',
+        key_column='id',
         max_records=100,
         use_absolute_path=False  # Usar ruta relativa
     )
