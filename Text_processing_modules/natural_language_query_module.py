@@ -319,4 +319,4 @@ if __name__ == "__main__":
     except Exception as e:
         import traceback
         print("Error:")
-   
+        traceback.print_exc()
