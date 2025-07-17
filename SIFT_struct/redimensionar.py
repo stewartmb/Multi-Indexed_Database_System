@@ -1,6 +1,8 @@
 import os
 from PIL import Image
 import math
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def resize_to_256_square(image_path, output_path, z):
     with Image.open(image_path) as img:

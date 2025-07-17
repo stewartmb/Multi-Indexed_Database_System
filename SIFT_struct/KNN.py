@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def comparar_histogramas_coseno(npz_path, tfidf_path=None):
     """Abre el archivo de histogramas o TF-IDF y calcula la similitud de coseno entre todos los pares"""

@@ -3,6 +3,8 @@ from sklearn.cluster import MiniBatchKMeans
 import os
 import matplotlib.pyplot as plt
 import joblib
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def cargar_todos_los_descriptores(npz_path):
     """Carga todos los descriptores de todas las imágenes en una sola matriz y un diccionario"""

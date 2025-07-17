@@ -14,7 +14,7 @@ visual_dictionary:
 n_clusters: Número de palabras visuales (clusters).
 
 centers: Lista de listas, cada una es el vector centroide de un cluster (palabra visual), 
-de dimensión igual a la de los descriptores SIFT (por ejemplo, 128 o menos si usaste PCA).
+de dimensión igual a la de los descriptores SIFT (por ejemplo, 128 o menos si se usa PCA).
 
 --------------------------------------------------------------------------------------------
 

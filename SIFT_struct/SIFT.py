@@ -3,6 +3,7 @@ import os
 import sys
 import numpy as np
 from sklearn.decomposition import PCA
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def load_and_verify_image(path):
     """Carga una imagen y verifica su integridad"""
