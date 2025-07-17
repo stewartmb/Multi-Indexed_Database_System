@@ -4,10 +4,10 @@ import math
 import sys
 import time
 from pathlib import Path
-from preprocessing_module import preprocess
+from Text_processing_modules.preprocessing_module import preprocess
 
 # Agregar el directorio padre para importar módulos
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from Hash_struct.Hash import Hash
 from Spimi_struct.Spimi import Spimi
 

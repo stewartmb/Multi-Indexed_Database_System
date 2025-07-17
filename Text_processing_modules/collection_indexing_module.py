@@ -123,7 +123,7 @@ class TextCollectionIndexer:
         
         print(f"[STATUS] Tamaño del vocabulario: {len(self.vocab_dict)}")
     
-    def create_record_hash(self):
+    def create_record_hash(self): # TODO: CAMBIAR A HEAP
         """Crear tabla hash para almacenamiento de registros."""
         print("[STATUS] Creando tabla hash de registros...")
         
