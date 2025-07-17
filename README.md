@@ -66,6 +66,8 @@ Aparte, se implementó una clase [Registro](https://github.com/stewartmb/Proyect
 ## 📂 Índices Implementados
 En cuanto a los **índices**, se han implementado los siguientes:
 
+
+
 | Tipo de Índice         | Descripción                                         | Documentación                                                                              |
 | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | 📄 Sequential File     | Búsqueda ordenada secuencial                        | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Sequential_Struct/Sequential.md) |
