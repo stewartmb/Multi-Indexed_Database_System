@@ -98,7 +98,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
     for file in files:
         contents = await file.read()
         # Por ejemplo, guardarlo:
-        with open(f"uploaded_{file.filename}", "wb") as f:
+        with open(f"Temporal/{file.filename}", "wb") as f:
             f.write(contents)
         file_names.append(file.filename)
     return JSONResponse(content={"message": "Files uploaded successfully", "files": file_names})

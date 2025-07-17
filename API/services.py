@@ -328,6 +328,31 @@ def insert(query):
     end = time.time_ns()
     t_ms = end - start
 
+    print(query)
+
+    column_names = list(data["columns"].keys())
+    row_values = query["values"][1]  # Suponiendo que esto es una fila de datos
+
+    for key in column_names:
+        col_type = data["columns"][key]["type"]
+        if col_type == "file":
+            index = column_names.index(key)
+            file_value = row_values[index]
+
+            src_path = f"Temporal/{file_value}"
+            dest_dir = f"Schema/multimedia/{nombre_tabla}"
+            dest_path = f"{dest_dir}/{file_value}"
+
+            # Crea el directorio de destino si no existe
+            os.makedirs(dest_dir, exist_ok=True)
+
+            # Mueve el archivo
+            shutil.move(src_path, dest_path)
+
+            print(f"Archivo movido a: {dest_path}")
+
+
+
     return {
         "message": f"INSERTED VALUE ON TABLE {nombre_tabla} in {t_ms/1e6} ms"
     }
@@ -516,6 +541,7 @@ def aux_select(query):
                     key_column=data["key"],
                     table_format=format
                 )
+
 
                 # print(spimi.query(cond["query"], cond["top_k"]))
                 sets.append(spimi.query(cond["query"], cond["top_k"]))
