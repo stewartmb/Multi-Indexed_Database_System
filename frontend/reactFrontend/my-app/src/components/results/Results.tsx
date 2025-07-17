@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import styles from '../../styles/Results.module.css'; // Importar los estilos CSS
+import { useQueryUrl } from '../../contexts/QueryUrlContext';
 
 interface Props {
     data: any[] | null;
     message: string | null;
     error: string | null;
+    columns_types: string[];
+    table: string | null;
     details?: string | null;
     history: string[];
     columns: string[];
@@ -12,7 +15,7 @@ interface Props {
     isLoading?: boolean;
 }
 
-const Results: React.FC<Props> = ({ data, columns, message, error, details, history, onSelectHistory, isLoading = false }) => {
+const Results: React.FC<Props> = ({ data, columns, columns_types, table, message, error, details, history, onSelectHistory, isLoading = false }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'messages' | 'history'>('data'); // Eliminamos 'explain'
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -23,12 +26,16 @@ const Results: React.FC<Props> = ({ data, columns, message, error, details, hist
     const paginatedData = data ? data.slice(startIdx, startIdx + rowsPerPage) : [];
     const totalPages = data ? Math.ceil(data.length / rowsPerPage) : 1;
 
+    const { queryUrl } = useQueryUrl();
+
     // Debug logging
     React.useEffect(() => {
         console.log("B");
         console.log('Results component received:', {
             data,
             columns,
+            columns_types,
+            table,
             paginatedData,
             currentPage,
             totalPages
@@ -49,16 +56,66 @@ const Results: React.FC<Props> = ({ data, columns, message, error, details, hist
 
     // Function to safely render cell content
     const renderCellContent = (row: any, columnIndex: number) => {
-        console.log('Rendering cell:', { columnIndex, rowData: row });
-        const value = Array.isArray(row) ? row[columnIndex] : row[columnIndex];
+    const value = Array.isArray(row) ? row[columnIndex] : row[columnIndex];
+
+    if (columns_types && columns_types[columnIndex] === "file" && value) {
+        // use context to get the base URL
         
-        if (value === null || value === undefined) {
-            return 'NULL';
+        const imageUrl = `${queryUrl}/multimedia/${table}/${value}`;
+        console.log(imageUrl);
+        if (columns_types && columns_types[columnIndex] === "file" && value) {
+        const fileUrl = `${queryUrl}/multimedia/${table}/${value}`;
+        const fileExtension = value.split('.').pop()?.toLowerCase();
+
+        if (!fileExtension) return 'Invalid file';
+
+        // Mostrar imagen
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension)) {
+            return (
+            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                <img 
+                src={fileUrl}
+                alt={value}
+                style={{ 
+                    maxWidth: '250px',
+                    maxHeight: '250px',
+                    objectFit: 'cover',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                }}
+                />
+            </a>
+            );
         }
-        if (typeof value === 'object') {
-            return JSON.stringify(value);
+
+        // Mostrar audio
+        if (['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(fileExtension)) {
+            return (
+            <audio controls style={{ maxWidth: '250px' }}>
+                <source src={fileUrl} type={`audio/${fileExtension}`} />
+                Your browser does not support the audio element.
+            </audio>
+            );
         }
-        return String(value);
+
+        // Otro tipo de archivo (PDF, TXT, etc.)
+        return (
+            <a 
+            href={fileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ color: '#007bff', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+            📄 {value}
+            </a>
+        );
+        }
+
+    }
+
+    if (value === null || value === undefined) return 'NULL';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
     };
 
     // Debug logging for data changes

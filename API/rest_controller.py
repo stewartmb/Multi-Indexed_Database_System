@@ -1,5 +1,5 @@
 import traceback
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 import os
 import sys
 from lark import Lark, UnexpectedToken, UnexpectedEOF, UnexpectedCharacters
@@ -9,8 +9,18 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from ParserSQL.parser import *
 from API.services import *
+from typing import List
+from fastapi.staticfiles import StaticFiles
+
 
 app = FastAPI()
+
+print(os.getcwd())
+if os.getcwd().endswith("API"):
+    os.chdir(os.path.dirname(os.getcwd()))
+    print("Changed working directory to:", os.getcwd())
+
+app.mount("/multimedia", StaticFiles(directory="Schema/multimedia"), name="DatabaseFiles")
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,3 +89,16 @@ def parse_sql_query(input: QueryInput):
             status_code=400
         )
     return response
+
+
+@app.post("/upload_files/")
+async def upload_files(files: List[UploadFile] = File(...)):
+    # Puedes guardarlos o procesarlos aquí
+    file_names = []
+    for file in files:
+        contents = await file.read()
+        # Por ejemplo, guardarlo:
+        with open(f"uploaded_{file.filename}", "wb") as f:
+            f.write(contents)
+        file_names.append(file.filename)
+    return JSONResponse(content={"message": "Files uploaded successfully", "files": file_names})
