@@ -74,7 +74,7 @@ En cuanto a los **índices**, se han implementado los siguientes:
 | 🌳 B+ Tree             | Árbol balanceado para búsquedas por rango           | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/BPtree_struct/BTree.md)          |
 | 🗺 R-Tree              | Índice espacial para coordenadas multidimensionales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/RTree_struct/Rtree.md)           |
 | 🗒️ BRIN  |Índice compacto que resume rangos de bloques para datos ordenados  | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Brin_struct/Brin.md)           |
-|  SPIMI |Implementación basada en hash que permite indexar colecciones textuales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Spimi_struct/benchmarks.md)) |
+|  SPIMI |Implementación basada en hash que permite indexar colecciones textuales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Spimi_struct/benchmarks.md) |
 
 
 ## 🧠 Parser SQL
