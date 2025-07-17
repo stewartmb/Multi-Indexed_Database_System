@@ -58,7 +58,7 @@ IMAGES_OP: "<->"
 limit: "limit"i VALUE
 top: "top"i VALUE
 
-TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "timestamp"i
+TYPE: "int"i | "float"i | "double"i | "bool"i | "date"i | "long"i | "ulong"i | "timestamp"i | "text"i | "file"i
 varchar: "varchar"i "[" VALUE "]"
 
 %import common.ESCAPED_STRING

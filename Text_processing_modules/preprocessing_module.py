@@ -54,6 +54,7 @@ def preprocess(text, stopwords_path=None, lang='english'):
         tokens = word_tokenize(text, language=lang)
     except LookupError:
         nltk.download('punkt')
+        nltk.download('punkt_tab')
         tokens = word_tokenize(text, language=lang)
 
     # Remove stopwords and non-alpha

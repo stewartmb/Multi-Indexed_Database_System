@@ -267,7 +267,7 @@ if __name__ == "__main__":
     try:
         # Inicializar sistema con una colección de ejemplo
         system = NLQueryModule(
-            collection_path="../collections/disneyland_reviews",
+            collection_path="collections/disneyland_reviews",
             collection_name="disneyland_reviews",
             key_column='Review_ID',
             table_format={
@@ -317,4 +317,6 @@ if __name__ == "__main__":
                     print("-" * 30)
     
     except Exception as e:
-        print(f"Error: {e}")
+        import traceback
+        print("Error:")
+        traceback.print_exc()

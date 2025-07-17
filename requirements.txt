@@ -6,3 +6,5 @@ pydantic
 uvicorn
 sympy
 traceback2
+nltk
+spacy
