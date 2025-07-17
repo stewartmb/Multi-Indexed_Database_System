@@ -10,7 +10,7 @@ def test_creacion():
     mir.creacion(carpeta_entrada="SIFT_struct/test_images")
     print("\nContenido del heap (primeros 10 registros):")
     mir.mostrar_heap(max_registros=10)
-    
+
 if __name__ == "__main__":
     test_creacion()
  
