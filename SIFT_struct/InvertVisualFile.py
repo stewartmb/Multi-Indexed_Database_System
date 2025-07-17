@@ -6,12 +6,12 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics.pairwise import cosine_similarity
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from SIFT_struct.redimensionar import resize_to_256_square
-from SIFT_struct.SIFT import load_and_verify_image, extract_descriptors
-from SIFT_struct.BoVW import cargar_todos_los_descriptores, crear_vocabulario_visual, construir_histogramas_por_imagen
-from SIFT_struct.KNN import calcular_tfidf
-from Utils.Registro import RegistroType
-from Heap_struct.Heap import Heap
+from SIFT_struct.redimensionar import *
+from SIFT_struct.SIFT import *
+from SIFT_struct.BoVW import *
+from SIFT_struct.KNN import *
+from Utils.Registro import *
+from Heap_struct.Heap import *
 
 class MultimediaImageRetrieval:
     """
@@ -95,13 +95,14 @@ class MultimediaImageRetrieval:
         5. Actualiza el archivo all_tfidf.npz.
         6. Inserta el registro (nombre, vector tf-idf) en el Heap.
         """
+        
         # 1. Redimensionar y guardar imagen
         nombre_base = os.path.splitext(os.path.basename(image_path))[0] + "_reescalado"
         ext = os.path.splitext(image_path)[1]
         img_out_path = os.path.join(self.img_dir, nombre_base + ext)
         os.makedirs(self.img_dir, exist_ok=True)
         resize_to_256_square(image_path, img_out_path, self.z)
-
+        
         # 2. Extraer descriptores locales
         img = load_and_verify_image(img_out_path)
         sift = cv2.SIFT_create()
@@ -109,19 +110,19 @@ class MultimediaImageRetrieval:
         if descriptor is None or len(descriptor) == 0:
             raise ValueError("No se pudieron extraer descriptores de la imagen.")
         self._add_descriptor_to_npz(nombre_base, descriptor)
-
+        
         # 3. Actualizar vocabulario visual
         self._update_vocabulario()
-
+        
         # 4. Calcular y agregar histograma BoVW
         # Solo para la nueva imagen, pero requiere el modelo actualizado
         data_dict = {nombre_base: descriptor}
         hist = construir_histogramas_por_imagen(data_dict, self.visual_dict_path)[nombre_base]
         self._add_histograma_to_npz(nombre_base, hist)
-
+        
         # 5. Actualizar archivo tf-idf
         self._update_tfidf()
-
+        
         # 6. Insertar registro en Heap
         tfidf_vec = self._get_tfidf_vector(nombre_base)
         # Registro: nombre (string, 100s) + vector tfidf (floats)
@@ -179,4 +180,85 @@ class MultimediaImageRetrieval:
             print(f"{nombre}: similitud coseno = {sim:.4f}")
         return resultados
     
+    def mostrar_heap(self, max_registros=10):
+        print(f"Contenido de {self.heap_file}:")
+        count = 0
+        if hasattr(self.heap, "read_all"):
+            registros = self.heap.read_all()
+            for reg in registros:
+                nombre = reg[0].rstrip('\x00')
+                tfidf_preview = reg[1:1+min(5, self.n_clusters)]
+                print(f"{nombre} | tfidf[:5]={tfidf_preview} ...")
+                count += 1
+                if count >= max_registros:
+                    break
+        else:
+            with open(self.heap_file, "rb") as f:
+                header_size = self.heap.HEADER_SIZE
+                f.seek(header_size)
+                for _ in range(max_registros):
+                    data = f.read(self.registro.size)
+                    flag = f.read(1)
+                    if not data or not flag:
+                        break
+                    if flag == b'\x01':
+                        continue
+                    reg = self.registro.from_bytes(data)
+                    nombre = reg[0].rstrip('\x00')
+                    tfidf_preview = reg[1:1+min(5, self.n_clusters)]
+                    print(f"{nombre} | tfidf[:5]={tfidf_preview} ...")
+                    count += 1
+        if count == 0:
+            print("Heap vacío.")
 
+    def insertar_todas_las_imagenes(self, carpeta_entrada="SIFT_struct/test_images"):
+        """
+        Procesa todas las imágenes .jpg de la carpeta dada y las inserta al heap.
+        """
+        carpeta_abs = os.path.join(self.base_dir, carpeta_entrada)
+        for archivo in os.listdir(carpeta_abs):
+            if archivo.lower().endswith(".jpg"):
+                ruta_imagen = os.path.join(carpeta_abs, archivo)
+                print(f"Insertando {ruta_imagen} ...")
+                try:
+                    self.insert(ruta_imagen)
+                except Exception as e:
+                    print(f"Error al insertar {archivo}: {e}")
+
+    def creacion(self, carpeta_entrada="SIFT_struct/test_images"):
+        """
+        Procesa todas las imágenes de la carpeta:
+        1. Redimensiona todas las imágenes a z x z.
+        2. Extrae y guarda los descriptores locales de todas las imágenes.
+        3. Crea el vocabulario visual (KMeans) con todos los descriptores.
+        4. Calcula los histogramas BoVW de todas las imágenes.
+        5. Calcula los vectores tf-idf de todos los histogramas.
+        6. Inserta cada registro (nombre, vector tf-idf) en el Heap.
+        """
+        # 1. Redimensionar todas las imágenes
+        carpeta_entrada_abs = os.path.join(self.base_dir, carpeta_entrada)
+        os.makedirs(self.img_dir, exist_ok=True)
+        procesar_carpeta(carpeta_entrada_abs, self.img_dir, self.z)
+
+        # 2. Extraer y guardar descriptores de todas las imágenes redimensionadas
+        process_and_save_all_descriptors(self.img_dir, self.descriptor_path)
+
+        # 3. Crear vocabulario visual con todos los descriptores
+        all_desc, _, _ = cargar_todos_los_descriptores(self.descriptor_path)
+        crear_vocabulario_visual(all_desc, n_clusters=self.n_clusters, output_path=self.visual_dict_path)
+
+        # 4. Calcular histogramas BoVW de todas las imágenes
+        with np.load(self.descriptor_path) as data:
+            data_dict = {key: data[key] for key in data.files}
+        histogramas = construir_histogramas_por_imagen(data_dict, self.visual_dict_path)
+        np.savez(self.hist_path, **histogramas)
+
+        # 5. Calcular vectores tf-idf de todos los histogramas
+        keys, mats_tfidf = calcular_tfidf(histogramas)
+        np.savez(self.tfidf_path, **{k: mats_tfidf[i] for i, k in enumerate(keys)})
+
+        # 6. Insertar cada registro en el Heap
+        for i, nombre in enumerate(keys):
+            reg = [nombre] + list(mats_tfidf[i])
+            self.heap.insert(reg)
+        print(f"✔️ Proceso de creación completo. {len(keys)} imágenes indexadas en el heap.")   

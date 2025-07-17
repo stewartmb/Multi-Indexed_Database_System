@@ -2,7 +2,7 @@ import os
 from PIL import Image
 import math
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 
 def resize_to_256_square(image_path, output_path, z):
     with Image.open(image_path) as img:
@@ -30,6 +30,7 @@ def resize_to_256_square(image_path, output_path, z):
         img_final.save(output_path)
         print(f"Procesado: {output_path}")
 
+
 def procesar_carpeta(carpeta_entrada, carpeta_salida,z):
     os.makedirs(carpeta_salida, exist_ok=True)
     for archivo in os.listdir(carpeta_entrada):
@@ -40,7 +41,3 @@ def procesar_carpeta(carpeta_entrada, carpeta_salida,z):
             ruta_salida = os.path.join(carpeta_salida, nuevo_nombre)
 
             resize_to_256_square(ruta_imagen, ruta_salida,z)
-
-carpeta_imagenes = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_images")
-carpeta_salida = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_images_reescaladas")
-procesar_carpeta(carpeta_imagenes, carpeta_salida, z=512)
