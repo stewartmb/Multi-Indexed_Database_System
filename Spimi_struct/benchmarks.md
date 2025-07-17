@@ -15,7 +15,7 @@ Ambas fueron evaluadas con un crecimiento progresivo del tamaño de la colecció
 
 ## Tabla Comparativa
 
-|   n    | Vocab Size |  SPIMI Index (s)  |  SPIMI Query (s)  |  PG Index (s)  |  PG Query (s)  |
+|   n    | Vocab Size |  SPIMI Preprocessing + Indexing (s)  |  SPIMI Query (s)  |  PG Preprocessing + Indexing (s)  |  PG Query (s)  |
 |--------|------------|-------------------|-------------------|----------------|----------------|
 |  100   |   1,620    |       17.58       |       0.25        |     1.19       |     0.0017     |
 | 1,000  |   5,198    |      417.18       |       0.59        |     6.88       |     0.0038     |
