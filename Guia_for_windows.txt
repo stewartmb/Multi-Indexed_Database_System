@@ -1,0 +1,7 @@
+terminal python:
+pip install -r requirements.txt
+uvicorn API.rest_controller:app --reload
+
+terminal frontend:
+cd frontend/reactFrontend/my-app 
+npm run dev

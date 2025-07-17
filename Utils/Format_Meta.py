@@ -78,12 +78,7 @@ def get_info_from_meta() -> dict:
 
     if not os.path.exists(filename):
         print(f"El archivo '{filename}' no existe en {os.getcwd()}.")
-        # si no existe buscar en carpeta padre
-        filename = os.path.join(os.path.dirname(os.getcwd()), filename)
-        # cambiar cwd
-        os.chdir(os.path.dirname(os.getcwd()))
-        if not os.path.exists(filename):
-            return {}
+        return {}
 
     with open(filename, "r", encoding="utf-8") as f:
         try:
