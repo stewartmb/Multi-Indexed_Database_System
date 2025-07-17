@@ -2,4 +2,4 @@ create table disneyland_reviews ( id varchar[32] primary key, rating int, year_m
 
 drop table disneyland_reviews;
 
-copy disneyland_reviews from "DisneylandReviews.csv";
+copy disneyland_reviews from \"DisneylandReviews.csv\";

@@ -19,6 +19,7 @@ from RTree_struct.RTreeFile_Final import RTreeFile as Rtree
 from Isam_struct.Indice_Isam_file import ISAM as Isam
 from Brin_struct.Indice_Brin_file import BRIN as Brin
 from Text_processing_modules.collection_indexing_module import TextCollectionIndexer as TextIndexer
+from Text_processing_modules.natural_language_query_module import NLQueryModule as QueryAid
 
 M = 1000
 
@@ -666,6 +667,18 @@ def aux_select(query):
                 else:
                     print(val)
                     sets.append(set(brin.search(val)))
+            
+            elif index == "spimi":
+                collection_path = "collection/" + nombre_tabla
+                spimi = QueryAid(
+                    collection_path=collection_path,
+                    collection_name=nombre_tabla,
+                    key_column=data["key"],
+                    table_format=format
+                )
+
+                results = spimi.query(cond["query"], cond["top_k"])
+                print(results)
 
     for i in range(len(sets)):
         print(i, ":", sets[i])
@@ -812,7 +825,7 @@ def copy(query):
                 table_format=format,
                 text_column=key, # TODO: MISMO NOMBRE QUE EN EL CSV
                 output_base_path='Schema/collections',
-                key_column=data["key"],
+                key_column=data["key"], # TODO: MISMO NOMBRE QUE EN EL CSV
                 max_records=100, # TODO: remove
                 use_absolute_path=False  # Usar ruta relativa
             )
@@ -1103,7 +1116,8 @@ def drop_table(query):
             os.remove(index_filename(nombre_tabla, key, "buckets"))
         if index == "brin":
             os.remove(index_filename(nombre_tabla, key, "page"))
-        if index is not None and index != "rtree":
+        if index is not None and index != "rtree" and index != "spimi":
+            print("hola")
             index_file = index_filename(nombre_tabla,
                                     key,
                                     "index")
