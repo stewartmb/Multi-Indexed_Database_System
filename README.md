@@ -107,8 +107,8 @@ Se ha creado una interfaz web sencilla e intuitiva para:
 - Ver los resultados en tiempo real
   
 - Se incorpora visualización de los datos multimedia en la tabla de resultados
+  <img width="893" height="642" alt="image" src="https://github.com/user-attachments/assets/e6626c5f-2bed-4fe8-8050-f3b6fc785028" />
 
-  
 
 ## 📈 Experimentos y Resultados experimentales
 
