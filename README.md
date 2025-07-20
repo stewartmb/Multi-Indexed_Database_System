@@ -67,7 +67,6 @@ Aparte, se implementó una clase [Registro](https://github.com/stewartmb/Proyect
 En cuanto a los **índices**, se han implementado los siguientes:
 
 
-
 | Tipo de Índice         | Descripción                                         | Documentación                                                                              |
 | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | 📄 Sequential File     | Búsqueda ordenada secuencial                        | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Sequential_Struct/Sequential.md) |
@@ -75,8 +74,9 @@ En cuanto a los **índices**, se han implementado los siguientes:
 | #️⃣ Extendible Hashing | Hash dinámico para inserciones eficientes           | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Hash_struct/Hash.md)             |
 | 🌳 B+ Tree             | Árbol balanceado para búsquedas por rango           | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/BPtree_struct/BTree.md)          |
 | 🗺 R-Tree              | Índice espacial para coordenadas multidimensionales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/RTree_struct/Rtree.md)           |
-| 🗒️ BRIN  |Índice compacto que resume rangos de bloques para datos ordenados  | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Brin_struct/Brin.md)           |
-|  SPIMI |Implementación basada en hash que permite indexar colecciones textuales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Spimi_struct/benchmarks.md) |
+| 🗒️ BRIN               | Índice compacto que resume rangos de bloques para datos ordenados | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Brin_struct/Brin.md)           |
+| 📚 SPIMI              | Implementación basada en hash que permite indexar colecciones textuales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/Spimi_struct/benchmarks.md) |
+| 🧠 SIFT               | Extracción y búsqueda de características visuales locales | [Ver](https://github.com/stewartmb/Proyecto_BD2/blob/main/SIFT_struct/IVF.md)             |
 
 
 ## 🧠 Parser SQL
@@ -105,6 +105,10 @@ Se ha creado una interfaz web sencilla e intuitiva para:
 - Ejecutar comandos SQL desde el navegador
 
 - Ver los resultados en tiempo real
+  
+- Se incorpora visualización de los datos multimedia en la tabla de resultados
+
+  
 
 ## 📈 Experimentos y Resultados experimentales
 
