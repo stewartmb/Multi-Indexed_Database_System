@@ -132,6 +132,20 @@ Una vez las imagenes sean las deseadas, presionar el boton `Save content` para g
 
 Nota: Al insertar un archivo en una tabla, este será quitada de la carpeta de temporales, permitiendo subir otro archivo con el mismo nombre. Aunque esto tambien implica que es necesario volver a subir el archivo (presionando `Save content`) si se quisiera usar de nuevo.
 
+
+### Comparacion
+
+Nuestro proyecto se diferencia de otros sistemas de búsqueda por similitud de imágenes o audio porque no se limita únicamente al análisis multimedia; también integra consultas SQL tradicionales sobre bases de datos estructuradas. Esto significa que, además de realizar búsquedas indexadas por contenido visual, los usuarios pueden ejecutar consultas SQL tradicionales. Esta integración entre búsqueda por similitud y modelado de datos estructurados lo convierte en una solución más versátil para aplicaciones que requieren busqueda de datos con atributos tanto numericos como de texto o imagenes.
+
+#### Ejemplo de uso:
+- Una tienda online quiere que los usuarios busquen productos similares por imagen, pero también poder filtrarlos por precio, categoría o disponibilidad.
+
+
+[Referencia audio](http://www.rotorbrain.com/foote/musicr/)
+[Referencia imagenes](https://www.youtube.com/watch?v=M_Gziz-S4A0)
+
+
+
 ## 📈 Experimentos y Resultados experimentales
 
 Para probar la eficiencia de todos los índices, se han realizados pruebas con distintos volúmenes de datos.
