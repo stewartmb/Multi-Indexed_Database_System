@@ -107,8 +107,30 @@ Se ha creado una interfaz web sencilla e intuitiva para:
 - Ver los resultados en tiempo real
   
 - Se incorpora visualización de los datos multimedia en la tabla de resultados
-  <img width="893" height="642" alt="image" src="https://github.com/user-attachments/assets/e6626c5f-2bed-4fe8-8050-f3b6fc785028" />
 
+![Datos en tabla](images/tabla_multimedia.png)
+
+### Tutorial
+
+Para poder realizar consultas se deben realizar los siguientes pasos:
+
+1) Colocar la url en la que se está ejecutando el backend en el campo de texto de la barra lateral. Guardar esto usando `Set URL` y presionar `Refresh` para que se muestre el esquema con las tablas almacenado en el backend. Luego de hacer cambios es necesario volver a presionar refresh para mostrarlos; esto es para evitar una actualizacion automatica constante pese a que ningun cambio haya sido realizado.
+![set URL](images/paso1.png)
+
+2) Una vez conectado con el backend, se puede escribir consultas en la sintaxis especificada en el [parser](https://github.com/stewartmb/Proyecto_BD2/blob/main/ParserSQL/Parser.md) ya mencionado.
+![set URL](images/paso2.png)
+
+3) Presionando el boton `Load Files`, se accede a un nuevo apartado en el cual se pueden cargar archivos. Para esto se puede hacer clic para abrir el explorador de archivos local, o arrastrar directamente los archivos.
+![set URL](images/paso3.png)
+
+4) Aqui se mostrarán los archivos cargados en una especie de galería con funcionalidad scroll en caso de ser muchos archivos. Se puede seguir arrastrando archivos para agregar más, quitar archivos individualmente presionando la `x` o copiar el nombre del archivo haciendo clic en este. Es posible cargar archivos de cualquier extension, pero si el formato no puede ser mostrado aparecerá un icono placeholder. Los archivos que si pueden ser mostrados son formatos de imagenes y GIF soportados por el motor de busqueda (ej. Google).
+Una vez las imagenes sean las deseadas, presionar el boton `Save content` para guardarlas en una carpeta temporal en el backend y `Edit query` para volver a la ventana de query.
+![set URL](images/paso4.png)
+
+5) Finalmente, los campos de tipo `file` deben ser llenados como strings. Este string será el nombre del archivo, el cual puede ser escrito a mano o copiado haciendo clic en la imagen dentro de la ventana de load files.
+![set URL](images/paso5.png)
+
+Nota: Al insertar un archivo en una tabla, este será quitada de la carpeta de temporales, permitiendo subir otro archivo con el mismo nombre. Aunque esto tambien implica que es necesario volver a subir el archivo (presionando `Save content`) si se quisiera usar de nuevo.
 
 ## 📈 Experimentos y Resultados experimentales
 
