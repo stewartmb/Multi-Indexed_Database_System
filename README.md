@@ -161,15 +161,3 @@ Los tamaños de los dataset son de: 10k, 50k y 100k.
 ## Cuadros Comparativos de Desempeño, Gráficos y Resultados
 
 [Ver aquí](https://github.com/stewartmb/Proyecto_BD2/blob/main/cuadros/Cuadros.md)
-
-
-## 👥 Autores
-
-| Nombre  | GitHub                                         |
-| ------- | ---------------------------------------------- |
-| Melanie Cortez | [@melanie1512](https://github.com/melanie1512) |
-| Stewart Maquera | [@stewartmb](https://github.com/stewartmb)     |
-| Rodrigo Li | [@RodrigoLiC](https://github.com/RodrigoLiC)   |
-| Jorge Leon | [@JorgeL2005](https://github.com/JorgeL2005)   |
-| Sergio Cortez| [@SRC144](https://github.com/SRC144)   |
-
